@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<!-- Written by QtCreator 11.0.3, 2023-10-13T01:28:49. -->
+<!-- Written by QtCreator 11.0.3, 2023-11-08T13:26:38. -->
 <qtcreator>
  <data>
   <variable>EnvironmentId</variable>
@@ -71,6 +71,7 @@
    <valuemap type="QVariantMap" key="AutoTest.CheckStates"/>
    <value type="int" key="AutoTest.RunAfterBuild">0</value>
    <value type="bool" key="AutoTest.UseGlobal">true</value>
+   <value type="QString" key="Axivion.ProjectName"></value>
    <valuemap type="QVariantMap" key="ClangTools">
     <value type="bool" key="ClangTools.AnalyzeOpenFiles">true</value>
     <value type="bool" key="ClangTools.BuildBeforeAnalysis">true</value>
@@ -78,10 +79,16 @@
     <value type="int" key="ClangTools.ParallelJobs">16</value>
     <value type="bool" key="ClangTools.PreferConfigFile">true</value>
     <valuelist type="QVariantList" key="ClangTools.SelectedDirs"/>
-    <valuelist type="QVariantList" key="ClangTools.SelectedFiles"/>
+    <valuelist type="QVariantList" key="ClangTools.SelectedFiles">
+     <value type="QString">E:/Documents/GitHub/OpenSCSim/src/optics/tmm.cpp</value>
+    </valuelist>
     <valuelist type="QVariantList" key="ClangTools.SuppressedDiagnostics"/>
     <value type="bool" key="ClangTools.UseGlobalSettings">true</value>
    </valuemap>
+   <value type="QDateTime" key="GitLab.LastRequest"></value>
+   <value type="QString" key="GitLab.LinkedId"></value>
+   <value type="QString" key="GitLab.Project"></value>
+   <value type="QString" key="GitLab.Server"></value>
   </valuemap>
  </data>
  <data>
