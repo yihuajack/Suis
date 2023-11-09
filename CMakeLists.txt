@@ -16,7 +16,6 @@ endif()
 
 qt_add_executable(OpenSCSimApp src/main.cpp
     src/optics/tmm.cpp
-    src/optics/tmm-gsl.cpp
 )
 
 qt_add_resources(OpenSCSimApp "configuration"

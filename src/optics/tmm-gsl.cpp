@@ -5,10 +5,15 @@
 #else
 #include <QtDebug>
 #endif
+#include <QList>
+#include <QString>
 #include <sstream>
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_complex_math.h>
 #include "tmm.h"
+
+#define QWARNING_COMPLEX(c) \
+qWarning() << #c << ": " << complex_to_string(c);
 
 std::string complex_to_string(const gsl_complex& value) {
     std::ostringstream ss;
@@ -50,13 +55,13 @@ gsl_complex snell(gsl_complex n_1, gsl_complex n_2, gsl_complex th_1) {
 QList<gsl_complex> list_snell(const QList<gsl_complex>& n_list, gsl_complex th_0) {
     QList<gsl_complex> angles;
     for (size_t i = 0; i < n_list.size() - 1; i++) {
-        angles.push_back(gsl_complex_arcsin(gsl_complex_div(gsl_complex_mul(n_list.front(), gsl_complex_sin(th_0)), n_list[i])));
+        angles.push_back(gsl_complex_arcsin(gsl_complex_div(gsl_complex_mul(n_list.first(), gsl_complex_sin(th_0)), n_list[i])));
     }
-    if (!is_forward_angle(n_list.front(), angles.front())) {
-        angles.front() = gsl_complex_sub(gsl_complex_rect(M_PI, 0), angles.front());
+    if (!is_forward_angle(n_list.first(), angles.first())) {
+        angles.first() = gsl_complex_sub(gsl_complex_rect(M_PI, 0), angles.first());
     }
-    if (!is_forward_angle(n_list.back(), angles.back())) {
-        angles.back() = gsl_complex_sub(gsl_complex_rect(M_PI, 0), angles.back());
+    if (!is_forward_angle(n_list.last(), angles.last())) {
+        angles.last() = gsl_complex_sub(gsl_complex_rect(M_PI, 0), angles.last());
     }
     return angles;
 }
