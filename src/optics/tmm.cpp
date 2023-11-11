@@ -1,3 +1,5 @@
+#include <algorithm>
+#include <array>
 #include <complex>
 #include <sstream>
 #include <stdexcept>
@@ -7,8 +9,56 @@
 #include <vector>
 #include "tmm.h"
 
+class ValueWarning : public std::runtime_error {
+public:
+    explicit ValueWarning(const std::string& message) : std::runtime_error(message) {}
+};
+
+template <typename T, size_t N, size_t M, size_t P>
+auto dot(const std::array<std::array<std::complex<T>, M>, N>& matrix1, const std::array<std::array<std::complex<T>, P>, M>& matrix2) -> std::array<std::array<std::complex<T>, P>, N> {
+    std::array<std::array<std::complex<T>, P>, N> result;
+    for (size_t i = 0; i < N; i++) {
+        for (size_t j = 0; j < P; j++) {
+            for (size_t k = 0; k < M; k++) {
+                result[i][j] += matrix1[i][k] * matrix2[k][j];
+            }
+        }
+    }
+    return result;
+}
+
+template <typename T, size_t N, size_t M>
+auto transpose(const std::array<std::array<std::complex<T>, M>, N>& array) -> std::array<std::array<std::complex<T>, N>, M> {
+    std::array<std::array<std::complex<T>, N>, M> result;
+    for (size_t i = 0; i < N; ++i) {
+        for (size_t j = 0; j < M; ++j) {
+            result[j][i] = array[i][j];
+        }
+    }
+    return result;
+}
+
+template <typename T, size_t N>
+auto transpose(const std::vector<std::array<std::complex<T>, N>>& array) -> std::array<std::vector<std::complex<T>>, N> {
+    std::array<std::vector<std::complex<T>>, N> result;
+    for (size_t i = 0; i < N; ++i) {
+        for (size_t j = 0; j < array.size(); ++j) {
+            result[j][i] = array[i][j];
+        }
+    }
+    return result;
+}
+
+template <typename T, size_t N>
+auto squeeze(const std::array<T, N>& array) -> T {
+    if (std::is_array_v<T> && array.size() == 1) {
+        return array[0];
+    }
+    throw std::logic_error("Array cannot be squeezed");
+}
+
 template <typename T>
-static inline std::string complex_to_string_with_name(const std::complex<T> c, const std::string& name) {
+static inline auto complex_to_string_with_name(const std::complex<T> c, const std::string& name) -> std::string {
     // QDebug cannot overload << and >> for std::complex
     std::ostringstream ss;
     ss << name << ": " << c.real() << " + " << c.imag() << "i";
@@ -16,8 +66,8 @@ static inline std::string complex_to_string_with_name(const std::complex<T> c, c
 }
 
 /*
- * if a wave is traveling at angle theta from normal in a medium with index n,
- * calculate whether or not this is the forward-traveling wave (i.e., the one
+ * If a wave is traveling at angle theta from normal in a medium with index n,
+ * calculate whether this is the forward-traveling wave (i.e., the one
  * going from front to back of the stack, like the incoming or outgoing waves,
  * but unlike the reflected wave). For real n & theta, the criterion is simply
  * -pi/2 < theta < pi/2, but for complex n & theta, it's more complicated.
@@ -25,23 +75,25 @@ static inline std::string complex_to_string_with_name(const std::complex<T> c, c
  * angle, then (pi-theta) is the backward angle and vice-versa.
  */
 template <typename T>
-bool is_forward_angle(const std::complex<T> n, const std::complex<T> theta) {
+auto is_forward_angle(const std::complex<T> n, const std::complex<T> theta) -> bool {
     bool answer = false;
     if (n.real() * n.imag() >= 0) {
-        throw std::runtime_error("For materials with gain, it's ambiguous which beam is incoming vs outgoing\n" +
+        throw std::runtime_error("For materials with gain, it's ambiguous which "
+                                 "beam is incoming vs outgoing. See "
+                                 "https://arxiv.org/abs/1603.02720 Appendix C.\n" +
                                  complex_to_string_with_name(n, "n") + "\t" + complex_to_string_with_name(theta, "angle"));
-    } else {
-        std::complex<double> ncostheta = n * std::cos(theta);
-        answer = std::abs(ncostheta.imag()) > 100 * EPSILON ? ncostheta.imag() > 0 : ncostheta.real() > 0;
-        if ((answer && (ncostheta.imag() > -100 * EPSILON ||
-                        ncostheta.real() > -100 * EPSILON ||
-                        std::real(n * std::cos(std::conj(theta))) > -100 * EPSILON)) ||
-            (!answer && (ncostheta.imag() < 100 * EPSILON ||
-                         ncostheta.real() < 100 * EPSILON ||
-                         std::real(n * std::cos(std::conj(theta))) < 100 * EPSILON))) {
-            throw std::runtime_error("It's not clear which beam is incoming vs outgoing. Weird index maybe?\n" +
-                                     complex_to_string_with_name(n, "n") + "\t" + complex_to_string_with_name(theta, "angle"));
-        }
+    }
+    std::complex<double> ncostheta = n * std::cos(theta);
+    answer = std::abs(ncostheta.imag()) > 100 * EPSILON ? ncostheta.imag() > 0 : ncostheta.real() > 0;
+    if ((answer && (ncostheta.imag() > -100 * EPSILON ||
+    ncostheta.real() > -100 * EPSILON ||
+    std::real(n * std::cos(std::conj(theta))) > -100 * EPSILON)) ||
+    (!answer && (ncostheta.imag() < 100 * EPSILON ||
+    ncostheta.real() < 100 * EPSILON ||
+    std::real(n * std::cos(std::conj(theta))) < 100 * EPSILON))) {
+        throw std::runtime_error("It's not clear which beam is incoming vs outgoing. Weird"
+                                 " index maybe?\n" +
+                                 complex_to_string_with_name(n, "n") + "\t" + complex_to_string_with_name(theta, "angle"));
     }
     return answer;
 }
@@ -52,7 +104,7 @@ bool is_forward_angle(const std::complex<T> n, const std::complex<T> theta) {
  * that "angles" may be complex!!
  */
 template <typename T>
-std::complex<T> snell(const std::complex<T> n_1, const std::complex<T> n_2, const std::complex<T> th_1) {
+auto snell(const std::complex<T> n_1, const std::complex<T> n_2, const std::complex<T> th_1) -> std::complex<T> {
     std::complex<T> th_2_guess = std::asin(n_1 * std::sin(th_1) / n_2);
     return is_forward_angle(n_2, th_2_guess) ? th_2_guess : M_PI - th_2_guess;
 }
@@ -62,7 +114,7 @@ std::complex<T> snell(const std::complex<T> n_1, const std::complex<T> n_2, cons
  * "angles" may be complex!!
  */
 template <typename T>
-std::valarray<std::complex<T>> list_snell(const std::valarray<std::complex<T>>& n_list, const std::complex<T> th_0) {
+auto list_snell(const std::valarray<std::complex<T>>& n_list, const std::complex<T> th_0) -> std::valarray<std::complex<T>> {
     std::valarray<std::complex<T>> angles = std::asin(n_list[0] * std::sin(th_0) / n_list);
     if (!is_forward_angle(n_list[0], angles[0])) {
         angles[0] = M_PI - angles[0];
@@ -84,14 +136,14 @@ std::valarray<std::complex<T>> list_snell(const std::valarray<std::complex<T>>& 
  * (in radians, where 0=normal). "th" stands for "theta".
  */
 template <typename T>
-std::complex<T> interface_r(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f, const std::complex<T> th_i, const std::complex<T> th_f) {
+auto interface_r(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f, const std::complex<T> th_i, const std::complex<T> th_f) -> std::complex<T> {
     if (polarization == 's') {
         return (n_i * std::cos(th_i) - n_f * std::cos(th_f)) / ((n_i * std::cos(th_i) + n_f * std::cos(th_f)));
-    } else if (polarization == 'p') {
-        return (n_f * std::cos(th_i) - n_i * std::cos(th_f)) / ((n_f * std::cos(th_i) + n_i * std::cos(th_f)));
-    } else {
-        throw std::invalid_argument("Polarization must be 's' or 'p'");
     }
+    if (polarization == 'p') {
+        return (n_f * std::cos(th_i) - n_i * std::cos(th_f)) / ((n_f * std::cos(th_i) + n_i * std::cos(th_f)));
+    }
+    throw std::invalid_argument("Polarization must be 's' or 'p'");
 }
 
 /*
@@ -105,21 +157,21 @@ std::complex<T> interface_r(const char polarization, const std::complex<T> n_i, 
  * (in radians, where 0=normal). "th" stands for "theta".
  */
 template <typename T>
-std::complex<T> interface_t(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f, const std::complex<T> th_i, const std::complex<T> th_f) {
+auto interface_t(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f, const std::complex<T> th_i, const std::complex<T> th_f) -> std::complex<T> {
     if (polarization == 's') {
         return 2 * n_i * std::cos(th_i) / ((n_i * std::cos(th_i) + n_f * std::cos(th_f)));
-    } else if (polarization == 'p') {
-        return 2 * n_i * std::cos(th_i) / ((n_f * std::cos(th_i) + n_i * std::cos(th_f)));
-    } else {
-        throw std::invalid_argument("Polarization must be 's' or 'p'");
     }
+    if (polarization == 'p') {
+        return 2 * n_i * std::cos(th_i) / ((n_f * std::cos(th_i) + n_i * std::cos(th_f)));
+    }
+    throw std::invalid_argument("Polarization must be 's' or 'p'");
 }
 
 /*
  * Calculate reflected power R, starting with reflection amplitude r.
  */
 template <typename T>
-T R_from_r(const std::complex<T> r) {
+auto R_from_r(const std::complex<T> r) -> T {
     return std::norm(r);
 }
 
@@ -137,14 +189,14 @@ T R_from_r(const std::complex<T> r) {
  * See manual for discussion of formulas
  */
 template <typename T>
-T T_from_t(const char pol, const std::complex<T> t, const std::complex<T> n_i, const std::complex<T> n_f, const std::complex<T> th_i, const std::complex<T> th_f) {
+auto T_from_t(const char pol, const std::complex<T> t, const std::complex<T> n_i, const std::complex<T> n_f, const std::complex<T> th_i, const std::complex<T> th_f) -> T {
     if (pol == 's') {
         return std::abs(t * t) * (n_f * std::cos(th_f)).real() / (n_i * std::cos(th_i)).real();
-    } else if (pol == 'p') {
-        return std::abs(t * t) * (n_f * std::conj(std::cos(th_f))).real() / (n_i * std::conj(std::cos(th_i))).real();
-    } else {
-        throw std::invalid_argument("Polarization must be 's' or 'p'");
     }
+    if (pol == 'p') {
+        return std::abs(t * t) * (n_f * std::conj(std::cos(th_f))).real() / (n_i * std::conj(std::cos(th_i))).real();
+    }
+    throw std::invalid_argument("Polarization must be 's' or 'p'");
 }
 
 /*
@@ -158,21 +210,21 @@ T T_from_t(const char pol, const std::complex<T> t, const std::complex<T> n_i, c
  * (in radians, where 0=normal). "th" stands for "theta".
  */
 template <typename T>
-T power_entering_from_r(const char pol, const std::complex<T> r, const std::complex<T> n_i, const std::complex<T> th_i) {
+auto power_entering_from_r(const char pol, const std::complex<T> r, const std::complex<T> n_i, const std::complex<T> th_i) -> T {
     if (pol == 's') {
         return (n_i * std::cos(th_i) * (1 + std::conj(r)) * (1 - r)).real() / (n_i * std::cos(th_i)).real();
-    } else if (pol == 'p') {
-        return (n_i * std::conj(std::cos(th_i)) * (1 + r) * (1 - std::conj(r))).real() / (n_i * std::conj(std::cos(th_i))).real();
-    } else {
-        throw std::invalid_argument("Polarization must be 's' or 'p'");
     }
+    if (pol == 'p') {
+        return (n_i * std::conj(std::cos(th_i)) * (1 + r) * (1 - std::conj(r))).real() / (n_i * std::conj(std::cos(th_i))).real();
+    }
+    throw std::invalid_argument("Polarization must be 's' or 'p'");
 }
 
 /*
  * Fraction of light intensity reflected at an interface.
  */
 template <typename T>
-T interface_R(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f, const std::complex<T> th_i, const std::complex<T> th_f) {
+auto interface_R(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f, const std::complex<T> th_i, const std::complex<T> th_f) -> T {
     return R_from_r(interface_r(polarization, n_i, n_f, th_i, th_f));
 }
 
@@ -180,7 +232,7 @@ T interface_R(const char polarization, const std::complex<T> n_i, const std::com
  * Fraction of light intensity transmitted at an interface.
  */
 template <typename T>
-T interface_T(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f, const std::complex<T> th_i, const std::complex<T> th_f) {
+auto interface_T(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f, const std::complex<T> th_i, const std::complex<T> th_f) -> T {
     return T_from_t(interface_t(polarization, n_i, n_f, th_i, th_f), n_i, n_f, th_i, th_f);
 }
 
@@ -224,7 +276,8 @@ T interface_T(const char polarization, const std::complex<T> n_i, const std::com
  * - pol, n_list, d_list, th_0, lam_vac--same as input
  */
 template <typename T>
-std::unordered_map<std::string, std::variant<std::complex<T>>> coh_tmm(const char polarization, const std::valarray<std::complex<T>>& n_list, const std::valarray<T>& d_list, const std::complex<T> th_0, const T lam_vac) {
+auto coh_tmm(const char pol, const std::valarray<std::complex<T>>& n_list, const std::valarray<T>& d_list, const std::complex<T> th_0, const T lam_vac) -> std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>> {
+    // Input tests
     if (n_list.size() != d_list.size()) {
         throw std::logic_error("n_list and d_list must have same length");
     }
@@ -235,31 +288,93 @@ std::unordered_map<std::string, std::variant<std::complex<T>>> coh_tmm(const cha
         throw std::runtime_error("Error in n0 or th0!");
     }
     size_t num_layers = n_list.size();
+    // th_list is a list with, for each layer, the angle that the light travels
+    // through the layer. Computed with Snell's law. Note that the "angles" may be
+    // complex!
     std::valarray<std::complex<T>> th_list = list_snell(n_list, th_0);
+    // kz is the z-component of (complex) angular wavevector for forward-moving
+    // wave. Positive imaginary part means decaying.
     std::valarray<std::complex<T>> kz_list = 2 * M_PI * n_list * std::cos(th_list) / lam_vac;
-    result["kz_list"] = kz_list;
-    std::vector<std::complex<T>> r_list;
-    std::vector<std::complex<T>> t_list;
-    std::vector<std::complex<T>> vw_list;
-    std::complex<T> prev_kz = kz_list.front();
-    for (size_t i = 1; i < n_list.size(); i++) {
-        std::complex<T> this_kz = kz_list[i];
-        std::complex<T> delta = this_kz * d_list[i];
-        std::complex<T> phase = std::exp(std::complex<T>(0, 1) * delta);
-        std::complex<T> interface_r = coh_interface_r(polarization, n_list[i - 1], n_list[i], th_list[i - 1], th_list[i]);
-        std::complex<T> interface_t = coh_interface_t(polarization, n_list[i - 1], n_list[i], th_list[i - 1], th_list[i]);
-        std::complex<T> r = interface_r + interface_t * interface_t * prev_kz * phase / (1 - interface_r * interface_r * prev_kz * this_kz * phase);
-        std::complex<T> t = interface_t * phase * (1 - interface_r * interface_r) / (1 - interface_r * interface_r * prev_kz * this_kz * phase);
-        r_list.push_back(r);
-        t_list.push_back(t);
-        vw_list.push_back({1, r});
-        prev_kz = this_kz;
+    // delta is the total phase accrued by traveling through a given layer.
+    // Ignore warning about inf multiplication
+    std::valarray<std::complex<T>> delta = kz_list * d_list;
+    // For a very opaque layer, reset delta to avoid divide-by-0 and similar
+    // errors. The criterion imag(delta) > 35 corresponds to single-pass
+    // transmission < 1e-30 --- small enough that the exact value doesn't
+    // matter.
+    for (size_t i = 1; i < num_layers - 1; i++) {
+        if (delta[i].imag() > 35) {
+            delta[i] = delta[i].real() + 35i;
+            throw ValueWarning("Warning: Layers that are almost perfectly opaque "
+                               "are modified to be slightly transmissive, "
+                               "allowing 1 photon in 10^30 to pass through. It's "
+                               "for numerical stability. This warning will not "
+                               "be shown again.");
+        }
     }
+    // t_list[i,j] and r_list[i,j] are transmission and reflection amplitudes,
+    // respectively, coming from i, going to j. Only need to calculate this when
+    // j=i+1. (2D array is overkill but helps avoid confusion.)
+    std::vector<std::vector<std::complex<T>>> t_list(num_layers, std::vector<std::complex<T>>(num_layers));
+    std::vector<std::vector<std::complex<T>>> r_list(num_layers, std::vector<std::complex<T>>(num_layers));
+    for (size_t i = 0; i < num_layers - 1; i++) {
+        t_list[i][i + 1] = interface_t(pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1]);
+        r_list[i][i + 1] = interface_r(pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1]);
+    }
+    // At the interface between the (n-1)st and nth material, let v_n be the
+    // amplitude of the wave on the nth side heading forwards (away from the
+    // boundary), and let w_n be the amplitude on the nth side heading backwards
+    // (towards the boundary). Then (v_n,w_n) = M_n (v_{n+1},w_{n+1}). M_n is
+    // M_list[n]. M_0 and M_{num_layers-1} are not defined.
+    // My M is a bit different from Sernelius's, but Mtilde is the same.
+    std::vector<std::array<std::array<std::complex<T>, 2>, 2>> M_list;
+    for (size_t i = 1; i < num_layers - 1; i++) {
+        M_list.push_back(dot({{std::exp(-1i * delta[i]), 0}, {0, std::exp(1i * delta[i])}}, {{1, r_list[i][i + 1]}, {r_list[i][i + 1], 1}}));
+    }
+    std::array<std::array<std::complex<T>, 2>, 2> Mtilde = {{1, 0}, {0, 1}};
+    for (size_t i = 1; i < num_layers - 1; i++) {
+        Mtilde = dot(Mtilde, M_list[i]);
+    }
+    Mtilde = dot({{{1 / t_list[0][1], r_list[0][1] / t_list[0][1]}, {r_list[0][1] / t_list[0][1], 1 / t_list[0][1]}}}, Mtilde);
+    // Net complex transmission and reflection amplitudes
+    std::complex<T> r = Mtilde[1][0] / Mtilde[0][0];
+    std::complex<T> t = 1 / Mtilde[0][0];
+    // vw_list[n] = [v_n, w_n]. v_0 and w_0 are undefined because the 0th medium
+    // has no left interface.
+    std::vector<std::array<std::complex<T>, 2>> vw_list(num_layers, std::array<std::complex<T>, 2>());
+    std::array<std::array<std::complex<T>, 1>, 2> vw;
+    vw_list.back() = squeeze(transpose(vw));
+    for (size_t i = num_layers - 2; i > 0; i--) {
+        vw = dot(M_list[i], vw);
+        vw_list[i] = squeeze(transpose(vw));
+    }
+    // Net transmitted and reflected power, as a proportion of the incoming light
+    // power.
+    T R = R_from_r(r);
+    T Tr = T_from_t(pol, t, n_list[0], n_list[n_list.size() - 1], th_0, th_list[th_list.size() - 1]);
+    T power_entering = power_entering_from_r(pol, r, n_list[0], th_0);
     std::unordered_map<std::string, std::vector<std::complex<T>>> result;
     result["r"] = r;
     result["t"] = t;
-    result["R"] = R_from_r(r);
-    result["T"] = T_from_t(pol, t, n_list.front(), n_list.back(), th_0, th_list.back());
-    result["power_entering"] = {power_entering_from_r(polarization, r_list.front(), n_list.front(), th_list.front())};
+    result["R"] = R;
+    result["T"] = Tr;
+    result["power_entering"] = power_entering;
+    result["vw_list"] = vw_list;
+    result["kz_list"] = kz_list;
+    result["th_list"] = th_list;
+    result["pol"] = pol;
+    result["n_list"] = n_list;
+    result["d_list"] = d_list;
+    result["th_0"] = th_0;
+    result["lam_vac"] = lam_vac;
     return result;
+}
+
+/*
+ * Reverses the order of the stack then runs coh_tmm.
+ */
+template <typename T>
+auto coh_tmm_reverse(char pol, const std::valarray<std::complex<T>>& n_list, const std::valarray<T>& d_list, const std::complex<T> th_0, const T lam_vac) -> std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>> {
+    std::complex<T> th_f = snell(n_list[0], n_list[n_list.size() - 1], th_0);
+    return coh_tmm(pol, std::reverse(n_list.begin(), n_list.end()), std::reverse(d_list.begin(), d_list.end()), th_f, lam_vac);
 }
