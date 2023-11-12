@@ -10,56 +10,12 @@
 #include "tmm.h"
 
 template<typename T>
-using coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
+using coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<std::complex<T>>, std::vector<std::valarray<std::complex<T>>>>>;
 
 class ValueWarning : public std::runtime_error {
 public:
     explicit ValueWarning(const std::string &message) : std::runtime_error(message) {}
 };
-
-template<typename T, size_t N, size_t M, size_t P>
-auto dot(const std::array<std::array<std::complex<T>, M>, N> &matrix1,
-         const std::array<std::array<std::complex<T>, P>, M> &matrix2) -> std::array<std::array<std::complex<T>, P>, N> {
-    std::array<std::array<std::complex<T>, P>, N> result;
-    for (size_t i = 0; i < N; i++) {
-        for (size_t j = 0; j < P; j++) {
-            for (size_t k = 0; k < M; k++) {
-                result[i][j] += matrix1[i][k] * matrix2[k][j];
-            }
-        }
-    }
-    return result;
-}
-
-template<typename T, size_t N, size_t M>
-auto transpose(const std::array<std::array<std::complex<T>, M>, N> &array) -> std::array<std::array<std::complex<T>, N>, M> {
-    std::array<std::array<std::complex<T>, N>, M> result;
-    for (size_t i = 0; i < N; ++i) {
-        for (size_t j = 0; j < M; ++j) {
-            result[j][i] = array[i][j];
-        }
-    }
-    return result;
-}
-
-template<typename T, size_t N>
-auto transpose(const std::vector<std::array<std::complex<T>, N>> &array) -> std::array<std::vector<std::complex<T>>, N> {
-    std::array<std::vector<std::complex<T>>, N> result;
-    for (size_t i = 0; i < N; ++i) {
-        for (size_t j = 0; j < array.size(); ++j) {
-            result[j][i] = array[i][j];
-        }
-    }
-    return result;
-}
-
-template<typename T, size_t N>
-auto squeeze(const std::array<T, N> &array) -> T {
-    if (std::is_array_v<T> && array.size() == 1) {
-        return array[0];
-    }
-    throw std::logic_error("Array cannot be squeezed");
-}
 
 template<typename T>
 static inline auto complex_to_string_with_name(const std::complex<T> c, const std::string &name) -> std::string {
@@ -68,6 +24,76 @@ static inline auto complex_to_string_with_name(const std::complex<T> c, const st
     ss << name << ": " << c.real() << " + " << c.imag() << "i";
     return ss.str();
 }
+
+// Reference:
+// https://stackoverflow.com/questions/53378000/how-to-access-to-subsequence-of-a-valarray-considering-it-as-a-2d-matrix-in-c
+// Using std::slice/std::slice_array is not a good idea
+template<typename T, size_t N, size_t M>
+class ComplexMatrix {
+private:
+    std::valarray<T> data;
+public:
+    ComplexMatrix() : data(N * M) {}
+    explicit ComplexMatrix(std::valarray<T> data) : data(data) {}
+    ComplexMatrix(std::initializer_list<std::initializer_list<T>> &initList) {
+        size_t i = 0;
+        for (const auto &row : initList) {
+            std::move(row.begin(), row.end(), &data[i * M]);
+            ++i;
+        }
+    }
+
+    class RowProxy {
+    private:
+        std::valarray<T> &elems;
+        size_t row;
+    public:
+        explicit RowProxy(std::valarray<T>& elems, size_t row) : elems(elems), row(row) {}
+        auto operator[](size_t j) -> T & {
+            return elems[row * M + j];
+        }
+    };
+
+    auto operator[](size_t i) -> RowProxy {
+        return RowProxy(data, M, i);
+    }
+    auto operator/(const T& scalar) const -> ComplexMatrix<T, N, M> {
+        ComplexMatrix<T, N, M> result;
+        result.data = data / scalar;
+        return result;
+    }
+
+    // For function marked [[nodiscard]]:
+    // https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-nodiscard.html
+    auto transpose() const -> ComplexMatrix<T, M, N> {
+        ComplexMatrix<T, M, N> result;
+        for (size_t i = 0; i < N; i++) {
+            for (size_t j = 0; j < M; j++) {
+                result[j][i] = (*this)[i][j];
+            }
+        }
+        return result;
+    }
+    template<size_t P>
+    friend auto dot(const ComplexMatrix<T, N, M> &matrix1,
+                    const ComplexMatrix<T, M, P> &matrix2) -> ComplexMatrix<T, N, P> {
+        ComplexMatrix<T, N, P> result;
+        for (size_t i = 0; i < N; i++) {
+            for (size_t j = 0; j < P; j++) {
+                for (size_t k = 0; k < M; k++) {
+                    result[i][j] += matrix1[i][k] * matrix2[k][j];
+                }
+            }
+        }
+        return result;
+    }
+    auto squeeze() const -> std::valarray<std::complex<T>> {
+        if (N == 1) {
+            return data;
+        }
+        throw std::logic_error("ComplexMatrix cannot be squeezed");
+    }
+};
 
 /*
  * If a wave is traveling at angle theta from normal in a medium with index n,
@@ -89,12 +115,12 @@ auto is_forward_angle(const std::complex<T> n, const std::complex<T> theta) -> b
     }
     std::complex<double> ncostheta = n * std::cos(theta);
     bool answer = std::abs(ncostheta.imag()) > 100 * EPSILON ? ncostheta.imag() > 0 : ncostheta.real() > 0;
-    if ((answer && (ncostheta.imag() > -100 * EPSILON ||
-                    ncostheta.real() > -100 * EPSILON ||
-                    std::real(n * std::cos(std::conj(theta))) > -100 * EPSILON)) ||
-        (!answer && (ncostheta.imag() < 100 * EPSILON ||
-                     ncostheta.real() < 100 * EPSILON ||
-                     std::real(n * std::cos(std::conj(theta))) < 100 * EPSILON))) {
+    if ((answer and (ncostheta.imag() > -100 * EPSILON or
+                     ncostheta.real() > -100 * EPSILON or
+                     std::real(n * std::cos(std::conj(theta))) > -100 * EPSILON)) or
+        (not answer and (ncostheta.imag() < 100 * EPSILON or
+                         ncostheta.real() < 100 * EPSILON or
+                         std::real(n * std::cos(std::conj(theta))) < 100 * EPSILON))) {
         throw std::runtime_error("It's not clear which beam is incoming vs outgoing. Weird"
                                  " index maybe?\n" +
                                  complex_to_string_with_name(n, "n") + "\t" +
@@ -121,10 +147,10 @@ auto snell(const std::complex<T> n_1, const std::complex<T> n_2, const std::comp
 template<typename T>
 auto list_snell(const std::valarray<std::complex<T>> &n_list, const std::complex<T> th_0) -> std::valarray<std::complex<T>> {
     std::valarray<std::complex<T>> angles = std::asin(n_list[0] * std::sin(th_0) / n_list);
-    if (!is_forward_angle(n_list[0], angles[0])) {
+    if (not is_forward_angle(n_list[0], angles[0])) {
         angles[0] = M_PI - angles[0];
     }
-    if (!is_forward_angle(n_list[n_list.size() - 1], angles[angles.size() - 1])) {
+    if (not is_forward_angle(n_list[n_list.size() - 1], angles[angles.size() - 1])) {
         angles[angles.size() - 1] = M_PI - angles[angles.size() - 1];
     }
     return angles;
@@ -292,13 +318,13 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
              const std::complex<T> th_0,
              const T lam_vac) -> coh_tmm_dict<T> {
     // Input tests
-    if (n_list.size() != d_list.size()) {
+    if (n_list.size() not_eq d_list.size()) {
         throw std::logic_error("n_list and d_list must have same length");
     }
-    if (!isinf(d_list[0]) || !isinf(d_list[d_list.size() - 1])) {
+    if (not isinf(d_list[0]) or not isinf(d_list[d_list.size() - 1])) {
         throw std::runtime_error("d_list must start and end with inf!");
     }
-    if (std::abs((n_list.front() * std::sin(th_0)).imag()) < 100 * EPSILON || is_forward_angle(n_list.front(), th_0)) {
+    if (std::abs((n_list.front() * std::sin(th_0)).imag()) < 100 * EPSILON or is_forward_angle(n_list.front(), th_0)) {
         throw std::runtime_error("Error in n0 or th0!");
     }
     size_t num_layers = n_list.size();
@@ -318,7 +344,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // matter.
     for (size_t i = 1; i < num_layers - 1; i++) {
         if (delta[i].imag() > 35) {
-            delta[i] = delta[i].real() + 35i;
+            delta[i] = delta[i].real() + 35I;
             throw ValueWarning("Warning: Layers that are almost perfectly opaque "
                                "are modified to be slightly transmissive, "
                                "allowing 1 photon in 10^30 to pass through. It's "
@@ -343,29 +369,31 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // M_n is M_list[n].
     // M_0 and M_{num_layers-1} are not defined.
     // My M is a bit different from Sernelius's, but Mtilde is the same.
-    std::vector<std::array<std::array<std::complex<T>, 2>, 2>> M_list;
+    // std::vector<std::array<std::array<std::complex<T>, 2>, 2>> M_list;
+    std::vector<ComplexMatrix<T, 2, 2>> M_list;
     for (size_t i = 1; i < num_layers - 1; i++) {
-        M_list.push_back(dot({{std::exp(-1i * delta[i]), 0}, {0, std::exp(1i * delta[i])}},
-                             {{1, r_list[i][i + 1]}, {r_list[i][i + 1], 1}}));
+        M_list.push_back(dot(ComplexMatrix({{std::exp(-1I * delta[i]), 0}, {0, std::exp(1I * delta[i])}}),
+                                                        ComplexMatrix({{1, r_list[i][i + 1]}, {r_list[i][i + 1], 1}})));
     }
-    std::array<std::array<std::complex<T>, 2>, 2> Mtilde = {{1, 0},
-                                                            {0, 1}};
+    // std::array<std::array<std::complex<T>, 2>, 2> Mtilde = {{1, 0}, {0, 1}};
+    ComplexMatrix<T, 2, 2> Mtilde = {{1, 0}, {0, 1}};
     for (size_t i = 1; i < num_layers - 1; i++) {
         Mtilde = dot(Mtilde, M_list[i]);
     }
-    Mtilde = dot({{{1 / t_list[0][1], r_list[0][1] / t_list[0][1]}, {r_list[0][1] / t_list[0][1], 1 / t_list[0][1]}}},
-                 Mtilde);
+    Mtilde = dot(ComplexMatrix({{1, r_list[0][1]}, {r_list[0][1], 1}}) / t_list[0][1], Mtilde);
     // Net complex transmission and reflection amplitudes
     std::complex<T> r = Mtilde[1][0] / Mtilde[0][0];
     std::complex<T> t = 1 / Mtilde[0][0];
     // vw_list[n] = [v_n, w_n]. v_0 and w_0 are undefined because the 0th medium
     // has no left interface.
-    std::vector<std::array<std::complex<T>, 2>> vw_list(num_layers, std::array<std::complex<T>, 2>());
-    std::array<std::array<std::complex<T>, 1>, 2> vw;
-    vw_list.back() = squeeze(transpose(vw));
+    // std::vector<std::array<std::complex<T>, 2>> vw_list(num_layers, std::array<std::complex<T>, 2>());
+    // std::array<std::array<std::complex<T>, 1>, 2> vw;
+    std::vector<std::valarray<std::complex<T>>> vw_list(num_layers, std::valarray<std::complex<T>>());
+    ComplexMatrix<T, 2, 1> vw;
+    vw_list.back() = vw.transpose().squeeze();
     for (size_t i = num_layers - 2; i > 0; i--) {
         vw = dot(M_list[i], vw);
-        vw_list[i] = squeeze(transpose(vw));
+        vw_list[i] = vw.transpose().squeeze();
     }
     // Net transmitted and reflected power, as a proportion of the incoming light
     // power.
@@ -450,6 +478,82 @@ auto unpolarized_RT(std::valarray<std::complex<T>> &n_list, const std::valarray<
 template<typename T>
 auto position_resolved(size_t layer, T distance,
                        const coh_tmm_dict<T> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<T, std::complex<T>>> {
-    std::array<std::complex<T>, 2> v = (layer > 0) ? coh_tmm_data["vw_list"][layer] : 1;
-    std::array<std::complex<T>, 2> w = (layer > 0) ? coh_tmm_data["vw_list"][layer] : coh_tmm_data["r"];
+    std::complex<T> v = (layer > 0) ? coh_tmm_data["vw_list"][layer][0] : 1;
+    std::complex<T> w = (layer > 0) ? coh_tmm_data["vw_list"][layer][1] : coh_tmm_data["r"];
+    std::complex<T> kz = coh_tmm_data["kz_list"][layer];
+    std::complex<T> th = coh_tmm_data["th_list"][layer];
+    std::complex<T> n = coh_tmm_data["n_list"][layer];
+    std::complex<T> n_0 = coh_tmm_data["n_list"][0];
+    std::complex<T> th_0 = coh_tmm_data["th_0"];
+    char pol = coh_tmm_data["pol"];
+    if (not ((layer >= 1 and 0 <= distance and distance <= coh_tmm_data["d_list"][layer]) or (layer == 0 and distance <= 0))) {
+        throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(layer));
+    }
+    // The amplitude of forward-moving wave is Ef, backwards is Eb
+    std::complex<T> Ef = v * std::exp(1I * kz * distance);
+    std::complex<T> Eb = w * std::exp(-1I * kz * distance);
+    // Poynting vector
+    T poyn = pol == 's' ? (n * std::cos(th) * std::conj(Ef + Eb) * (Ef - Eb)).real() / (n_0 * std::cos(th_0)).real() :
+             (n * std::conj(std::cos(th)) * (Ef + Eb) * std::conj(Ef - Eb)).real() / (n_0 * std::conj(std::cos(th_0))).real();
+    // Absorbed energy density
+    T absor = pol == 's' ? (n * std::cos(th) * kz * std::pow(std::abs(Ef + Eb), 2)).imag() / (n_0 * std::cos(th_0)).real() :
+              (n * std::conj(std::cos(th)) * (kz * std::pow(std::abs(Ef - Eb), 2) - std::conj(kz) * std::pow(std::abs(Ef + Eb), 2))).imag() / (n_0 * std::conj(std::cos(th_0))).real();
+    // Electric field
+    std::complex<T> Ex = pol == 's' ? 0 : (Ef - Eb) * std::cos(th);
+    std::complex<T> Ey = pol == 's' ? Ef + Eb : 0;
+    std::complex<T> Ez = pol == 's' ? 0 : -(Ef + Eb) * std::sin(th);
+    return {{"poyn", poyn}, {"absor", absor}, {"Ex", Ex}, {"Ey", Ey}, {"Ez", Ez}};
+}
+
+/*
+ * d_list is a list of thicknesses of layers, all of which are finite.
+
+ * distance is the distance from the front of the whole multilayer structure
+ * (i.e., from the start of layer 0.)
+
+ * Function returns [layer, z], where:
+
+ * - layer is what number layer you are at.
+ * - z is the distance into that layer.
+
+ * For large distance, layer = len(d_list), even though d_list[layer] does not
+ * exist in this case.
+ * For negative distance, return [-1, distance]
+ */
+template<typename T>
+auto find_in_structure(const std::valarray<std::complex<T>> &d_list, T distance) -> std::pair<size_t, T> {
+    if (std::isinf(d_list.sum())) {
+        throw std::runtime_error("This function expects finite arguments");
+    }
+    if (distance < 0) {
+        throw std::runtime_error("Should return [-1, distance]");
+    }
+    size_t layer = 0;
+    while (layer < d_list.size() and distance >= d_list[layer]) {
+        distance -= d_list[layer];
+        layer++;
+    }
+    return std::pair(layer, distance);
+}
+
+/*
+ * d_list is list of thicknesses of layers [inf, blah, blah, ..., blah, inf]
+
+ * distance is the distance from the front of the whole multilayer structure
+ * (i.e., from the start of layer 1.)
+
+ * Function returns [layer, z], where:
+
+ * - layer is what number layer you are at.
+ * - z is the distance into that layer.
+
+ * For distance < 0, returns [0, distance].
+ * So the first interface can be described as either [0,0] or [1,0].
+ */
+template<typename T>
+auto find_in_structure_inf(const std::valarray<std::complex<T>> &d_list, T distance) -> std::pair<size_t, T> {
+    if (distance < 0) {
+        return std::pair(0, distance);
+    }
+    std::pair<size_t, T> found = find_in_structure(d_list[std::slice(1, d_list.size() - 2, 1)], distance);
 }
