@@ -52,3 +52,49 @@ auto squeezeArray(const std::array<T, N> &array) -> T {
     }
     throw std::logic_error("Array cannot be squeezed");
 }
+
+// Reference:
+// https://stackoverflow.com/questions/53378000/how-to-access-to-subsequence-of-a-valarray-considering-it-as-a-2d-matrix-in-c
+// Using std::slice/std::slice_array is not a good idea
+template<typename T, size_t N, size_t M>
+class ComplexMatrix {
+private:
+    std::valarray<T> data;
+public:
+    ComplexMatrix() : data(N * M) {}
+    explicit ComplexMatrix(std::valarray<T> data) : data(data) {}
+    ComplexMatrix(std::initializer_list<std::initializer_list<T>> &initList) {
+        size_t i = 0;
+        for (const auto &row : initList) {
+            std::move(row.begin(), row.end(), &data[i * M]);
+            ++i;
+        }
+    }
+
+    class RowProxy {
+    private:
+        std::valarray<T> &elems;
+        size_t row;
+    public:
+        explicit RowProxy(std::valarray<T>& elems, size_t row) : elems(elems), row(row) {}
+        auto operator[](size_t j) -> T & {
+            return elems[row * M + j];
+        }
+    };
+
+    auto operator[](size_t i) -> RowProxy {
+        return RowProxy(data, M, i);
+    }
+    auto operator/(const T& scalar) const -> ComplexMatrix<T, N, M> {
+        ComplexMatrix<T, N, M> result;
+        result.data = data / scalar;
+        return result;
+    }
+
+    auto squeeze() const -> std::valarray<std::complex<T>> {
+        if (N == 1) {
+            return data;
+        }
+        throw std::logic_error("ComplexMatrix cannot be squeezed");
+    }
+};

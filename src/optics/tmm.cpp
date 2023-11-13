@@ -10,7 +10,7 @@
 #include "tmm.h"
 
 template<typename T>
-using coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<std::complex<T>>, std::vector<std::valarray<std::complex<T>>>>>;
+using coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
 
 class ValueWarning : public std::runtime_error {
 public:
@@ -25,37 +25,33 @@ static inline auto complex_to_string_with_name(const std::complex<T> c, const st
     return ss.str();
 }
 
-// Reference:
-// https://stackoverflow.com/questions/53378000/how-to-access-to-subsequence-of-a-valarray-considering-it-as-a-2d-matrix-in-c
-// Using std::slice/std::slice_array is not a good idea
 template<typename T, size_t N, size_t M>
 class ComplexMatrix {
 private:
-    std::valarray<T> data;
+    std::array<std::array<T, M>, N> data;
 public:
-    ComplexMatrix() : data(N * M) {}
-    explicit ComplexMatrix(std::valarray<T> data) : data(data) {}
+    ComplexMatrix() : data(N, std::array<T, M>()) {}
+    explicit ComplexMatrix(td::array<std::array<T, M>, N> data) : data(data) {}
     ComplexMatrix(std::initializer_list<std::initializer_list<T>> &initList) {
         size_t i = 0;
         for (const auto &row : initList) {
-            std::move(row.begin(), row.end(), &data[i * M]);
+            std::move(row.begin(), row.end(), &data[i]);
             ++i;
         }
     }
 
     class RowProxy {
     private:
-        std::valarray<T> &elems;
-        size_t row;
+        std::array<T, M> &row;
     public:
-        explicit RowProxy(std::valarray<T>& elems, size_t row) : elems(elems), row(row) {}
+        explicit RowProxy(std::array<T, M> &row) : row(row) {}
         auto operator[](size_t j) -> T & {
-            return elems[row * M + j];
+            return row[j];
         }
     };
 
     auto operator[](size_t i) -> RowProxy {
-        return RowProxy(data, M, i);
+        return RowProxy(data[i]);
     }
     auto operator/(const T& scalar) const -> ComplexMatrix<T, N, M> {
         ComplexMatrix<T, N, M> result;
@@ -87,11 +83,100 @@ public:
         }
         return result;
     }
-    auto squeeze() const -> std::valarray<std::complex<T>> {
+    auto squeeze() const -> std::array<std::complex<T>, M> {
         if (N == 1) {
-            return data;
+            return data[0];
         }
         throw std::logic_error("ComplexMatrix cannot be squeezed");
+    }
+};
+
+/*
+ * Absorption in a given layer is a pretty simple analytical function:
+ * The sum of four exponentials.
+
+ * a(z) = A1*exp(a1*z) + A2*exp(-a1*z)
+ *        + A3*exp(1j*a3*z) + conj(A3)*exp(-1j*a3*z)
+
+ * where a(z) is absorption at depth z, with z=0 being the start of the layer,
+ * and A1,A2,a1,a3 are real numbers, with a1>0, a3>0, and A3 is complex.
+ * The class stores these five parameters, as well as d, the layer thickness.
+
+ * This gives absorption as a fraction of intensity coming towards the first
+ * layer of the stack.
+ */
+template<typename T>
+class AbsorpAnalyticFn {
+private:
+    std::complex<T> d, A3;
+    T a1, a3, A1, A2;;
+public:
+    /*
+     * fill in the absorption analytic function starting from coh_tmm_data
+     * (the output of coh_tmm), for absorption in the layer with index
+     * "layer".
+     */
+    void fill_in(coh_tmm_dict<T> coh_tmm_data, size_t layer) {
+        char pol = coh_tmm_data["pol"];
+        std::complex<T> v = coh_tmm_data["vw_list"][layer][0];
+        std::complex<T> w = coh_tmm_data["vw_list"][layer][1];
+        std::complex<T> kz = coh_tmm_data["kz_list"][layer];
+        std::complex<T> n = coh_tmm_data["n_list"][layer];
+        std::complex<T> n_0 = coh_tmm_data["n_list"][0];
+        std::complex<T> th_0 = coh_tmm_data["th_0"];
+        std::complex<T> th = coh_tmm_data["th"][layer];
+        d = coh_tmm_data["d_list"][layer];
+
+        a1 = (2 * kz).imag();
+        a3 = (2 * kz).real();
+
+        if (pol == 's') {
+            T temp = (n * std::cos(th) * kz).imag() / (n_0 * std::cos(th_0)).real();
+            A1 = temp * std::norm(w);
+            A2 = temp * std::norm(v);
+            A3 = temp * v * std::conj(w);
+        } else {
+            T temp = 2 * kz.imag() * (n * std::cos(std::conj(th))).real() / (n_0 * std::conj(std::cos(th_0))).real();
+            A1 = temp * std::norm(w);
+            A2 = temp * std::norm(v);
+            A3 = v * std::conj(w) * -2 * kz.real() * (n * std::cos(std::conj(th))).imag() / (n_0 * std::conj(std::cos(th_0))).real();
+        }
+    }
+    /*
+     * Calculates absorption at a given depth z, where z=0 is the start of the
+     * layer.
+     */
+    auto run(T z) const -> std::complex<T> {
+        return A1 * std::exp(a1 * z) + A2 * std::exp(-a1 * z) + A3 * std::exp(1I * a3 * z) + std::conj(A3) * std::exp(-1I * a3 * z);
+    }
+    /*
+     * Flip the function front-to-back, to describe a(d-z) instead of a(z),
+     * where d is layer thickness.
+     */
+    void flip() {
+        T newA1 = A2 * std::exp(-a1 * d);
+        T newA2 = A1 * std::exp(-a1 * d);
+        A1, A2 = newA1, newA2;
+        A3 = std::conj(A3 * std::exp(1I * a3 * d));
+    }
+    /*
+     * multiplies the absorption at each point by "factor".
+     */
+    void scale(T factor) {
+        A1 *= factor;
+        A2 *= factor;
+        A3 *= factor;
+    }
+    /*
+     * adds another compatible absorption analytical function
+     */
+    void add(const AbsorpAnalyticFn &b) {
+        if (b.a1 not_eq a1 or b.a3 not_eq a3) {
+            throw std::runtime_error("Incompatible absorption analytical functions!");
+        }
+        A1 += b.A1;
+        A2 += b.A2;
+        A3 += b.A3;
     }
 };
 
@@ -386,9 +471,8 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     std::complex<T> t = 1 / Mtilde[0][0];
     // vw_list[n] = [v_n, w_n]. v_0 and w_0 are undefined because the 0th medium
     // has no left interface.
-    // std::vector<std::array<std::complex<T>, 2>> vw_list(num_layers, std::array<std::complex<T>, 2>());
+    std::vector<std::array<std::complex<T>, 2>> vw_list(num_layers, std::array<std::complex<T>, 2>());
     // std::array<std::array<std::complex<T>, 1>, 2> vw;
-    std::vector<std::valarray<std::complex<T>>> vw_list(num_layers, std::valarray<std::complex<T>>());
     ComplexMatrix<T, 2, 1> vw;
     vw_list.back() = vw.transpose().squeeze();
     for (size_t i = num_layers - 2; i > 0; i--) {
@@ -556,4 +640,61 @@ auto find_in_structure_inf(const std::valarray<std::complex<T>> &d_list, T dista
         return std::pair(0, distance);
     }
     std::pair<size_t, T> found = find_in_structure(d_list[std::slice(1, d_list.size() - 2, 1)], distance);
+    return std::pair(found.first + 1, found.second);
+}
+
+/*
+ * Gives the location of the start of any given layer, relative to the front
+ * of the whole multilayer structure.
+ * (i.e., the start of layer 1)
+ *
+ * d_list is list of thicknesses of layers [inf, blah, blah, ..., blah, inf]
+ */
+template<typename T>
+auto layer_starts(const std::valarray<std::complex<T>> &d_list) -> std::valarray<std::complex<T>> {
+    std::valarray<std::complex<T>> final_answer(d_list.size());
+    final_answer[0] = -INFINITY;
+    final_answer[1] = 0;
+    for (size_t i = 2; i < d_list.size(); i++) {
+        final_answer[i] = final_answer[i - 1] + d_list[i - 1];
+    }
+}
+
+template <typename T>
+std::valarray<T> diff(const std::valarray<T> &input) {
+    if (input.size() < 2) {
+        // If the input has fewer than two elements, return an empty valarray
+        return std::valarray<T>();
+    }
+    // Calculate the differences
+    std::valarray<T> result(input.size() - 1);
+    for (size_t i = 0; i < result.size(); i++) {
+        result[i] = input[i + 1] - input[i];
+    }
+    return result;
+}
+
+/*
+ * An array listing what proportion of light is absorbed in each layer.
+ *
+ * Assumes the final layer eventually absorbs all transmitted light.
+ *
+ * Assumes the initial layer eventually absorbs all reflected light.
+ *
+ * Entries of the array should sum to 1.
+ *
+ * coh_tmm_data is output of coh_tmm()
+ */
+template<typename T>
+auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) {
+    size_t num_layers = coh_tmm_data["d_list"].size();
+    std::valarray<T> power_entering_each_layer(num_layers);
+    power_entering_each_layer[0] = 1;
+    power_entering_each_layer[1] = coh_tmm_data["power_entering"];
+    power_entering_each_layer[num_layers - 1] = coh_tmm_data["T"];
+    for (size_t i = 2; i < num_layers - 1; i++) {
+        power_entering_each_layer[i] = position_resolved(i, 0, coh_tmm_data)["poyn"];
+    }
+    std::valarray<T> final_answer(num_layers);
+
 }
