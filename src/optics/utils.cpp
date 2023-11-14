@@ -98,3 +98,17 @@ public:
         throw std::logic_error("ComplexMatrix cannot be squeezed");
     }
 };
+
+template <typename T>
+std::valarray<T> diff(const std::valarray<T> &input) {
+    if (input.size() < 2) {
+        // If the input has fewer than two elements, return an empty valarray
+        return std::valarray<T>();
+    }
+    // Calculate the differences
+    std::valarray<T> result(input.size() - 1);
+    for (size_t i = 0; i < result.size(); i++) {
+        result[i] = input[i + 1] - input[i];
+    }
+    return result;
+}

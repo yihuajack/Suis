@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <array>
 #include <complex>
+#include <numeric>
 #include <sstream>
 #include <stdexcept>
 #include <unordered_map>
@@ -16,6 +17,8 @@ class ValueWarning : public std::runtime_error {
 public:
     explicit ValueWarning(const std::string &message) : std::runtime_error(message) {}
 };
+
+enum class LayerType { Coherent, InCoherent };
 
 template<typename T>
 static inline auto complex_to_string_with_name(const std::complex<T> c, const std::string &name) -> std::string {
@@ -406,7 +409,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     if (n_list.size() not_eq d_list.size()) {
         throw std::logic_error("n_list and d_list must have same length");
     }
-    if (not isinf(d_list[0]) or not isinf(d_list[d_list.size() - 1])) {
+    if (not std::isinf(d_list[0]) or not std::isinf(d_list[d_list.size() - 1])) {
         throw std::runtime_error("d_list must start and end with inf!");
     }
     if (std::abs((n_list.front() * std::sin(th_0)).imag()) < 100 * EPSILON or is_forward_angle(n_list.front(), th_0)) {
@@ -606,7 +609,7 @@ auto position_resolved(size_t layer, T distance,
  */
 template<typename T>
 auto find_in_structure(const std::valarray<std::complex<T>> &d_list, T distance) -> std::pair<size_t, T> {
-    if (std::isinf(d_list.sum())) {
+    if (std::std::isinf(d_list.sum())) {
         throw std::runtime_error("This function expects finite arguments");
     }
     if (distance < 0) {
@@ -660,20 +663,6 @@ auto layer_starts(const std::valarray<std::complex<T>> &d_list) -> std::valarray
     }
 }
 
-template <typename T>
-std::valarray<T> diff(const std::valarray<T> &input) {
-    if (input.size() < 2) {
-        // If the input has fewer than two elements, return an empty valarray
-        return std::valarray<T>();
-    }
-    // Calculate the differences
-    std::valarray<T> result(input.size() - 1);
-    for (size_t i = 0; i < result.size(); i++) {
-        result[i] = input[i + 1] - input[i];
-    }
-    return result;
-}
-
 /*
  * An array listing what proportion of light is absorbed in each layer.
  *
@@ -686,7 +675,7 @@ std::valarray<T> diff(const std::valarray<T> &input) {
  * coh_tmm_data is output of coh_tmm()
  */
 template<typename T>
-auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) {
+auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<T> {
     size_t num_layers = coh_tmm_data["d_list"].size();
     std::valarray<T> power_entering_each_layer(num_layers);
     power_entering_each_layer[0] = 1;
@@ -696,5 +685,64 @@ auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) {
         power_entering_each_layer[i] = position_resolved(i, 0, coh_tmm_data)["poyn"];
     }
     std::valarray<T> final_answer(num_layers);
+    // std::valarray does not have begin() end(), use std::begin() std::end() instead
+    std::adjacent_difference(power_entering_each_layer.begin(), power_entering_each_layer.end(), std::begin(final_answer));
+    final_answer[num_layers - 1] = power_entering_each_layer[num_layers - 1];
+    return final_answer;
+}
 
+/*
+ * Helper function for inc_tmm. Groups and sorts layer information.
+
+ * See coh_tmm for definitions of n_list, d_list.
+
+ * c_list is "coherency list". Each entry should be 'i' for incoherent or 'c'
+ * for 'coherent'.
+
+ * A "stack" is a group of one or more consecutive coherent layers. A "stack
+ * index" labels the stacks 0, 1, 2, ... The "within-stack index" counts the
+ * coherent layers within the stack 1, 2, 3, ... [index 0 is the incoherent layer
+ * before the stack starts]
+
+ * An "incoherent layer index" labels the incoherent layers 0, 1, 2, ...
+
+ * An "alllayer index" labels all layers (all elements of d_list) 0, 1, 2, ...
+
+ * Returns info about how the layers relate:
+
+ * - stack_d_list[i] = list of thicknesses of each coherent layer in the i'th
+ *   stack, plus starting and ending with "inf"
+ * - stack_n_list[i] = list of refractive index of each coherent layer in the
+ *   i'th stack, plus the two surrounding incoherent layers
+ * - all_from_inc[i] = j means that the layer with incoherent index i has
+ *   alllayer index j
+ * - inc_from_all[i] = j means that the layer with alllayer index i has
+ *   incoherent index j. If j = nan then the layer is coherent.
+ * - all_from_stack[i1][i2] = j means that the layer with stack index i1 and
+ *   within-stack index i2 has alllayer index j
+ * - stack_from_all[i] = [j1 j2] means that the layer with alllayer index i is
+ *   part of stack j1 with withinstack-index j2. If stack_from_all[i] = nan
+ *   then the layer is incoherent
+ * - inc_from_stack[i] = j means that the i'th stack comes after the layer
+ *   with incoherent index j, and before the layer with incoherent index j+1.
+ * - stack_from_inc[i] = j means that the layer with incoherent index i comes
+ *   immediately after the j'th stack. If j=nan, it is not immediately
+ *   following a stack.
+ * - num_stacks = number of stacks
+ * - num_inc_layers = number of incoherent layers
+ * - num_layers = number of layers in total
+ */
+template<typename T>
+auto inc_group_layer(const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
+                     const std::vector<LayerType> &c_list) {
+    // isinf() and std::inf() are different
+    // isinf() is in "math.h": #define isinf(x) (fpclassify(x) == FP_INFINITE)
+    // std::isinf() is in <cmath>: true if infinite, false otherwise
+    // (INFINITY, std::numeric_limits<double>::infinity(), std::exp(800), etc.)
+    if (not std::isinf(d_list[0]) or not std::isinf(d_list[d_list.size() - 1])) {
+        throw std::runtime_error("d_list must start and end with inf!");
+    }
+    if (c_list.front() not_eq LayerType::InCoherent or c_list.back() not_eq LayerType::InCoherent) {
+        throw std::runtime_error("c_list should start and end with Incoherent");
+    }
 }
