@@ -12,6 +12,8 @@
 
 template<typename T>
 using coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
+template<typename T>
+using inc_group_layer_dict = std::unordered_map<std::string, std::variant<std::vector<std::vector<T>>, std::vector<std::vector<std::complex<T>>>, std::vector<size_t>, std::vector<long long int>, std::vector<std::vector<size_t>>, size_t>>;
 
 class ValueWarning : public std::runtime_error {
 public:
@@ -487,21 +489,19 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     T R = R_from_r(r);
     T Tr = T_from_t(pol, t, n_list[0], n_list[n_list.size() - 1], th_0, th_list[th_list.size() - 1]);
     T power_entering = power_entering_from_r(pol, r, n_list[0], th_0);
-    std::unordered_map<std::string, std::vector<std::complex<T>>> result;
-    result["r"] = r;
-    result["t"] = t;
-    result["R"] = R;
-    result["T"] = Tr;
-    result["power_entering"] = power_entering;
-    result["vw_list"] = vw_list;
-    result["kz_list"] = kz_list;
-    result["th_list"] = th_list;
-    result["pol"] = pol;
-    result["n_list"] = n_list;
-    result["d_list"] = d_list;
-    result["th_0"] = th_0;
-    result["lam_vac"] = lam_vac;
-    return result;
+    return {{"r", r},
+            {"t", t},
+            {"R", R},
+            {"T", Tr},
+            {"power_entering", power_entering},
+            {"vw_list", vw_list},
+            {"kz_list", kz_list},
+            {"th_list", th_list},
+            {"pol", pol},
+            {"n_list", n_list},
+            {"d_list", d_list},
+            {"th_0", th_0},
+            {"lam_vac", lam_vac}};
 }
 
 /*
@@ -734,7 +734,7 @@ auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<
  */
 template<typename T>
 auto inc_group_layer(const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
-                     const std::vector<LayerType> &c_list) {
+                     const std::vector<LayerType> &c_list) -> inc_group_layer_dict<T> {
     // isinf() and std::inf() are different
     // isinf() is in "math.h": #define isinf(x) (fpclassify(x) == FP_INFINITE)
     // std::isinf() is in <cmath>: true if infinite, false otherwise
@@ -745,4 +745,74 @@ auto inc_group_layer(const std::valarray<std::complex<T>> &n_list, const std::va
     if (c_list.front() not_eq LayerType::InCoherent or c_list.back() not_eq LayerType::InCoherent) {
         throw std::runtime_error("c_list should start and end with Incoherent");
     }
+    if (n_list.size() not_eq d_list.size() or d_list.size() not_eq c_list.size()) {
+        throw std::logic_error("List sizes do not match!");
+    }
+    size_t inc_index = 0;
+    size_t stack_index = 0;
+    std::vector<std::vector<T>> stack_d_list;
+    std::vector<std::vector<std::complex<T>>> stack_n_list;
+    std::vector<size_t> all_from_inc;
+    std::vector<long long int> inc_from_all;
+    std::vector<std::vector<size_t>> all_from_stack;
+    // Although we know the size of the inner vector is 2 if valid, but we want to make it empty if invalid
+    std::vector<std::vector<size_t>> stack_from_all;
+    std::vector<long long int> inc_from_stack;
+    std::vector<size_t> stack_from_inc;
+    bool stack_in_progress = false;
+    std::vector<T> ongoing_stack_d_list;
+    std::vector<std::complex<T>> ongoing_stack_n_list;
+    size_t within_stack_index = 0;
+    for (size_t alllayer_index = 0; alllayer_index < n_list.size(); alllayer_index++) {
+        if (c_list[alllayer_index] == LayerType::Coherent) {  // coherent layer
+            // NAN has to be a float, double, or long double
+            // Use -1 instead of NAN or std::nan/nanf/nanl
+            inc_from_all.push_back(-1);
+            if (not stack_in_progress) {  // this layer is starting new stack
+                stack_in_progress = true;
+                ongoing_stack_d_list = {INFINITY, d_list[alllayer_index]};
+                ongoing_stack_n_list = {n_list[alllayer_index - 1], n_list[alllayer_index]};
+                stack_from_all.push_back({stack_index, 1});
+                all_from_stack.push_back({alllayer_index - 1, alllayer_index});
+                inc_from_stack.push_back(inc_index - 1);  // narrowing conversion
+                within_stack_index = 1;
+            } else {  // another coherent layer in the same stack
+                ongoing_stack_d_list.push_back(d_list[alllayer_index]);
+                ongoing_stack_n_list.push_back(n_list[alllayer_index]);
+                within_stack_index++;
+                stack_from_all.push_back({stack_index, within_stack_index});
+                all_from_stack.back().push_back(alllayer_index);
+            }
+        } else if (c_list[alllayer_index] == LayerType::InCoherent) {  // incoherent layer
+            stack_from_all.emplace_back();  // push_back({})
+            inc_from_all.push_back(inc_index);  // narrowing conversion
+            all_from_inc.push_back(alllayer_index);
+            if (not stack_in_progress) {  // the previous layer was also incoherent
+                stack_from_inc.push_back(stack_index);
+            } else {  // the previous layer was coherent
+                stack_in_progress = false;
+                stack_from_inc.push_back(stack_index);
+                ongoing_stack_d_list.push_back(INFINITY);
+                stack_d_list.push_back(ongoing_stack_d_list);
+                ongoing_stack_n_list.push_back(n_list[alllayer_index]);
+                stack_n_list.push_back(ongoing_stack_n_list);
+                all_from_stack.back().push_back(alllayer_index);
+                stack_index++;
+            }
+            inc_index++;
+        } else {
+            throw std::invalid_argument("Error: c_list entries must be Incoherent or Coherent!");
+        }
+    }
+    return {{"stack_d_list", stack_d_list},
+            {"stack_n_list", stack_n_list},
+            {"all_from_inc", all_from_inc},
+            {"inc_from_all", inc_from_all},
+            {"all_from_stack", all_from_stack},
+            {"stack_from_all", stack_from_all},
+            {"inc_from_stack", inc_from_stack},
+            {"stack_from_inc", stack_from_inc},
+            {"num_stacks", all_from_stack.size()},
+            {"num_inc_layers", all_from_inc.size()},
+            {"num_layers", n_list.size()}};
 }
