@@ -61,15 +61,11 @@ auto real_if_close(const std::valarray<T1> &a, T2 tol = TOL) -> std::variant<std
     if (tol > 1) {
         tol *= EPSILON<T2>;
     }
-    for (const T1 &elem : a) {
-        if (std::abs(a.imag()) < tol) {
-            return a.apply([](T1 x) -> T2
-                {
-                    return x.real();
-                });
-        }
-    }
-    return std::all_of(std::begin(a), std::end(a), [&tol](const T1 &elem) { return std::abs(elem.imag()) < tol; }) ;
+    return std::all_of(std::begin(a), std::end(a), [&tol](const T1 &elem) {
+        return std::abs(elem.imag()) < tol;
+    }) ? a.apply([](T1 x) -> T2 {
+        return x.real();
+    }) : a;
 }
 
 template<typename T, std::size_t N, std::size_t M>
@@ -104,7 +100,8 @@ public:
     // as it will alert error: too many initializers for arrays like {0, 1, 2, 3, 4} or {{0, 1}, {2, 3, 4}}.
     // ComplexMatrix<int, 2, 2> = {1, 0, 0, 1} will construct by the array<array> [MOVING] constructor;
     // others will construct by the initializer_list<initializer_list> constructor due to automatic brace elision.
-    ComplexMatrix([[maybe_unused]] std::initializer_list<std::initializer_list<T>> init_list) {
+    // See Item 7, Chapter 3 of Effective Modern C++
+    ComplexMatrix(std::initializer_list<std::initializer_list<T>> init_list) {
         std::size_t i = 0;
         for (std::initializer_list<T> row : init_list) {
             std::move(row.begin(), row.end(), data[i].begin());
@@ -955,5 +952,7 @@ template<typename T>
 auto inc_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
              const std::vector<LayerType> &c_list, const std::complex<T> th_0, const T lam_vac) {
     // Input tests
-
+    if ((real_if_close(n_list[0] * std::sin(th_0))).imag() not_eq 0) {
+        throw std::runtime_error("Error in n0 or th0!");
+    }
 }
