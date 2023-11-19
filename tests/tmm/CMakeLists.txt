@@ -3,4 +3,5 @@ project(tmm)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(tmm main.cpp ../../src/optics/tmm.cpp)
+add_executable(tmm main.cpp ../../src/optics/tmm.cpp
+        ../../src/optics/FixedMatrix.cpp)

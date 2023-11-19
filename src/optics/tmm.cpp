@@ -8,12 +8,15 @@
 #include <valarray>
 #include <variant>
 #include <vector>
+#include "FixedMatrix.h"
 #include "tmm.h"
 
 template<typename T>
 using coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
 template<typename T>
-using inc_group_layer_dict = std::unordered_map<std::string, std::variant<std::vector<std::vector<T>>, std::vector<std::vector<std::complex<T>>>, std::vector<std::size_t>, std::vector<long long int>, std::vector<std::vector<std::size_t>>, std::size_t>>;
+using inc_group_layer_dict = std::unordered_map<std::string, std::variant<std::size_t, std::vector<std::size_t>, std::vector<long long int>, std::vector<std::vector<T>>, std::vector<std::vector<std::complex<T>>>, std::vector<std::vector<std::size_t>>>>;
+template<typename T>
+using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t, std::vector<std::size_t>, std::vector<long long int>, std::vector<T>, std::vector<std::vector<T>>, std::vector<std::vector<std::complex<T>>>, std::vector<std::vector<std::size_t>>, std::vector<std::array<T, 2>>, std::vector<coh_tmm_dict<T>>>>;
 
 class ValueWarning : public std::runtime_error {
 public:
@@ -61,136 +64,40 @@ auto real_if_close(const std::valarray<T1> &a, T2 tol = TOL) -> std::variant<std
     if (tol > 1) {
         tol *= EPSILON<T2>;
     }
-    return std::all_of(std::begin(a), std::end(a), [&tol](const T1 &elem) {
+    // The parameters of the lambda expression (function) for std::valarray<T>::apply cannot be a reference
+    // but can be consts if it is not modified.
+    // Note that apply() has to be valarray<T> apply( T func(T) ) const;
+    // or valarray<T> apply( T func(const T&) ) const;
+    // First, you are not allowed to change the original valarray;
+    // second, it is impossible to return a valarray that is not of type T
+    // Besides, operands to '?:' cannot have different types.
+    if (std::all_of(std::begin(a), std::end(a), [&tol](const T1 &elem) {
         return std::abs(elem.imag()) < tol;
-    }) ? a.apply([](T1 x) -> T2 {
-        return x.real();
-    }) : a;
+    })) {
+        std::valarray<T2> real_part_array(a.size());
+        std::transform(std::begin(a), std::end(a), std::begin(real_part_array), [](const std::complex<T2> &c_num) {
+            return c_num.real();
+        });
+        return real_part_array;
+    }
+    return a;
 }
 
-template<typename T, std::size_t N, std::size_t M>
-class ComplexMatrix {
-private:
-    std::array<std::array<T, M>, N> data;
-public:
-    ComplexMatrix() : data(N, std::array<T, M>()) {}
-    ComplexMatrix(const ComplexMatrix &other) : data(other.data) {}
-    ComplexMatrix(ComplexMatrix &&other) noexcept : data(std::move(other.data)) {}
-    explicit ComplexMatrix(const std::array<std::array<T, M>, N> &data) : data(data) {}
-    explicit ComplexMatrix(std::array<std::array<T, M>, N> &&data) noexcept : data(std::move(data)) {}
-    // Different from traditional C-style arrays that can be brace-initialized by {{1, 0}, {0, 1}}
-    // 2D std::array has to be brace-initialized by {{{1, 0}, {0, 1}}} or {1, 0, 0, 1}
-    // https://stackoverflow.com/questions/12844475/why-cant-simple-initialize-with-braces-2d-stdarray
-    // Distinguish std::initializer_list<T> and list-initialization
-    // Note that std::initializer_list<T> uses copy-semantics by holding its values as const objects, see
-    // https://stackoverflow.com/questions/24109445/stdinitializer-list-and-reference-types
-    // Since std::initializer_list may be implemented as a pair of pointers or pointer and length,
-    // it is often passed by value, see
-    // https://stackoverflow.com/questions/17803475/why-is-stdinitializer-list-often-passed-by-value
-    // init_list and row must not be a reference; otherwise,
-    // error: cannot bind non-const lvalue reference of type 'std::initializer_list<std::initializer_list<int> >&'
-    // to an rvalue of type 'std::initializer_list<std::initializer_list<int> >'
-    // error: binding reference of type 'std::initializer_list<int>&'
-    // to 'const std::initializer_list<int>' discards qualifiers
-    // Hence, we cannot distinguish the move and copy constructor or assignment operator
-    // like std::copy(row.begin(), row.end(), data[i].begin());
-    // A pitfall is that 2D std::array behaves like traditional 2D C-style array that when moving or copying an
-    // initializer list or a vector to the array, the extra element will be added to the next sub-array.
-    // Thus, it is encouraged to use the array<array> constructor,
-    // as it will alert error: too many initializers for arrays like {0, 1, 2, 3, 4} or {{0, 1}, {2, 3, 4}}.
-    // ComplexMatrix<int, 2, 2> = {1, 0, 0, 1} will construct by the array<array> [MOVING] constructor;
-    // others will construct by the initializer_list<initializer_list> constructor due to automatic brace elision.
-    // See Item 7, Chapter 3 of Effective Modern C++
-    ComplexMatrix(std::initializer_list<std::initializer_list<T>> init_list) {
-        std::size_t i = 0;
-        for (std::initializer_list<T> row : init_list) {
-            std::move(row.begin(), row.end(), data[i].begin());
-            ++i;
-        }
+// real_if_close for singleton
+// The compiler takes responsibility to match only std::complex<T>
+template<typename T>
+auto real_if_close(const std::complex<T> &a, T tol = TOL) -> std::variant<T, std::complex<T>> {
+    if constexpr (not std::is_floating_point_v<T>) {
+        return a;
     }
-    ~ComplexMatrix() = default;
-
-    class RowProxy {
-    private:
-        std::array<T, M> &row;
-    public:
-        explicit RowProxy(std::array<T, M> &row) : row(row) {}
-        auto operator[](std::size_t j) -> T & {
-            return row[j];
-        }
-    };
-
-    auto operator[](std::size_t i) -> RowProxy {
-        return RowProxy(data[i]);
+    if (tol > 1) {
+        tol *= EPSILON<T>;
     }
-    auto operator/(const T& scalar) const -> ComplexMatrix<T, N, M> {
-        ComplexMatrix<T, N, M> result;
-        result.data = data / scalar;
-        return result;
+    if (std::abs(a.imag()) < tol) {
+        return a.real();
     }
-    auto operator=(const ComplexMatrix &other) -> ComplexMatrix& {
-        if (this != &other) {
-            data = other.data;
-        }
-        return *this;
-    }
-    auto operator=(ComplexMatrix &&other) noexcept -> ComplexMatrix& {
-        if (this != &other) {
-            data = std::move(other.data);
-        }
-        return *this;
-    }
-    auto operator=(const std::array<std::array<T, M>, N> &data_) -> ComplexMatrix& {
-        if (data != &data_) {
-            data = data_;
-        }
-        return *this;
-    }
-    auto operator=(std::array<std::array<T, M>, N> &&data_) noexcept -> ComplexMatrix& {
-        if (data != &data_) {
-            data = std::move(data_);
-        }
-        return *this;
-    }
-    auto operator=([[maybe_unused]] std::initializer_list<std::initializer_list<T>> init_list) -> ComplexMatrix& {
-        std::size_t i = 0;
-        for (std::initializer_list<T> row : init_list) {
-            std::move(row.begin(), row.end(), data[i].begin());
-            ++i;
-        }
-    }
-
-    // For function marked [[nodiscard]]:
-    // https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-nodiscard.html
-    auto transpose() const -> ComplexMatrix<T, M, N> {
-        ComplexMatrix<T, M, N> result;
-        for (std::size_t i = 0; i < N; i++) {
-            for (std::size_t j = 0; j < M; j++) {
-                result[j][i] = (*this)[i][j];
-            }
-        }
-        return result;
-    }
-    template<std::size_t P>
-    friend auto dot(const ComplexMatrix<T, N, M> &matrix1,
-                    const ComplexMatrix<T, M, P> &matrix2) -> ComplexMatrix<T, N, P> {
-        ComplexMatrix<T, N, P> result;
-        for (std::size_t i = 0; i < N; i++) {
-            for (std::size_t j = 0; j < P; j++) {
-                for (std::size_t k = 0; k < M; k++) {
-                    result[i][j] += matrix1[i][k] * matrix2[k][j];
-                }
-            }
-        }
-        return result;
-    }
-    auto squeeze() const -> std::array<std::complex<T>, M> {
-        if (N == 1) {
-            return data[0];
-        }
-        throw std::logic_error("ComplexMatrix cannot be squeezed");
-    }
-};
+    return a;
+}
 
 /*
  * Absorption in a given layer is a pretty simple analytical function:
@@ -326,9 +233,9 @@ auto snell(const std::complex<T> n_1, const std::complex<T> n_2, const std::comp
     return is_forward_angle(n_2, th_2_guess) ? th_2_guess : M_PI - th_2_guess;
 }
 
-/* return list of angle theta in each layer based on angle th_0 in layer 0,
- * using Snell's law. n_list is index of refraction of each layer. Note that
- * "angles" may be complex!!
+/* return list of angle theta in each layer based on angle th_0 in layer 0, using Snell's law.
+ * n_list is index of refraction of each layer.
+ * Note that "angles" may be complex!!
  */
 template<typename T>
 auto list_snell(const std::valarray<std::complex<T>> &n_list, const std::complex<T> th_0) -> std::valarray<std::complex<T>> {
@@ -556,17 +463,17 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // M_0 and M_{num_layers-1} are not defined.
     // My M is a bit different from Sernelius's, but Mtilde is the same.
     // std::vector<std::array<std::array<std::complex<T>, 2>, 2>> M_list;
-    std::vector<ComplexMatrix<T, 2, 2>> M_list;
+    std::vector<FixedMatrix<std::complex<T>, 2, 2>> M_list;
     for (std::size_t i = 1; i < num_layers - 1; i++) {
-        M_list.push_back(dot(ComplexMatrix({{std::exp(-1I * delta[i]), 0}, {0, std::exp(1I * delta[i])}}),
-                                                        ComplexMatrix({{1, r_list[i][i + 1]}, {r_list[i][i + 1], 1}})));
+        M_list.push_back(dot(FixedMatrix({{std::exp(-1I * delta[i]), 0}, {0, std::exp(1I * delta[i])}}),
+                                                        FixedMatrix({{1, r_list[i][i + 1]}, {r_list[i][i + 1], 1}})));
     }
     // std::array<std::array<std::complex<T>, 2>, 2> Mtilde = {{1, 0}, {0, 1}};
-    ComplexMatrix<T, 2, 2> Mtilde = {{1, 0}, {0, 1}};
+    FixedMatrix<std::complex<T>, 2, 2> Mtilde = {{1, 0}, {0, 1}};
     for (std::size_t i = 1; i < num_layers - 1; i++) {
         Mtilde = dot(Mtilde, M_list[i]);
     }
-    Mtilde = dot(ComplexMatrix({{1, r_list[0][1]}, {r_list[0][1], 1}}) / t_list[0][1], Mtilde);
+    Mtilde = dot(FixedMatrix({{1, r_list[0][1]}, {r_list[0][1], 1}}) / t_list[0][1], Mtilde);
     // Net complex transmission and reflection amplitudes
     std::complex<T> r = Mtilde[1][0] / Mtilde[0][0];
     std::complex<T> t = 1 / Mtilde[0][0];
@@ -574,7 +481,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // has no left interface.
     std::vector<std::array<std::complex<T>, 2>> vw_list(num_layers, std::array<std::complex<T>, 2>());
     // std::array<std::array<std::complex<T>, 1>, 2> vw;
-    ComplexMatrix<T, 2, 1> vw;
+    FixedMatrix<std::complex<T>, 2, 1> vw({{t}, {0}});
     vw_list.back() = vw.transpose().squeeze();
     for (std::size_t i = num_layers - 2; i > 0; i--) {
         vw = dot(M_list[i], vw);
@@ -720,7 +627,7 @@ auto find_in_structure(const std::valarray<std::complex<T>> &d_list, T distance)
 }
 
 /*
- * d_list is list of thicknesses of layers [inf, blah, blah, ..., blah, inf]
+ * d_list is a list of thicknesses of layers [inf, blah, blah, ..., blah, inf]
 
  * distance is the distance from the front of the whole multilayer structure
  * (i.e., from the start of layer 1.)
@@ -747,7 +654,7 @@ auto find_in_structure_inf(const std::valarray<std::complex<T>> &d_list, T dista
  * of the whole multilayer structure.
  * (i.e., the start of layer 1)
  *
- * d_list is list of thicknesses of layers [inf, blah, blah, ..., blah, inf]
+ * d_list is a list of thicknesses of layers [inf, blah, blah, ..., blah, inf]
  */
 template<typename T>
 auto layer_starts(const std::valarray<std::complex<T>> &d_list) -> std::valarray<std::complex<T>> {
@@ -797,7 +704,7 @@ auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<
 
  * A "stack" is a group of one or more consecutive coherent layers. A "stack
  * index" labels the stacks 0, 1, 2, ... The "within-stack index" counts the
- * coherent layers within the stack 1, 2, 3, ... [index 0 is the incoherent layer
+ * coherent layers within stack 1, 2, 3, ... [index 0 is the incoherent layer
  * before the stack starts]
 
  * An "incoherent layer index" labels the incoherent layers 0, 1, 2, ...
@@ -822,15 +729,15 @@ auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<
  * - inc_from_stack[i] = j means that the i'th stack comes after the layer
  *   with incoherent index j, and before the layer with incoherent index j+1.
  * - stack_from_inc[i] = j means that the layer with incoherent index i comes
- *   immediately after the j'th stack. If j=nan, it is not immediately
+ *   immediately after the j'th stack. If j=-1, it is not immediately
  *   following a stack.
  * - num_stacks = number of stacks
  * - num_inc_layers = number of incoherent layers
  * - num_layers = number of layers in total
  */
 template<typename T>
-auto inc_group_layer(const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
-                     const std::vector<LayerType> &c_list) -> inc_group_layer_dict<T> {
+auto inc_group_layers(const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
+                      const std::vector<LayerType> &c_list) -> inc_group_layer_dict<T> {
     // isinf() and std::inf() are different
     // isinf() is in "math.h": #define isinf(x) (fpclassify(x) == FP_INFINITE)
     // std::isinf() is in <cmath>: true if infinite, false otherwise
@@ -854,7 +761,7 @@ auto inc_group_layer(const std::valarray<std::complex<T>> &n_list, const std::va
     // Although we know the size of the inner vector is 2 if valid, but we want to make it empty if invalid
     std::vector<std::vector<std::size_t>> stack_from_all;
     std::vector<long long int> inc_from_stack;
-    std::vector<std::size_t> stack_from_inc;
+    std::vector<long long int> stack_from_inc;
     bool stack_in_progress = false;
     std::vector<T> ongoing_stack_d_list;
     std::vector<std::complex<T>> ongoing_stack_n_list;
@@ -884,7 +791,7 @@ auto inc_group_layer(const std::valarray<std::complex<T>> &n_list, const std::va
             inc_from_all.push_back(inc_index);  // narrowing conversion
             all_from_inc.push_back(alllayer_index);
             if (not stack_in_progress) {  // the previous layer was also incoherent
-                stack_from_inc.push_back(stack_index);
+                stack_from_inc.push_back(-1);
             } else {  // the previous layer was coherent
                 stack_in_progress = false;
                 stack_from_inc.push_back(stack_index);
@@ -914,7 +821,7 @@ auto inc_group_layer(const std::valarray<std::complex<T>> &n_list, const std::va
 }
 
 /*
- * Incoherent, or partly-incoherent-partly-coherent, transfer matrix method.
+ * Incoherent, or partly incoherent partly coherent, transfer matrix method.
 
  * See coh_tmm for definitions of pol, n_list, d_list, th_0, lam_vac.
 
@@ -924,14 +831,14 @@ auto inc_group_layer(const std::valarray<std::complex<T>> &n_list, const std::va
  * If an incoherent layer has real refractive index (no absorption), then its
  * thickness doesn't affect the calculation results.
 
- * See https://arxiv.org/abs/1603.02720 for physics background and some
+ * See https://arxiv.org/abs/1603.02720 for a physics background and some
  * of the definitions.
 
  * Outputs the following as a dictionary:
 
- * - R--reflected wave power (as fraction of incident)
- * - T--transmitted wave power (as fraction of incident)
- * - VW_list-- n'th element is [V_n,W_n], the forward- and backward-traveling
+ * - R--reflected wave power (as a fraction of incident)
+ * - T--transmitted wave power (as a fraction of incident)
+ * - VW_list-- the n'th element is [V_n, W_n], the forward- and backward-traveling
  *   intensities, respectively, at the beginning of the n'th incoherent medium.
  * - coh_tmm_data_list--n'th element is coh_tmm_data[n], the output of
  *   the coh_tmm program for the n'th "stack" (group of one or more
@@ -939,7 +846,7 @@ auto inc_group_layer(const std::valarray<std::complex<T>> &n_list, const std::va
  * - coh_tmm_bdata_list--n'th element is coh_tmm_bdata[n], the output of the
  *   coh_tmm program for the n'th stack, but with the layers of the stack
  *   in reverse order.
- * - stackFB_list--n'th element is [F,B], where F is light traveling forward
+ * - stackFB_list--n'th element is [F, B], where F is light traveling forward
  *   towards the n'th stack and B is light traveling backwards towards the n'th
  *   stack.
  * - num_layers-- total number both coherent and incoherent.
@@ -950,9 +857,147 @@ auto inc_group_layer(const std::valarray<std::complex<T>> &n_list, const std::va
  */
 template<typename T>
 auto inc_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
-             const std::vector<LayerType> &c_list, const std::complex<T> th_0, const T lam_vac) {
+             const std::vector<LayerType> &c_list, const std::complex<T> th_0,
+             const T lam_vac) -> inc_tmm_dict<T> {
     // Input tests
-    if ((real_if_close(n_list[0] * std::sin(th_0))).imag() not_eq 0) {
+    if (std::holds_alternative<std::complex<T>>(real_if_close(n_list[0] * std::sin(th_0)))) {
         throw std::runtime_error("Error in n0 or th0!");
     }
+    inc_group_layer_dict<T> group_layer_data = inc_group_layers(n_list, d_list, c_list);
+    std::size_t num_inc_layers = group_layer_data["num_inc_layers"];
+    std::size_t num_stacks = group_layer_data["num_stacks"];
+    std::vector<std::vector<std::complex<T>>> stack_n_list = group_layer_data["stack_n_list"];
+    std::vector<std::vector<T>> stack_d_list = group_layer_data["stack_d_list"];
+    std::vector<std::vector<std::size_t>> all_from_stack = group_layer_data["all_from_stack"];
+    std::vector<std::size_t> all_from_inc = group_layer_data["all_from_inc"];
+    std::vector<long long int> stack_from_inc = group_layer_data["stack_from_inc"];
+    std::vector<long long int> inc_from_stack = group_layer_data["inc_from_stack"];
+
+    // th_list is a list with, for each layer, the angle that the light travels through the layer.
+    // Computed with Snell's law.
+    // Note that the "angles" may be complex!
+    std::valarray<std::complex<T>> th_list = list_snell(n_list, th_0);
+
+    // coh_tmm_data_list[i] is the output of coh_tmm for the i'th stack
+    std::vector<coh_tmm_dict<T>> coh_tmm_data_list;
+    // coh_tmm_bdata_list[i] is the same stack as coh_tmm_data_list[i] but
+    // with the order of layers reversed
+    std::vector<coh_tmm_dict<T>> coh_tmm_bdata_list;
+    for (std::size_t i = 0; i < num_stacks; i++) {
+        coh_tmm_data_list.push_back(coh_tmm(pol, stack_n_list[i],
+                                            stack_d_list[i],
+                                            th_list[all_from_stack[i][0]],
+                                            lam_vac));
+        coh_tmm_bdata_list.push_back(coh_tmm_reverse(pol, stack_n_list[i],
+                                                     stack_d_list[i],
+                                                     th_list[all_from_stack[i][0]],
+                                                     lam_vac));
+    }
+    // P_list[i] is a fraction not absorbed in a single pass through i'th incoherent
+    // layer.
+    std::valarray<std::complex<T>> P_list(num_inc_layers);
+    for (std::size_t inc_index = 1; inc_index < num_inc_layers - 1; inc_index++) {  // skip 0'th and last (infinite)
+        std::size_t i = all_from_inc[inc_index];
+        P_list[inc_index] = std::exp(-4 * M_PI * d_list[i] * (n_list[i] * std::cos(th_list[i])).imag() / lam_vac);
+        // For a very opaque layer, reset P to avoid divide-by-0 and similar
+        // errors.
+        if (P_list[inc_index] < 1e-30) {
+            P_list[inc_index] = 1e-30;
+        }
+    }
+    // T_list[i, j] and R_list[i, j] are transmission and reflection powers,
+    // respectively, coming from the i'th incoherent layer, going to the j'th incoherent layer.
+    // Only need to calculate this when j=i+1 or j=i-1.
+    // (2D array is overkill but helps avoid confusion.)
+    // initialize these arrays
+
+    // https://stackoverflow.com/questions/17663186/initializing-a-two-dimensional-stdvector
+    std::vector<std::vector<T>> T_list(num_inc_layers, std::vector<T>(num_inc_layers));
+    std::vector<std::vector<T>> R_list(num_inc_layers, std::vector<T>(num_inc_layers));
+    for (std::size_t inc_index = 0; inc_index < num_inc_layers - 1; inc_index++) {  // looking at interface i -> i+1
+        std::size_t alllayer_index = all_from_inc[inc_index];
+        long long int nextstack_index = stack_from_inc[inc_index + 1];
+        if (nextstack_index == -1) {  // the next layer is incoherent
+            R_list[inc_index][inc_index + 1] = interface_R(pol, n_list[alllayer_index],
+                                                           n_list[alllayer_index + 1],
+                                                           th_list[alllayer_index],
+                                                           th_list[alllayer_index + 1]);
+            T_list[inc_index][inc_index + 1] = interface_T(pol, n_list[alllayer_index + 1],
+                                                           n_list[alllayer_index],
+                                                           th_list[alllayer_index + 1],
+                                                           th_list[alllayer_index]);
+            R_list[inc_index + 1][inc_index] = interface_R(pol, n_list[alllayer_index + 1],
+                                                           n_list[alllayer_index],
+                                                           th_list[alllayer_index + 1],
+                                                           th_list[alllayer_index]);
+            T_list[inc_index + 1][inc_index] = interface_T(pol, n_list[alllayer_index + 1],
+                                                           n_list[alllayer_index],
+                                                           th_list[alllayer_index + 1],
+                                                           th_list[alllayer_index]);
+        } else {  // the next layer is coherent
+            R_list[inc_index][inc_index + 1] = coh_tmm_data_list[nextstack_index]["R"];
+            T_list[inc_index][inc_index + 1] = coh_tmm_data_list[nextstack_index]["T"];
+            R_list[inc_index + 1][inc_index] = coh_tmm_bdata_list[nextstack_index]["R"];
+            T_list[inc_index + 1][inc_index] = coh_tmm_bdata_list[nextstack_index]["T"];
+        }
+    }
+    // L is the transfer matrix from the i'th to (i+1)st incoherent layer, see
+    // manual
+    std::vector<FixedMatrix<T, 2, 2>> L_list{FixedMatrix<std::complex<T>, 2, 2>(NAN)};  // L_0 is not defined because 0'th layer has no beginning.
+    FixedMatrix<T, 2, 2> Ltilde = FixedMatrix({{1, -R_list[1][0]}, {R_list[0][1], T_list[1][0] * T_list[0][1] - R_list[1][0] * R_list[0][1]}}) / T_list[0][1];
+    for (std::size_t i = 1; i < num_inc_layers - 1; i++) {
+        FixedMatrix<T, 2, 2> L = dot<T, 2, 2>(FixedMatrix({{1 / P_list[i]}, {0, P_list[i]}}),
+                                              FixedMatrix({{1, -R_list[i + 1][i]}, {R_list[i][i + 1], T_list[i + 1][i] * T_list[i][i + 1] - R_list[i + 1][i] * R_list[i][i + 1]}})) / T_list[i][i + 1];
+        L_list.push_back(L);
+        Ltilde *= L;
+    }
+    T Tr = 1 / Ltilde[0][0];
+    // Top-level comma expression in array subscript is deprecated in C++20 and unsupported in C++23
+    T R = Ltilde[1][0] / Ltilde[0][0];
+
+    // VW_list[n] = [V_n, W_n], the forward- and backward-moving intensities
+    // at the beginning of the n'th incoherent layer.
+    // VW_list[0] is undefined because 0'th layer has no beginning.
+
+    std::vector<std::array<T, 2>> VW_list(num_inc_layers, std::array<std::complex<T>, 2>());
+    VW_list.front() = {NAN, NAN};
+    FixedMatrix<T, 2, 1> VW({{Tr}, {0}});
+    VW_list.back() = VW.transpose().squeeze();
+    for (std::size_t i = num_inc_layers - 2; i > 0; i--) {
+        VW = dot(L_list[i], VW);
+        VW_list[i] = VW.transpose().squeeze();
+    }
+
+    // stackFB_list[n]=[F, B] means that F is light traveling forward towards n'th
+    // stack and B is light traveling backwards towards n'th stack.
+    // Reminder: inc_from_stack[i] = j means that the i'th stack comes after the
+    // layer with incoherent index j.
+    std::vector<std::array<T, 2>> stackFB_list;
+    for (long long int prev_inc_index : inc_from_stack) {
+        T F = (prev_inc_index == 0) ? 1 : VW_list[prev_inc_index][0] * P_list[prev_inc_index];
+        T B = VW_list[prev_inc_index + 1][1];
+        stackFB_list.push_back(std::array<T, 2>{F, B});
+    }
+    // power_entering_list[i] is the normalized Poynting vector crossing the
+    // interface into the i'th incoherent layer from the previous (coherent or incoherent) layer.
+    // See the manual.
+    std::vector<T> power_entering_list{1};  // "1" by convention for infinite 0th layer.
+    for (std::size_t i = 1; i < num_inc_layers; i++) {
+        long long int prev_stack_index = stack_from_inc[i];
+        if (prev_stack_index == -1) {
+            // case where this layer directly follows another incoherent layer
+            power_entering_list.push_back(i == 1 ? T_list[0][1] - VW_list[1][1] * T_list[1][0] :  // special case because VW_list[0] & A_list[0] are undefined
+                                                   VW_list[i - 1][0] * P_list[i - 1] * T_list[i - 1][i] - VW_list[i][1] * T_list[i][i - 1]);
+        } else {  // case where this layer follows a coherent stack
+            power_entering_list.push_back(stackFB_list[prev_stack_index][0] * coh_tmm_data_list[prev_stack_index]["T"] - stackFB_list[prev_stack_index][1] * coh_tmm_bdata_list[prev_stack_index]["power_entering"]);
+        }
+    }
+    // Since group_layer_data does not have duplicate keys, the merging order does not matter.
+    return group_layer_data.merge({{"T", Tr},
+            {"R", R},
+            {"VW_list", VW_list},
+            {"coh_tmm_data_list", coh_tmm_data_list},
+            {"coh_tmm_bdata_list", coh_tmm_bdata_list},
+            {"stackFB_list", stackFB_list},
+            {"power_entering_list", power_entering_list}});
 }
