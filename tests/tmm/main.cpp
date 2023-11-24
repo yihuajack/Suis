@@ -6,8 +6,8 @@
 // Using target_include_directories(tmm PRIVATE ${CMAKE_SOURCE_DIR}/../../src/optics)
 // We can directly include tmm.h rather than #include "../../src/optics/tmm.h"
 // See https://stackoverflow.com/questions/31969547/what-is-the-difference-between-include-directories-and-target-include-directorie
-#include "../../src/optics/FixedMatrix.h"
-#include "../../src/optics/tmm.h"
+#include "FixedMatrix.h"
+#include "tmm.h"
 
 // "5 * degree" is 5 degrees expressed in radians
 // "1.2 / degree" is 1.2 radians expressed in degrees

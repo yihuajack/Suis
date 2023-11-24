@@ -9,17 +9,24 @@
 #include <cstddef>
 #include <stdexcept>
 
+// Forward declaration
+//template<typename T, std::size_t N, std::size_t M>
+//class FixedMatrix;
+//
+//template<typename T, std::size_t N, std::size_t M, std::size_t P>
+//auto dot(const FixedMatrix<T, N, M> &matrix1, const FixedMatrix<T, M, P> &matrix2) -> FixedMatrix<T, N, P>;
+
 template<typename T, std::size_t N, std::size_t M>
 class FixedMatrix {
 private:
     std::array<std::array<T, M>, N> data;
 public:
-    FixedMatrix();
+    FixedMatrix() = default;
     explicit FixedMatrix(T num);
     FixedMatrix(const FixedMatrix &other);
     FixedMatrix(FixedMatrix &&other) noexcept;
     explicit FixedMatrix(const std::array<std::array<T, M>, N> &data);
-    explicit FixedMatrix(std::array<std::array<T, M>, N> &&data) noexcept;
+    explicit FixedMatrix(std::array<std::array<T, M>, N> data) noexcept;
     // Different from traditional C-style arrays that can be brace-initialized by {{1, 0}, {0, 1}}
     // 2D std::array has to be brace-initialized by {{{1, 0}, {0, 1}}} or {1, 0, 0, 1}
     // https://stackoverflow.com/questions/12844475/why-cant-simple-initialize-with-braces-2d-stdarray
@@ -45,16 +52,28 @@ public:
     // See Item 7, Chapter 3 of Effective Modern C++
     FixedMatrix(std::initializer_list<std::initializer_list<T>> init_list);
     ~FixedMatrix() = default;
-
+    // See Scott Meyer's More Effective C++ "Techniques, Idioms, Patterns" Item 30 Proxy classes
     class RowProxy {
     private:
         std::array<T, M> &row;
     public:
         explicit RowProxy(std::array<T, M> &row);
         auto operator[](std::size_t j) -> T &;
+        auto operator[](std::size_t j) const -> const T &;
+
+        constexpr auto begin() noexcept -> std::array<T, M>::iterator;
+        constexpr auto begin() const noexcept -> std::array<T, M>::const_iterator;
+        constexpr auto cbegin() const noexcept -> std::array<T, M>::const_iterator;
+        constexpr auto end() noexcept -> std::array<T, M>::iterator;
+        constexpr auto end() const noexcept -> std::array<T, M>::const_iterator;
+        constexpr auto cend() const noexcept -> std::array<T, M>::const_iterator;
     };
 
+    // Notice that the implementations of operator[] has already included bounds checking by at() functions.
+    // For this operator[] functions and RowProxy's, they cannot be defined as constexpr; otherwise,
+    // inline function used but never defined.
     auto operator[](std::size_t i) -> RowProxy;
+    auto operator[](std::size_t i) const -> const RowProxy;
     auto operator/(const T &scalar) const -> FixedMatrix<T, N, M>;
     // In-place matrix multiplication is generally not supported.
     void operator/=(const T &scalar);
@@ -63,13 +82,30 @@ public:
     auto operator=(FixedMatrix &&other) noexcept -> FixedMatrix&;
     auto operator=(const std::array<std::array<T, M>, N> &data_) -> FixedMatrix&;
     auto operator=(std::array<std::array<T, M>, N> &&data_) noexcept -> FixedMatrix&;
-    auto operator=([[maybe_unused]] std::initializer_list<std::initializer_list<T>> init_list) -> FixedMatrix&;
+    auto operator=(std::initializer_list<std::initializer_list<T>> init_list) -> FixedMatrix&;
+
+    constexpr auto begin() noexcept -> std::array<std::array<T, M>, N>::iterator;
+    constexpr auto begin() const noexcept -> std::array<std::array<T, M>, N>::const_iterator;
+    constexpr auto cbegin() const noexcept -> std::array<std::array<T, M>, N>::const_iterator;
+    constexpr auto end() noexcept -> std::array<std::array<T, M>, N>::iterator;
+    constexpr auto end() const noexcept -> std::array<std::array<T, M>, N>::const_iterator;
+    constexpr auto cend() const noexcept -> std::array<std::array<T, M>, N>::const_iterator;
 
     // For function marked [[nodiscard]]:
     // https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-nodiscard.html
     auto transpose() const -> FixedMatrix<T, M, N>;
     template<std::size_t P>
-    friend auto dot(const FixedMatrix<T, N, M> &matrix1, const FixedMatrix<T, M, P> &matrix2) -> FixedMatrix<T, N, P>;
+    friend auto dot(const FixedMatrix<T, N, M> &matrix1, const FixedMatrix<T, M, P> &matrix2) -> FixedMatrix<T, N, P> {
+        FixedMatrix<T, N, P> result;
+        for (std::size_t i = 0; i < N; i++) {
+            for (std::size_t j = 0; j < P; j++) {
+                for (std::size_t k = 0; k < M; k++) {
+                    result[i][j] += matrix1[i][k] * matrix2[k][j];
+                }
+            }
+        }
+        return result;
+    }
     auto squeeze() const -> std::array<T, M>;
 };
 

@@ -303,10 +303,10 @@ template<typename T>
 auto interface_t(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f,
                  const std::complex<T> th_i, const std::complex<T> th_f) -> std::complex<T> {
     if (polarization == 's') {
-        return 2 * n_i * std::cos(th_i) / ((n_i * std::cos(th_i) + n_f * std::cos(th_f)));
+        return 2.0 * n_i * std::cos(th_i) / ((n_i * std::cos(th_i) + n_f * std::cos(th_f)));
     }
     if (polarization == 'p') {
-        return 2 * n_i * std::cos(th_i) / ((n_f * std::cos(th_i) + n_i * std::cos(th_f)));
+        return 2.0 * n_i * std::cos(th_i) / ((n_f * std::cos(th_i) + n_i * std::cos(th_f)));
     }
     throw std::invalid_argument("Polarization must be 's' or 'p'");
 }
@@ -371,10 +371,10 @@ template<typename T>
 auto power_entering_from_r(const char pol, const std::complex<T> r, const std::complex<T> n_i,
                            const std::complex<T> th_i) -> T {
     if (pol == 's') {
-        return (n_i * std::cos(th_i) * (1 + std::conj(r)) * (1 - r)).real() / (n_i * std::cos(th_i)).real();
+        return (n_i * std::cos(th_i) * (1.0 + std::conj(r)) * (1.0 - r)).real() / (n_i * std::cos(th_i)).real();
     }
     if (pol == 'p') {
-        return (n_i * std::conj(std::cos(th_i)) * (1 + r) * (1 - std::conj(r))).real() /
+        return (n_i * std::conj(std::cos(th_i)) * (1.0 + r) * (1.0 - std::conj(r))).real() /
                (n_i * std::conj(std::cos(th_i))).real();
     }
     throw std::invalid_argument("Polarization must be 's' or 'p'");
@@ -493,7 +493,7 @@ auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::
     if (not std::isinf(d_list[0]) or not std::isinf(d_list[d_list.size() - 1])) {
         throw std::runtime_error("d_list must start and end with inf!");
     }
-    if (std::abs((n_list.front() * std::sin(th_0)).imag()) < TOL * EPSILON<T> or is_forward_angle(n_list.front(), th_0)) {
+    if (std::abs((n_list[0] * std::sin(th_0)).imag()) < TOL * EPSILON<T> or is_forward_angle(n_list[0], th_0)) {
         throw std::runtime_error("Error in n0 or th0!");
     }
     std::size_t num_layers = n_list.size();
@@ -506,14 +506,19 @@ auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::
     std::valarray<std::complex<T>> kz_list = 2 * M_PI * n_list * std::cos(th_list) / lam_vac;
     // delta is the total phase accrued by traveling through a given layer.
     // Ignore warning about inf multiplication
-    std::valarray<std::complex<T>> delta = kz_list * d_list;
+    std::valarray<std::complex<T>> d_list_comp_temp(d_list.size());
+    // Unfortunately, we cannot directly multiply a double and a complex.
+    std::transform(std::begin(d_list), std::end(d_list), std::begin(d_list_comp_temp), [](T real) {
+        return std::complex<T>(real, 0.0);
+    });
+    std::valarray<std::complex<T>> delta = kz_list * d_list_comp_temp;
     // For a very opaque layer, reset delta to avoid divide-by-0 and similar
     // errors. The criterion imag(delta) > 35 corresponds to single-pass
     // transmission < 1e-30 --- small enough that the exact value doesn't
     // matter.
     for (std::size_t i = 1; i < num_layers - 1; i++) {
         if (delta[i].imag() > 35) {
-            delta[i] = delta[i].real() + 35I;
+            delta[i] = std::complex<T>(delta[i].real(), 35);
             throw ValueWarning("Warning: Layers that are almost perfectly opaque "
                                "are modified to be slightly transmissive, "
                                "allowing 1 photon in 10^30 to pass through. It's "
@@ -541,18 +546,18 @@ auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::
     // std::vector<std::array<std::array<std::complex<T>, 2>, 2>> M_list;
     std::vector<FixedMatrix<std::complex<T>, 2, 2>> M_list;
     for (std::size_t i = 1; i < num_layers - 1; i++) {
-        M_list.push_back(dot(FixedMatrix({{std::exp(-1I * delta[i]), 0}, {0, std::exp(1I * delta[i])}}),
-                             FixedMatrix({{1, r_list[i][i + 1]}, {r_list[i][i + 1], 1}})));
+        M_list.push_back(dot(FixedMatrix<std::complex<T>, 2, 2>({{std::exp(std::complex<T>(0, -1) * delta[i]), 0}, {0, std::exp(std::complex<T>(0, 1) * delta[i])}}),
+                             FixedMatrix<std::complex<T>, 2, 2>({{1, r_list[i][i + 1]}, {r_list[i][i + 1], 1}})));
     }
     // std::array<std::array<std::complex<T>, 2>, 2> Mtilde = {{1, 0}, {0, 1}};
     FixedMatrix<std::complex<T>, 2, 2> Mtilde = {{1, 0}, {0, 1}};
     for (std::size_t i = 1; i < num_layers - 1; i++) {
         Mtilde = dot(Mtilde, M_list[i]);
     }
-    Mtilde = dot(FixedMatrix({{1, r_list[0][1]}, {r_list[0][1], 1}}) / t_list[0][1], Mtilde);
+    Mtilde = dot(FixedMatrix<std::complex<T>, 2, 2>({{1, r_list[0][1]}, {r_list[0][1], 1}}) / t_list[0][1], Mtilde);
     // Net complex transmission and reflection amplitudes
     std::complex<T> r = Mtilde[1][0] / Mtilde[0][0];
-    std::complex<T> t = 1 / Mtilde[0][0];
+    std::complex<T> t = 1.0 / Mtilde[0][0];
     // vw_list[n] = [v_n, w_n]. v_0 and w_0 are undefined because the 0th medium
     // has no left interface.
     std::vector<std::array<std::complex<T>, 2>> vw_list(num_layers, std::array<std::complex<T>, 2>());
@@ -606,8 +611,8 @@ auto ellips(std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_li
             const T lam_vac) -> std::unordered_map<std::string, T> {
     coh_tmm_dict<T> s_data = coh_tmm('s', n_list, d_list, th_0, lam_vac);
     coh_tmm_dict<T> p_data = coh_tmm('p', n_list, d_list, th_0, lam_vac);
-    std::complex<T> rs = s_data["r"];
-    std::complex<T> rp = s_data["r"];
+    std::complex<T> rs = std::get<std::complex<T>>(s_data["r"]);
+    std::complex<T> rp = std::get<std::complex<T>>(p_data["r"]);
     return {{"psi", std::atan(std::abs(rp / rs))}, {"Delta", std::arg(-rp / rs)}};
 }
 
@@ -1161,3 +1166,13 @@ auto inc_find_absorp_analytic_fn(std::size_t layer, const inc_tmm_dict<T> &inc_d
     backfunc.flip();
     return forwardfunc.add(backfunc);
 }
+
+// https://stackoverflow.com/questions/68372091/template-function-declared-in-header-defined-in-seperate-cpp-file-causing-unde
+// https://stackoverflow.com/questions/115703/storing-c-template-function-definitions-in-a-cpp-file
+// https://isocpp.org/wiki/faq/templates#separate-template-fn-defn-from-decl
+// https://stackoverflow.com/questions/495021/why-can-templates-only-be-implemented-in-the-header-file
+template auto coh_tmm(char pol, const std::valarray<std::complex<double>> &n_list, const std::valarray<double> &d_list,
+                      std::complex<double> th_0, double lam_vac) -> coh_tmm_dict<double>;
+
+template auto ellips(std::valarray<std::complex<double>> &n_list, const std::valarray<double> &d_list,
+                     std::complex<double> th_0, double lam_vac) -> std::unordered_map<std::string, double>;
