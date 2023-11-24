@@ -94,20 +94,17 @@ public:
     // For function marked [[nodiscard]]:
     // https://clang.llvm.org/extra/clang-tidy/checks/modernize/use-nodiscard.html
     auto transpose() const -> FixedMatrix<T, M, N>;
-    template<std::size_t P>
-    friend auto dot(const FixedMatrix<T, N, M> &matrix1, const FixedMatrix<T, M, P> &matrix2) -> FixedMatrix<T, N, P> {
-        FixedMatrix<T, N, P> result;
-        for (std::size_t i = 0; i < N; i++) {
-            for (std::size_t j = 0; j < P; j++) {
-                for (std::size_t k = 0; k < M; k++) {
-                    result[i][j] += matrix1[i][k] * matrix2[k][j];
-                }
-            }
-        }
-        return result;
-    }
+    // template<std::size_t P>
+    // auto dot(const FixedMatrix<T, N, M> &matrix1, const FixedMatrix<T, M, P> &matrix2) -> FixedMatrix<T, N, P>;
     auto squeeze() const -> std::array<T, M>;
 };
+
+// For friend functions or non-member functions
+template<typename T, std::size_t N, std::size_t M, std::size_t P>
+// For member functions:
+// template<typename T, std::size_t N, std::size_t M>
+// template<std::size_t P>
+auto dot(const FixedMatrix<T, N, M> &matrix1, const FixedMatrix<T, M, P> &matrix2) -> FixedMatrix<T, N, P>;
 
 template<typename T, std::size_t N, std::size_t M, std::size_t P>
 auto operator*(const FixedMatrix<T, N, M> &mat1, const FixedMatrix<T, M, P> &mat2) -> FixedMatrix<T, N, P>;

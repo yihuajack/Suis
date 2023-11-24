@@ -52,5 +52,5 @@ void basic_test() {
 }
 
 int main() {
-    void runall();
+    runall();
 }
