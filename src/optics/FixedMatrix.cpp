@@ -224,7 +224,7 @@ auto dot(const FixedMatrix<T, N, M> &matrix1, const FixedMatrix<T, M, P> &matrix
 }
 template<typename T, std::size_t N, std::size_t M, std::size_t P>
 auto operator*(const FixedMatrix<T, N, M> &mat1, const FixedMatrix<T, M, P> &mat2) -> FixedMatrix<T, N, P> {
-    return dot<P>(mat1, mat2);
+    return dot(mat1, mat2);
 }
 
 template class FixedMatrix<std::complex<double>, 1, 2>;

@@ -62,7 +62,7 @@ auto real_if_close(const std::valarray<T1> &a, T2 tol = TOL) -> std::variant<std
         return std::abs(elem.imag()) < tol;
     })) {
         std::valarray<T2> real_part_array(a.size());
-        std::transform(std::begin(a), std::end(a), std::begin(real_part_array), [](const std::complex<T2> &c_num) {
+        std::transform(std::begin(a), std::end(a), std::begin(real_part_array), [](const std::complex<T2> c_num) {
             return c_num.real();
         });
         return real_part_array;
@@ -86,97 +86,52 @@ auto real_if_close(const std::complex<T> &a, T tol = TOL) -> std::variant<T, std
     return a;
 }
 
-/*
- * Absorption in a given layer is a pretty simple analytical function:
- * The sum of four exponentials.
-
- * a(z) = A1*exp(a1*z) + A2*exp(-a1*z)
- *        + A3*exp(1j*a3*z) + conj(A3)*exp(-1j*a3*z)
-
- * where a(z) is absorption at depth z, with z=0 being the start of the layer,
- * and A1,A2,a1,a3 are real numbers, with a1>0, a3>0, and A3 is complex.
- * The class stores these five parameters, as well as d, the layer thickness.
-
- * This gives absorption as a fraction of intensity coming towards the first
- * layer of the stack.
- */
 template<typename T>
-class AbsorpAnalyticFn {
-private:
-    std::complex<T> d, A3;
-    T a1, a3, A1, A2;;
-public:
-    AbsorpAnalyticFn() = default;
+void AbsorpAnalyticFn<T>::fill_in(const coh_tmm_dict<T> &coh_tmm_data, const std::size_t layer) {
+    char pol = std::get<char>(coh_tmm_data.at("pol"));
+    std::complex<T> v = std::get<std::vector<std::array<std::complex<T>, 2>>>(coh_tmm_data.at("vw_list"))[layer][0];
+    std::complex<T> w = std::get<std::vector<std::array<std::complex<T>, 2>>>(coh_tmm_data.at("vw_list"))[layer][1];
+    std::complex<T> kz = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("kz_list"))[layer];
+    std::complex<T> n = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[layer];
+    std::complex<T> n_0 = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[0];
+    std::complex<T> th_0 = std::get<std::complex<T>>(coh_tmm_data.at("th_0"));
+    std::complex<T> th = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("th_list"))[layer];
+    d = std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer];
 
-    /*
-     * fill in the absorption analytic function starting from coh_tmm_data
-     * (the output of coh_tmm), for absorption in the layer with index
-     * "layer".
-     */
-    void fill_in(coh_tmm_dict<T> coh_tmm_data, std::size_t layer);
-    /*
-     * Calculates absorption at a given depth z, where z=0 is the start of the
-     * layer.
-     */
-    auto run(T z) const -> std::complex<T>;
-    /*
-     * Flip the function front-to-back, to describe a(d-z) instead of a(z),
-     * where d is layer thickness.
-     */
-    void flip();
-    /*
-     * multiplies the absorption at each point by "factor".
-     */
-    void scale(T factor);
-    /*
-     * adds another compatible absorption analytical function
-     */
-    AbsorpAnalyticFn add(const AbsorpAnalyticFn &b);
-};
-
-template<typename T>
-void AbsorpAnalyticFn<T>::fill_in(coh_tmm_dict<T> coh_tmm_data, std::size_t layer) {
-    char pol = coh_tmm_data["pol"];
-    std::complex<T> v = coh_tmm_data["vw_list"][layer][0];
-    std::complex<T> w = coh_tmm_data["vw_list"][layer][1];
-    std::complex<T> kz = coh_tmm_data["kz_list"][layer];
-    std::complex<T> n = coh_tmm_data["n_list"][layer];
-    std::complex<T> n_0 = coh_tmm_data["n_list"][0];
-    std::complex<T> th_0 = coh_tmm_data["th_0"];
-    std::complex<T> th = coh_tmm_data["th"][layer];
-    d = coh_tmm_data["d_list"][layer];
-
-    a1 = (2 * kz).imag();
-    a3 = (2 * kz).real();
+    a1 = 2 * kz.imag();  // you can find that it is equivalent to (2.0 * kz).imag()
+    a3 = 2 * kz.real();
 
     if (pol == 's') {
         T temp = (n * std::cos(th) * kz).imag() / (n_0 * std::cos(th_0)).real();
         A1 = temp * std::norm(w);
         A2 = temp * std::norm(v);
         A3 = temp * v * std::conj(w);
-    } else {
+    } else {  // pol == 'p'
         T temp = 2 * kz.imag() * (n * std::cos(std::conj(th))).real() / (n_0 * std::conj(std::cos(th_0))).real();
         A1 = temp * std::norm(w);
         A2 = temp * std::norm(v);
-        A3 = v * std::conj(w) * -2 * kz.real() * (n * std::cos(std::conj(th))).imag() / (n_0 * std::conj(std::cos(th_0))).real();
+        A3 = v * std::conj(w) * -2.0 * kz.real() * (n * std::cos(std::conj(th))).imag() / (n_0 * std::conj(std::cos(th_0))).real();
     }
 }
 
 template<typename T>
-auto AbsorpAnalyticFn<T>::run(T z) const -> std::complex<T> {
-    return A1 * std::exp(a1 * z) + A2 * std::exp(-a1 * z) + A3 * std::exp(1I * a3 * z) + std::conj(A3) * std::exp(-1I * a3 * z);
+auto AbsorpAnalyticFn<T>::run(const T z) const -> std::complex<T> {
+    return A1 * std::exp(a1 * z) + A2 * std::exp(-a1 * z) + A3 * std::exp(std::complex<T>(0, 1) * a3 * z) + std::conj(A3) * std::exp(std::complex<T>(0, -1) * a3 * z);
 }
 
 template<typename T>
-void AbsorpAnalyticFn<T>::flip() {
+auto AbsorpAnalyticFn<T>::flip() -> AbsorpAnalyticFn<T> {  // can be discarded
     T newA1 = A2 * std::exp(-a1 * d);
     T newA2 = A1 * std::exp(-a1 * d);
-    A1, A2 = newA1, newA2;
-    A3 = std::conj(A3 * std::exp(1I * a3 * d));
+    // In C++, the left operand of comma operator has no effect!
+    A1 = newA1;
+    A2 = newA2;
+    A3 = std::conj(A3 * std::exp(std::complex<T>(0, 1) * a3 * d));
+    return *this;
 }
 
 template<typename T>
-void AbsorpAnalyticFn<T>::scale(T factor) {
+void AbsorpAnalyticFn<T>::scale(const T factor) {
     A1 *= factor;
     A2 *= factor;
     A3 *= factor;
@@ -193,6 +148,8 @@ auto AbsorpAnalyticFn<T>::add(const AbsorpAnalyticFn &b) -> AbsorpAnalyticFn<T> 
     return *this;
 }
 
+template class AbsorpAnalyticFn<double>;
+
 /*
  * If a wave is traveling at angle theta from normal in a medium with index n,
  * calculate whether this is the forward-traveling wave (i.e., the one
@@ -204,7 +161,7 @@ auto AbsorpAnalyticFn<T>::add(const AbsorpAnalyticFn &b) -> AbsorpAnalyticFn<T> 
  */
 template<typename T>
 auto is_forward_angle(const std::complex<T> n, const std::complex<T> theta) -> bool {
-    if (n.real() * n.imag() >= 0) {
+    if (n.real() * n.imag() < 0) {
         throw std::runtime_error("For materials with gain, it's ambiguous which "
                                  "beam is incoming vs outgoing. See "
                                  "https://arxiv.org/abs/1603.02720 Appendix C.\n" +
@@ -213,12 +170,12 @@ auto is_forward_angle(const std::complex<T> n, const std::complex<T> theta) -> b
     }
     std::complex<double> ncostheta = n * std::cos(theta);
     bool answer = std::abs(ncostheta.imag()) > TOL * EPSILON<T> ? ncostheta.imag() > 0 : ncostheta.real() > 0;
-    if ((answer and (ncostheta.imag() > -TOL * EPSILON<T> or
-                     ncostheta.real() > -TOL * EPSILON<T> or
-                     std::real(n * std::cos(std::conj(theta))) > -TOL * EPSILON<T>)) or
-        (not answer and (ncostheta.imag() < TOL * EPSILON<T> or
-                         ncostheta.real() < TOL * EPSILON<T> or
-                         std::real(n * std::cos(std::conj(theta))) < TOL * EPSILON<T>))) {
+    if ((answer and (ncostheta.imag() <= -TOL * EPSILON<T> or
+                     ncostheta.real() <= -TOL * EPSILON<T> or
+                     std::real(n * std::cos(std::conj(theta))) <= -TOL * EPSILON<T>)) or
+        (not answer and (ncostheta.imag() >= TOL * EPSILON<T> or
+                         ncostheta.real() >= TOL * EPSILON<T> or
+                         std::real(n * std::cos(std::conj(theta))) >= TOL * EPSILON<T>))) {
         throw std::runtime_error("It's not clear which beam is incoming vs outgoing. Weird"
                                  " index maybe?\n" +
                                  complex_to_string_with_name(n, "n") + "\t" +
@@ -237,6 +194,9 @@ auto snell(const std::complex<T> n_1, const std::complex<T> n_2, const std::comp
     std::complex<T> th_2_guess = std::asin(n_1 * std::sin(th_1) / n_2);
     return is_forward_angle(n_2, th_2_guess) ? th_2_guess : M_PI - th_2_guess;
 }
+
+template auto snell(std::complex<double> n_1, std::complex<double> n_2,
+                    std::complex<double> th_1) -> std::complex<double>;
 
 /* return list of angle theta in each layer based on angle th_0 in layer 0, using Snell's law.
  * n_list is index of refraction of each layer.
@@ -408,7 +368,7 @@ auto interface_R(const char polarization, const std::complex<T> n_i, const std::
     // });
     // Binary operation
     std::transform(std::begin(r), std::end(r), std::begin(th_f), std::begin(r),
-                   [](std::complex<T> r_value, std::complex<T> th_f_value) {
+                   [](const std::complex<T> r_value, const std::complex<T> th_f_value) {
         return (th_f_value.real() > M_PI / 2 - 1e-6) ? 1 : r_value;
     });
     // An alternative equivalent way
@@ -437,7 +397,7 @@ auto interface_T(const char polarization, const std::complex<T> n_i, const std::
     // we can safely set t = T = 0; otherwise we get numerical issues which give unphysically large
     // values of T because in T_from_t we divide by cos(th_i) which is ~ 0.
     std::transform(std::begin(t), std::end(t), std::begin(th_i), std::begin(t),
-                   [](std::complex<T> t_value, std::complex<T> th_i_value) {
+                   [](const std::complex<T> t_value, const std::complex<T> th_i_value) {
                        return (th_i_value.real() > M_PI / 2 - 1e-6) ? 0 : t_value;
                    });
 
@@ -493,7 +453,7 @@ auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::
     if (not std::isinf(d_list[0]) or not std::isinf(d_list[d_list.size() - 1])) {
         throw std::runtime_error("d_list must start and end with inf!");
     }
-    if (std::abs((n_list[0] * std::sin(th_0)).imag()) < TOL * EPSILON<T> or is_forward_angle(n_list[0], th_0)) {
+    if (std::abs((n_list[0] * std::sin(th_0)).imag()) >= TOL * EPSILON<T> or not is_forward_angle(n_list[0], th_0)) {
         throw std::runtime_error("Error in n0 or th0!");
     }
     std::size_t num_layers = n_list.size();
@@ -508,7 +468,7 @@ auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::
     // Ignore warning about inf multiplication
     std::valarray<std::complex<T>> d_list_comp_temp(d_list.size());
     // Unfortunately, we cannot directly multiply a double and a complex.
-    std::transform(std::begin(d_list), std::end(d_list), std::begin(d_list_comp_temp), [](T real) {
+    std::transform(std::begin(d_list), std::end(d_list), std::begin(d_list_comp_temp), [](const T real) {
         return std::complex<T>(real, 0.0);
     });
     std::valarray<std::complex<T>> delta = kz_list * d_list_comp_temp;
@@ -535,19 +495,19 @@ auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::
         t_list[i][i + 1] = interface_t(pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1]);
         r_list[i][i + 1] = interface_r(pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1]);
     }
-    // At the interface between the (n-1)st and nth material, let v_n be the
-    // amplitude of the wave on the nth side heading forwards (away from the
-    // boundary), and let w_n be the amplitude on the nth side heading backwards
+    // At the interface between the (n-1)st and nth material, let v_n be the amplitude of the wave on the nth side
+    // heading forwards (away from the boundary), and let w_n be the amplitude on the nth side heading backwards
     // (towards the boundary).
     // Then (v_n, w_n) = M_n (v_{n+1}, w_{n+1}).
     // M_n is M_list[n].
     // M_0 and M_{num_layers-1} are not defined.
-    // My M is a bit different from Sernelius's, but Mtilde is the same.
+    // My[Steven's] M is a bit different from Sernelius's, but Mtilde is the same.
+
     // std::vector<std::array<std::array<std::complex<T>, 2>, 2>> M_list;
-    std::vector<FixedMatrix<std::complex<T>, 2, 2>> M_list;
+    std::vector<FixedMatrix<std::complex<T>, 2, 2>> M_list(num_layers, FixedMatrix<std::complex<T>, 2, 2>());
     for (std::size_t i = 1; i < num_layers - 1; i++) {
-        M_list.push_back(dot(FixedMatrix<std::complex<T>, 2, 2>({{std::exp(std::complex<T>(0, -1) * delta[i]), 0}, {0, std::exp(std::complex<T>(0, 1) * delta[i])}}),
-                             FixedMatrix<std::complex<T>, 2, 2>({{1, r_list[i][i + 1]}, {r_list[i][i + 1], 1}})));
+        M_list[i] = dot(FixedMatrix<std::complex<T>, 2, 2>({{std::exp(std::complex<T>(0, -1) * delta[i]), 0}, {0, std::exp(std::complex<T>(0, 1) * delta[i])}}),
+                        FixedMatrix<std::complex<T>, 2, 2>({{1, r_list[i][i + 1]}, {r_list[i][i + 1], 1}})) / t_list[i][i + 1];
     }
     // std::array<std::array<std::complex<T>, 2>, 2> Mtilde = {{1, 0}, {0, 1}};
     FixedMatrix<std::complex<T>, 2, 2> Mtilde = {{1, 0}, {0, 1}};
@@ -588,6 +548,13 @@ auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::
             {"lam_vac", lam_vac}};
 }
 
+// https://stackoverflow.com/questions/68372091/template-function-declared-in-header-defined-in-seperate-cpp-file-causing-unde
+// https://stackoverflow.com/questions/115703/storing-c-template-function-definitions-in-a-cpp-file
+// https://isocpp.org/wiki/faq/templates#separate-template-fn-defn-from-decl
+// https://stackoverflow.com/questions/495021/why-can-templates-only-be-implemented-in-the-header-file
+template auto coh_tmm(char pol, const std::valarray<std::complex<double>> &n_list, const std::valarray<double> &d_list,
+                      std::complex<double> th_0, double lam_vac) -> coh_tmm_dict<double>;
+
 /*
  * Reverses the order of the stack then runs coh_tmm.
  */
@@ -607,7 +574,7 @@ auto coh_tmm_reverse(char pol, const std::valarray<std::complex<T>> &n_list, con
  * You may need to subtract pi/2 or whatever.
  */
 template<typename T>
-auto ellips(std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list, const std::complex<T> th_0,
+auto ellips(const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list, const std::complex<T> th_0,
             const T lam_vac) -> std::unordered_map<std::string, T> {
     coh_tmm_dict<T> s_data = coh_tmm('s', n_list, d_list, th_0, lam_vac);
     coh_tmm_dict<T> p_data = coh_tmm('p', n_list, d_list, th_0, lam_vac);
@@ -616,12 +583,15 @@ auto ellips(std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_li
     return {{"psi", std::atan(std::abs(rp / rs))}, {"Delta", std::arg(-rp / rs)}};
 }
 
+template auto ellips(const std::valarray<std::complex<double>> &n_list, const std::valarray<double> &d_list,
+                     std::complex<double> th_0, double lam_vac) -> std::unordered_map<std::string, double>;
+
 /*
  * Calculates reflected and transmitted power for unpolarized light.
  */
 template<typename T>
 auto unpolarized_RT(std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
-                    const std::complex<T> th_0, const T lam_vac) -> T {
+                    const std::complex<T> th_0, const T lam_vac) -> std::unordered_map<std::string, T> {
     coh_tmm_dict<T> s_data = coh_tmm('s', n_list, d_list, th_0, lam_vac);
     coh_tmm_dict<T> p_data = coh_tmm('p', n_list, d_list, th_0, lam_vac);
     T R = (s_data["R"] + p_data["R"]) / 2;
@@ -646,22 +616,27 @@ auto unpolarized_RT(std::valarray<std::complex<T>> &n_list, const std::valarray<
  * https://arxiv.org/pdf/1603.02720.pdf for formulas.
  */
 template<typename T>
-auto position_resolved(std::size_t layer, T distance,
+auto position_resolved(const std::size_t layer, const T distance,
                        const coh_tmm_dict<T> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<T, std::complex<T>>> {
-    std::complex<T> v = (layer > 0) ? coh_tmm_data["vw_list"][layer][0] : 1;
-    std::complex<T> w = (layer > 0) ? coh_tmm_data["vw_list"][layer][1] : coh_tmm_data["r"];
-    std::complex<T> kz = coh_tmm_data["kz_list"][layer];
-    std::complex<T> th = coh_tmm_data["th_list"][layer];
-    std::complex<T> n = coh_tmm_data["n_list"][layer];
-    std::complex<T> n_0 = coh_tmm_data["n_list"][0];
-    std::complex<T> th_0 = coh_tmm_data["th_0"];
-    char pol = coh_tmm_data["pol"];
-    if (not ((layer >= 1 and 0 <= distance and distance <= coh_tmm_data["d_list"][layer]) or (layer == 0 and distance <= 0))) {
+    // Notice that operator[] of std::unordered_map accepts both const Key& key and Key&& key,
+    // allowing both accessing and inserting!
+    // Instead, at() only accepts const Key& key allowing only accessing (with bounds checking), safer.
+    // If using operator[], "No viable overloaded operator[] for type 'const coh_tmm_dict<double>'"
+    // because our parameter is const reference qualified
+    std::complex<T> v = (layer > 0) ? std::get<std::vector<std::array<std::complex<T>, 2>>>(coh_tmm_data.at("vw_list"))[layer][0] : 1;
+    std::complex<T> w = (layer > 0) ? std::get<std::vector<std::array<std::complex<T>, 2>>>(coh_tmm_data.at("vw_list"))[layer][1] : std::get<std::complex<T>>(coh_tmm_data.at("r"));
+    std::complex<T> kz = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("kz_list"))[layer];
+    std::complex<T> th = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("th_list"))[layer];
+    std::complex<T> n = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[layer];
+    std::complex<T> n_0 = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[0];
+    std::complex<T> th_0 = std::get<std::complex<T>>(coh_tmm_data.at("th_0"));
+    char pol = std::get<char>(coh_tmm_data.at("pol"));
+    if ((layer < 1 || 0 > distance || distance > std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer]) && (layer != 0 || distance > 0)) {
         throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(layer));
     }
     // The amplitude of forward-moving wave is Ef, backwards is Eb
-    std::complex<T> Ef = v * std::exp(1I * kz * distance);
-    std::complex<T> Eb = w * std::exp(-1I * kz * distance);
+    std::complex<T> Ef = v * std::exp(std::complex<T>(0, 1) * kz * distance);
+    std::complex<T> Eb = w * std::exp(std::complex<T>(0, -1) * kz * distance);
     // Poynting vector
     T poyn = pol == 's' ? (n * std::cos(th) * std::conj(Ef + Eb) * (Ef - Eb)).real() / (n_0 * std::cos(th_0)).real() :
              (n * std::conj(std::cos(th)) * (Ef + Eb) * std::conj(Ef - Eb)).real() / (n_0 * std::conj(std::cos(th_0))).real();
@@ -674,6 +649,9 @@ auto position_resolved(std::size_t layer, T distance,
     std::complex<T> Ez = pol == 's' ? 0 : -(Ef + Eb) * std::sin(th);
     return {{"poyn", poyn}, {"absor", absor}, {"Ex", Ex}, {"Ey", Ey}, {"Ez", Ez}};
 }
+
+template auto position_resolved(const std::size_t layer, const double distance,
+                                const coh_tmm_dict<double> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<double, std::complex<double>>>;
 
 /*
  * d_list is a list of thicknesses of layers, all of which are finite.
@@ -759,20 +737,43 @@ auto layer_starts(const std::valarray<std::complex<T>> &d_list) -> std::valarray
  */
 template<typename T>
 auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<T> {
-    std::size_t num_layers = coh_tmm_data["d_list"].size();
+    std::size_t num_layers = std::get<std::valarray<T>>(coh_tmm_data.at("d_list")).size();
     std::valarray<T> power_entering_each_layer(num_layers);
     power_entering_each_layer[0] = 1;
-    power_entering_each_layer[1] = coh_tmm_data["power_entering"];
-    power_entering_each_layer[num_layers - 1] = coh_tmm_data["T"];
+    power_entering_each_layer[1] = std::get<T>(coh_tmm_data.at("power_entering"));
+    power_entering_each_layer[num_layers - 1] = std::get<T>(coh_tmm_data.at("T"));
     for (std::size_t i = 2; i < num_layers - 1; i++) {
-        power_entering_each_layer[i] = position_resolved(i, 0, coh_tmm_data)["poyn"];
+        power_entering_each_layer[i] = std::get<T>(position_resolved(i, 0.0, coh_tmm_data).at("poyn"));
     }
     std::valarray<T> final_answer(num_layers);
     // std::valarray does not have begin() end(), use std::begin() std::end() instead
-    std::adjacent_difference(power_entering_each_layer.begin(), power_entering_each_layer.end(), std::begin(final_answer));
+    // Note that
+    // std::adjacent_difference(std::begin(power_entering_each_layer), std::end(power_entering_each_layer),
+    //                          std::prev(std::begin(final_answer)));
+    // std::transform(std::begin(power_entering_each_layer), std::end(power_entering_each_layer),
+    //                std::begin(power_entering_each_layer), std::negate<>{});
+    // can also give correct results, but it will be a double free or corruption (out) and the program will be aborted
+    // because of prev-iterating std::begin(final_answer).
+    // An alternative solution:
+    // std::adjacent_difference(std::begin(power_entering_each_layer), std::end(power_entering_each_layer),
+    //                          std::begin(final_answer), [](double x, double y) {
+    //     return y - x;
+    // });
+    // std::move(std::begin(final_answer) + 1, std::end(final_answer), std::begin(final_answer));
+    // Note that after this operation, the last element is still the last difference, so remember to manually set the
+    // last element.
+    // For this solution, the last element is left 0 (initial).
+    std::adjacent_difference(std::next(std::begin(power_entering_each_layer)), std::end(power_entering_each_layer),
+                             std::begin(final_answer), [](const double x, const double y) {
+        return y - x;
+    });
+    // manually calculate the first difference
+    final_answer[0] = power_entering_each_layer[0] - power_entering_each_layer[1];
     final_answer[num_layers - 1] = power_entering_each_layer[num_layers - 1];
     return final_answer;
 }
+
+template auto absorp_in_each_layer(const coh_tmm_dict<double> &coh_tmm_data) -> std::valarray<double>;
 
 /*
  * Helper function for inc_tmm. Groups and sorts layer information.
@@ -944,14 +945,14 @@ auto inc_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::
         throw std::runtime_error("Error in n0 or th0!");
     }
     inc_group_layer_dict<T> group_layer_data = inc_group_layers(n_list, d_list, c_list);
-    std::size_t num_inc_layers = group_layer_data["num_inc_layers"];
-    std::size_t num_stacks = group_layer_data["num_stacks"];
-    std::vector<std::vector<std::complex<T>>> stack_n_list = group_layer_data["stack_n_list"];
-    std::vector<std::vector<T>> stack_d_list = group_layer_data["stack_d_list"];
-    std::vector<std::vector<std::size_t>> all_from_stack = group_layer_data["all_from_stack"];
-    std::vector<std::size_t> all_from_inc = group_layer_data["all_from_inc"];
-    std::vector<long long int> stack_from_inc = group_layer_data["stack_from_inc"];
-    std::vector<long long int> inc_from_stack = group_layer_data["inc_from_stack"];
+    std::size_t num_inc_layers = std::get<std::size_t>(group_layer_data.at("num_inc_layers"));
+    std::size_t num_stacks = std::get<std::size_t>(group_layer_data.at("num_stacks"));
+    std::vector<std::vector<std::complex<T>>> stack_n_list = std::get<std::vector<std::vector<std::complex<T>>>>(group_layer_data.at("stack_n_list"));
+    std::vector<std::vector<T>> stack_d_list = std::get<std::vector<std::vector<T>>>(group_layer_data.at("stack_d_list"));
+    std::vector<std::vector<std::size_t>> all_from_stack = std::get<std::vector<std::vector<std::size_t>>>(group_layer_data.at("all_from_stack"));
+    std::vector<std::size_t> all_from_inc = std::get<std::vector<std::size_t>>(group_layer_data.at("all_from_inc"));
+    std::vector<long long int> stack_from_inc = std::get<std::vector<long long int>>(group_layer_data.at("stack_from_inc"));
+    std::vector<long long int> inc_from_stack = std::get<std::vector<long long int>>(group_layer_data.at("inc_from_stack"));
 
     // th_list is a list with, for each layer, the angle that the light travels through the layer.
     // Computed with Snell's law.
@@ -1098,11 +1099,11 @@ auto inc_absorp_in_each_layer(const inc_tmm_dict<T> &inc_data) {
     // with incoherent index i comes immediately after the j'th stack (or j=nan
     // if it's not immediately following a stack).
 
-    std::vector<long long int> stack_from_inc = inc_data["stack_from_inc"];
-    std::vector<T> power_entering_list = inc_data["power_entering_list"];
+    std::vector<long long int> stack_from_inc = std::get<std::vector<long long int>>(inc_data.at("stack_from_inc"));
+    std::vector<T> power_entering_list = std::get<std::vector<T>>(inc_data.at("power_entering_list"));
     // stackFB_list[n]=[F, B] means that F is light traveling forward towards n'th
     // stack and B is light traveling backwards towards n'th stack.
-    std::vector<std::array<T, 2>> stackFB_list = inc_data["stackFB_list"];
+    std::vector<std::array<T, 2>> stackFB_list = std::get<std::vector<std::array<T, 2>>>(inc_data.at("stackFB_list"));
     std::vector<T> absorp_list;
 
     // loop through incoherent layers, excluding the final layer
@@ -1112,10 +1113,10 @@ auto inc_absorp_in_each_layer(const inc_tmm_dict<T> &inc_data) {
             absorp_list.push_back(power_entering_list[i] - power_entering_list[i + 1]);
         } else {  // incoherent layer i is immediately before a coherent stack
             std::size_t j = stack_from_inc[i + 1];
-            coh_tmm_dict<T> coh_tmm_data = inc_data["coh_tmm_data_list"][j];
-            coh_tmm_dict<T> coh_tmm_bdata = inc_data["coh_tmm_bdata_list"][j];
+            coh_tmm_dict<T> coh_tmm_data = std::get<std::vector<coh_tmm_dict<T>>>(inc_data.at("coh_tmm_data_list"))[j];
+            coh_tmm_dict<T> coh_tmm_bdata = std::get<std::vector<coh_tmm_dict<T>>>(inc_data.at("coh_tmm_bdata_list"))[j];
             // First, power in the incoherent layer...
-            T power_exiting = stackFB_list[j][0] * coh_tmm_data["power_entering"] - stackFB_list[j][1] * coh_tmm_bdata["T"];
+            T power_exiting = stackFB_list[j][0] * std::get<T>(coh_tmm_data.at("power_entering")) - stackFB_list[j][1] * coh_tmm_bdata["T"];
             absorp_list.push_back(power_entering_list[i] - power_exiting);
             // Next, power in the coherent stack...
             std::valarray<T> coh_absorp = stackFB_list[j][0] * absorp_in_each_layer(coh_tmm_data);
@@ -1137,7 +1138,7 @@ auto inc_absorp_in_each_layer(const inc_tmm_dict<T> &inc_data) {
         }
     }
     // final semi-infinite layer
-    absorp_list.push_back(inc_data["T"]);
+    absorp_list.push_back(std::get<T>(inc_data.at("T")));
     return absorp_list;
 }
 
@@ -1149,7 +1150,7 @@ auto inc_absorp_in_each_layer(const inc_tmm_dict<T> &inc_data) {
  */
 template<typename T>
 auto inc_find_absorp_analytic_fn(std::size_t layer, const inc_tmm_dict<T> &inc_data) -> AbsorpAnalyticFn<T> {
-    std::vector<std::size_t> j = inc_data["stack_from_all"][layer];
+    std::vector<std::size_t> j = std::get<std::vector<std::vector<std::size_t>>>(inc_data.at("stack_from_all"))[layer];
     if (j.empty()) {
         throw std::runtime_error("Layer must be coherent for this function!");
     }
@@ -1158,21 +1159,11 @@ auto inc_find_absorp_analytic_fn(std::size_t layer, const inc_tmm_dict<T> &inc_d
     std::size_t stackindex = j.front();
     std::size_t withinstackindex = j.back();
     AbsorpAnalyticFn<T> forwardfunc;
-    forwardfunc.fill_in(inc_data["coh_tmm_data_list"][stackindex], withinstackindex);
-    forwardfunc.scale(inc_data["stackFB_list"][stackindex][0]);
+    forwardfunc.fill_in(std::get<std::vector<coh_tmm_dict<T>>>(inc_data.at("coh_tmm_data_list"))[stackindex], withinstackindex);
+    forwardfunc.scale(std::get<std::vector<std::array<T, 2>>>(inc_data.at("stackFB_list"))[stackindex][0]);
     AbsorpAnalyticFn<T> backfunc;
-    backfunc.fill_in(inc_data["coh_tmm_bdata_list"][stackindex], -1 - withinstackindex);
-    backfunc.scale(inc_data["stackFB_list"][stackindex][1]);
+    backfunc.fill_in(std::get<std::vector<coh_tmm_dict<T>>>(inc_data.at("coh_tmm_bdata_list"))[stackindex], -1 - withinstackindex);
+    backfunc.scale(std::get<std::vector<std::array<T, 2>>>(inc_data.at("stackFB_list"))[stackindex][1]);
     backfunc.flip();
     return forwardfunc.add(backfunc);
 }
-
-// https://stackoverflow.com/questions/68372091/template-function-declared-in-header-defined-in-seperate-cpp-file-causing-unde
-// https://stackoverflow.com/questions/115703/storing-c-template-function-definitions-in-a-cpp-file
-// https://isocpp.org/wiki/faq/templates#separate-template-fn-defn-from-decl
-// https://stackoverflow.com/questions/495021/why-can-templates-only-be-implemented-in-the-header-file
-template auto coh_tmm(char pol, const std::valarray<std::complex<double>> &n_list, const std::valarray<double> &d_list,
-                      std::complex<double> th_0, double lam_vac) -> coh_tmm_dict<double>;
-
-template auto ellips(std::valarray<std::complex<double>> &n_list, const std::valarray<double> &d_list,
-                     std::complex<double> th_0, double lam_vac) -> std::unordered_map<std::string, double>;

@@ -9,13 +9,6 @@
 #include <cstddef>
 #include <stdexcept>
 
-// Forward declaration
-//template<typename T, std::size_t N, std::size_t M>
-//class FixedMatrix;
-//
-//template<typename T, std::size_t N, std::size_t M, std::size_t P>
-//auto dot(const FixedMatrix<T, N, M> &matrix1, const FixedMatrix<T, M, P> &matrix2) -> FixedMatrix<T, N, P>;
-
 template<typename T, std::size_t N, std::size_t M>
 class FixedMatrix {
 private:
@@ -104,6 +97,14 @@ template<typename T, std::size_t N, std::size_t M, std::size_t P>
 // For member functions:
 // template<typename T, std::size_t N, std::size_t M>
 // template<std::size_t P>
+// For a friend version,
+// see https://stackoverflow.com/questions/77541238/separating-template-friend-functions-declaration-and-definition
+// https://stackoverflow.com/questions/3989678/c-template-friend-operator-overloading
+// https://stackoverflow.com/questions/33861151/c-how-to-declare-a-function-template-friend-for-a-class-template
+// https://stackoverflow.com/questions/12875679/how-to-explicitly-instantiate-a-template-class-that-has-a-nested-class-with-a-fr
+// Probably it is more practical to move the definition of template friend function into here
+// or alternatively wrap it with a template-less struct in a namespace with a forward declaration,
+// or including the definition in the header file with a forward declaration.
 auto dot(const FixedMatrix<T, N, M> &matrix1, const FixedMatrix<T, M, P> &matrix2) -> FixedMatrix<T, N, P>;
 
 template<typename T, std::size_t N, std::size_t M, std::size_t P>
