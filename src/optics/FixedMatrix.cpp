@@ -212,7 +212,7 @@ auto FixedMatrix<T, N, M>::squeeze() const -> std::array<T, M> {
 
 template<typename T, std::size_t N, std::size_t M, std::size_t P>
 auto dot(const FixedMatrix<T, N, M> &matrix1, const FixedMatrix<T, M, P> &matrix2) -> FixedMatrix<T, N, P> {
-    FixedMatrix<T, N, P> result;
+    FixedMatrix<T, N, P> result{};
     for (std::size_t i = 0; i < N; i++) {
         for (std::size_t j = 0; j < P; j++) {
             for (std::size_t k = 0; k < M; k++) {
@@ -227,11 +227,18 @@ auto operator*(const FixedMatrix<T, N, M> &mat1, const FixedMatrix<T, M, P> &mat
     return dot(mat1, mat2);
 }
 
+template class FixedMatrix<double, 1, 2>;
 template class FixedMatrix<std::complex<double>, 1, 2>;
+template class FixedMatrix<double, 2, 1>;
 template class FixedMatrix<std::complex<double>, 2, 1>;
+template class FixedMatrix<double, 2, 2>;
 template class FixedMatrix<std::complex<double>, 2, 2>;
 
-template auto dot(const FixedMatrix<std::complex<double>, 2, 2> &matrix1,
-                  const FixedMatrix<std::complex<double>, 2, 2> &matrix2) -> FixedMatrix<std::complex<double>, 2, 2>;
+template auto dot(const FixedMatrix<double, 2, 2> &matrix1,
+                  const FixedMatrix<double, 2, 1> &matrix2) -> FixedMatrix<double, 2, 1>;
 template auto dot(const FixedMatrix<std::complex<double>, 2, 2> &matrix1,
                   const FixedMatrix<std::complex<double>, 2, 1> &matrix2) -> FixedMatrix<std::complex<double>, 2, 1>;
+template auto dot(const FixedMatrix<double, 2, 2> &matrix1,
+                  const FixedMatrix<double, 2, 2> &matrix2) -> FixedMatrix<double, 2, 2>;
+template auto dot(const FixedMatrix<std::complex<double>, 2, 2> &matrix1,
+                  const FixedMatrix<std::complex<double>, 2, 2> &matrix2) -> FixedMatrix<std::complex<double>, 2, 2>;

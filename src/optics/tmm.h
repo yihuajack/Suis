@@ -26,9 +26,32 @@ constexpr T EPSILON=std::numeric_limits<T>::epsilon();
 template<typename T>
 using coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<T>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
 template<typename T>
-using inc_group_layer_dict = std::unordered_map<std::string, std::variant<std::size_t, std::vector<std::size_t>, std::vector<long long int>, std::vector<std::vector<T>>, std::vector<std::vector<std::complex<T>>>, std::vector<std::vector<std::size_t>>>>;
+using stack_coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::vector<T>, std::vector<std::complex<T>>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
 template<typename T>
-using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t, std::vector<std::size_t>, std::vector<long long int>, std::vector<T>, std::vector<std::vector<T>>, std::vector<std::vector<std::complex<T>>>, std::vector<std::vector<std::size_t>>, std::vector<std::array<T, 2>>, std::vector<coh_tmm_dict<T>>>>;
+using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t, std::vector<std::size_t>, std::vector<long long int>, std::vector<T>, std::vector<coh_tmm_dict<T>>, std::vector<stack_coh_tmm_dict<T>>, std::vector<std::vector<T>>, std::vector<std::vector<std::complex<T>>>, std::vector<std::vector<std::size_t>>, std::valarray<std::array<T, 2>>>>;
+
+/*
+ * stack_d_list: std::vector<std::vector<T>>
+ * stack_n_list: std::vector<std::vector<std::complex<T>>>
+ * all_from_inc: std::vector<std::size_t>
+ * inc_from_all: std::vector<long long int>
+ * all_from_stack: std::vector<std::vector<std::size_t>>
+ * stack_from_all: std::vector<std::vector<std::size_t>>
+ * inc_from_stack: std::vector<long long int>
+ * stack_from_inc: std::vector<long long int>
+ * num_stacks: std::size_t
+ * num_inc_layers: std::size_t
+ * num_layers: std::size_t
+ * T: T
+ * R: T
+ * VW_list: std::valarray<std::array<T, 2>>
+ * coh_tmm_data_list: std::vector<stack_coh_tmm_dict<T>>
+ * coh_tmm_bdata_list: std::vector<coh_tmm_dict<T>>
+ * stackFB_list: std::valarray<std::array<T, 2>>
+ * power_entering_list: std::vector<T>
+ */
+
+enum class LayerType { Coherent, Incoherent };
 
 /*
  * Absorption in a given layer is a pretty simple analytical function:
@@ -82,6 +105,21 @@ template<typename T>
 auto snell(std::complex<T> n_1, std::complex<T> n_2, std::complex<T> th_1) -> std::complex<T>;
 
 template<typename T>
+auto interface_r(char polarization, std::complex<T> n_i, std::complex<T> n_f, std::complex<T> th_i,
+                 std::complex<T> th_f) -> std::complex<T>;
+
+template<typename T>
+auto power_entering_from_r(char pol, std::complex<T> r, std::complex<T> n_i, std::complex<T> th_i) -> T;
+
+template<typename T>
+auto interface_R(char polarization, std::complex<T> n_i, std::complex<T> n_f, std::complex<T> th_i,
+                 std::complex<T> th_f) -> T;
+
+template<typename T>
+auto interface_T(char polarization, std::complex<T> n_i, std::complex<T> n_f, std::complex<T> th_i,
+                 std::complex<T> th_f) -> T;
+
+template<typename T>
 auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
              std::complex<T> th_0, T lam_vac) -> coh_tmm_dict<T>;
 
@@ -95,5 +133,12 @@ auto position_resolved(std::size_t layer, T distance,
 
 template<typename T>
 auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<T>;
+
+template<typename T>
+auto inc_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
+             const std::valarray<LayerType> &c_list, std::complex<T> th_0, T lam_vac) -> inc_tmm_dict<T>;
+
+template<typename T>
+auto inc_absorp_in_each_layer(const inc_tmm_dict<T> &inc_data) -> std::vector<T>;
 
 #endif // TMM_H

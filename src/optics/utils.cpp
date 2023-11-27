@@ -2,113 +2,108 @@
 // Created by Yihua on 2023/11/12.
 //
 
-#include <array>
-#include <complex>
-#include <stdexcept>
-#include <vector>
+#include "tmm.h"
+#include "utils.h"
 
-template<typename T, size_t N, size_t M, size_t P>
-auto dot2dArray(const std::array<std::array<std::complex<T>, M>, N> &matrix1,
-                const std::array<std::array<std::complex<T>, P>, M> &matrix2) -> std::array<std::array<std::complex<T>, P>, N> {
-    std::array<std::array<std::complex<T>, P>, N> result;
-    for (size_t i = 0; i < N; i++) {
-        for (size_t j = 0; j < P; j++) {
-            for (size_t k = 0; k < M; k++) {
-                result[i][j] += matrix1[i][k] * matrix2[k][j];
-            }
-        }
+ValueWarning::ValueWarning(const std::string &message) : std::runtime_error(message) {}
+
+template auto complex_to_string_with_name(const std::complex<double> c, const std::string &name) -> std::string;
+
+/* numpy.real_if_close(a, tol=100)
+ * If input is complex with all imaginary parts close to zero, return real parts.
+ *
+ * "Close to zero" is defined as `tol` * (machine epsilon of the type for `a`).
+ *
+ * Parameters
+ * ----------
+ * a : const std::valarray<std::complex<T1>> &
+ *     Input array.
+ * tol : T2
+ *     Tolerance in machine epsilons for the complex part of the elements in the array.
+ *     If the tolerance is <=1, then the absolute tolerance is used.
+ *
+ * Returns
+ * -------
+ * out : std::valarray<T2>
+ *     If `a` is real, the type of `a` is used for the output.
+ *     If `a` has complex elements, the returned type is float.
+ */
+template<typename T1, typename T2>
+auto real_if_close(const std::valarray<T1> &a, T2 tol = TOL) -> std::variant<std::valarray<T1>, std::valarray<T2>> {
+    // std::is_same_v<T1, float> or std::is_same_v<T1, double> or std::is_same_v<T1, long double>
+    // or any extended floating-point types (std::float16_t, std::float32_t, std::float64_t, std::float128_t,
+    // or std::bfloat16_t)(since C++23), including any cv-qualified variants.
+    if constexpr (not std::is_same_v<T1, std::complex<T2>> or not std::is_floating_point_v<T2>) {
+        return a;
     }
+    // whether tol should be T2 or float is a question
+    if (tol > 1) {
+        tol *= EPSILON<T2>;
+    }
+    // The parameters of the lambda expression (function) for std::valarray<T>::apply cannot be a reference
+    // but can be consts if it is not modified.
+    // Note that apply() has to be valarray<T> apply( T func(T) ) const;
+    // or valarray<T> apply( T func(const T&) ) const;
+    // First, you are not allowed to change the original valarray;
+    // second, it is impossible to return a valarray that is not of type T
+    // Besides, operands to '?:' cannot have different types.
+    if (std::all_of(std::begin(a), std::end(a), [&tol](const T1 &elem) {
+        return std::abs(elem.imag()) < tol;
+    })) {
+        std::valarray<T2> real_part_array(a.size());
+        std::transform(std::begin(a), std::end(a), std::begin(real_part_array), [](const std::complex<T2> c_num) {
+            return c_num.real();
+        });
+        return real_part_array;
+    }
+    return a;
+}
+
+// real_if_close for singleton
+// The compiler takes responsibility to match only std::complex<T>template<typename T>
+template<typename T>
+auto real_if_close(const std::complex<T> &a, T tol) -> std::variant<T, std::complex<T>> {
+    if constexpr (not std::is_floating_point_v<T>) {
+        return a;
+    }
+    if (tol > 1) {
+        tol *= EPSILON<T>;
+    }
+    if (std::abs(a.imag()) < tol) {
+        return a.real();
+    }
+    return a;
+}
+
+template auto real_if_close(const std::complex<double> &a,
+                            double tol = TOL) -> std::variant<double, std::complex<double>>;
+
+template<typename T, std::size_t N>
+auto linspace(const T start, const T stop) -> std::array<T, N> {
+    std::array<T, N> result{};
+    T step = (stop - start) / static_cast<T>(N - 1);
+    T current = start;
+    std::generate(result.begin(), result.end(), [&current, step]() {
+        T value = current;
+        current += step;
+        return value;
+    });
     return result;
 }
 
-template<typename T, size_t N, size_t M>
-auto transpose2dArray(
-        const std::array<std::array<std::complex<T>, M>, N> &array) -> std::array<std::array<std::complex<T>, N>, M> {
-    std::array<std::array<std::complex<T>, N>, M> result;
-    for (size_t i = 0; i < N; i++) {
-        for (size_t j = 0; j < M; j++) {
-            result[j][i] = array[i][j];
-        }
-    }
+template auto linspace(const double start, const double stop) -> std::array<double, 357>;
+
+template<typename T>
+auto linspace(const T start, const T stop, const std::size_t num) -> std::vector<T> {
+    std::vector<T> result(num);
+    T step = (stop - start) / static_cast<T>(num - 1);
+    T current = start;
+    std::generate(result.begin(), result.end(), [&current, step]() {
+        T value = current;
+        current += step;
+        return value;
+    });
     return result;
 }
 
-template<typename T, size_t N>
-auto transposeArrayOfVector(
-        const std::vector<std::array<std::complex<T>, N>> &array) -> std::array<std::vector<std::complex<T>>, N> {
-    std::array<std::vector<std::complex<T>>, N> result;
-    for (size_t i = 0; i < N; i++) {
-        for (size_t j = 0; j < array.size(); j++) {
-            result[j][i] = array[i][j];
-        }
-    }
-    return result;
-}
-
-template<typename T, size_t N>
-auto squeezeArray(const std::array<T, N> &array) -> T {
-    if (std::is_array_v<T> and array.size() == 1) {
-        return array[0];
-    }
-    throw std::logic_error("Array cannot be squeezed");
-}
-
-// Reference:
-// https://stackoverflow.com/questions/53378000/how-to-access-to-subsequence-of-a-valarray-considering-it-as-a-2d-matrix-in-c
-// Using std::slice/std::slice_array is not a good idea
-template<typename T, size_t N, size_t M>
-class ComplexMatrix {
-private:
-    std::valarray<T> data;
-public:
-    ComplexMatrix() : data(N * M) {}
-    explicit ComplexMatrix(std::valarray<T> data) : data(data) {}
-    ComplexMatrix(std::initializer_list<std::initializer_list<T>> &initList) {
-        size_t i = 0;
-        for (const auto &row : initList) {
-            std::move(row.begin(), row.end(), &data[i * M]);
-            ++i;
-        }
-    }
-
-    class RowProxy {
-    private:
-        std::valarray<T> &elems;
-        size_t row;
-    public:
-        explicit RowProxy(std::valarray<T>& elems, size_t row) : elems(elems), row(row) {}
-        auto operator[](size_t j) -> T & {
-            return elems[row * M + j];
-        }
-    };
-
-    auto operator[](size_t i) -> RowProxy {
-        return RowProxy(data, M, i);
-    }
-    auto operator/(const T& scalar) const -> ComplexMatrix<T, N, M> {
-        ComplexMatrix<T, N, M> result;
-        result.data = data / scalar;
-        return result;
-    }
-
-    auto squeeze() const -> std::valarray<std::complex<T>> {
-        if (N == 1) {
-            return data;
-        }
-        throw std::logic_error("ComplexMatrix cannot be squeezed");
-    }
-};
-
-template <typename T>
-std::valarray<T> diff(const std::valarray<T> &input) {
-    if (input.size() < 2) {
-        // If the input has fewer than two elements, return an empty valarray
-        return std::valarray<T>();
-    }
-    // Calculate the differences
-    std::valarray<T> result(input.size() - 1);
-    for (size_t i = 0; i < result.size(); i++) {
-        result[i] = input[i + 1] - input[i];
-    }
-    return result;
-}
+template auto linspace(const double start, const double stop, const std::size_t num) -> std::vector<double>;
