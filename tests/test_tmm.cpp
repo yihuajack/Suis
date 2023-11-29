@@ -1,7 +1,6 @@
-/*
- * Tests to ensure tmm package was coded correctly.
- * Use run_all() to run them all in order.
- */
+// GCC has already forwarded <algorithm> from <valarray>, but it is not the case for MSVC.
+#include <algorithm>
+#include <numbers>
 #include <numeric>
 #include <unordered_set>
 // Using target_include_directories(tmm PRIVATE ${CMAKE_SOURCE_DIR}/../../src/optics)
@@ -10,9 +9,14 @@
 #include "tmm.h"
 #include "utils.h"
 
+// Only operator""if operator""i operator""il since C++14 are standard complex literals.
+// The capital complex literal "I" is a macro in GNU C Extension,
+// see https://gcc.gnu.org/onlinedocs/gcc/Complex.html.
+using namespace std::complex_literals;
+
 // "5 * degree" is 5 degrees expressed in radians
 // "1.2 / degree" is 1.2 radians expressed in degrees
-static constexpr double degree = M_PI / 180;
+static constexpr double degree = std::numbers::pi / 180;
 
 void basic_test();
 void position_resolved_test();
@@ -22,6 +26,11 @@ void incoherent_test();
 void RT_test();
 void coh_overflow_test();
 void inc_overflow_test();
+
+/*
+ * Tests to ensure tmm package was coded correctly.
+ * Use run_all() to run them all in order.
+ */
 
 void runall() {
     basic_test();
@@ -43,7 +52,7 @@ static inline auto df(std::complex<double> a, std::complex<double> b) -> double 
  * Also confirms that I[Steven] don't accidentally mess up the program by editing.
  */
 void basic_test() {
-    const std::valarray<std::complex<double>> n_list = {1, 2 + 4I, 3 + 0.3I, 1 + 0.1I};
+    const std::valarray<std::complex<double>> n_list = {1, 2.0 + 4i, 3.0 + 0.3i, 1.0 + 0.1i};
     const std::valarray<double> d_list = {INFINITY, 2, 3, INFINITY};
     constexpr std::complex<double> th_0 = 0.1;
     constexpr double lam_vac = 100;
@@ -52,13 +61,13 @@ void basic_test() {
     std::cout << "The following should all be zero (within rounding errors):\n";
 
     const coh_tmm_dict<double> s_data = coh_tmm('s', n_list, d_list, th_0, lam_vac);
-    std::cout << df(std::get<std::complex<double>>(s_data.at("r")), -0.60331226568845775 - 0.093522181653632019I) << '\n';
-    std::cout << df(std::get<std::complex<double>>(s_data.at("t")), 0.44429533471192989 + 0.16921936169383078I) << '\n';
+    std::cout << df(std::get<std::complex<double>>(s_data.at("r")), -0.60331226568845775 - 0.093522181653632019i) << '\n';
+    std::cout << df(std::get<std::complex<double>>(s_data.at("t")), 0.44429533471192989 + 0.16921936169383078i) << '\n';
     std::cout << df(std::get<double>(s_data.at("R")), 0.37273208839139516) << '\n';
     std::cout << df(std::get<double>(s_data.at("T")), 0.22604491247079261) << '\n';
     const coh_tmm_dict<double> p_data = coh_tmm('p', n_list, d_list, th_0, lam_vac);
-    std::cout << df(std::get<std::complex<double>>(p_data.at("r")), 0.60102654255772481 + 0.094489146845323682I) << '\n';
-    std::cout << df(std::get<std::complex<double>>(p_data.at("t")), 0.4461816467503148 + 0.17061408427088917I) << '\n';
+    std::cout << df(std::get<std::complex<double>>(p_data.at("r")), 0.60102654255772481 + 0.094489146845323682i) << '\n';
+    std::cout << df(std::get<std::complex<double>>(p_data.at("t")), 0.4461816467503148 + 0.17061408427088917i) << '\n';
     std::cout << df(std::get<double>(p_data.at("R")), 0.37016110373044969) << '\n';
     std::cout << df(std::get<double>(p_data.at("T")), 0.22824374314132009) << '\n';
     const std::unordered_map<std::string, double> ellips_data = ellips(n_list, d_list, th_0, lam_vac);
@@ -72,8 +81,8 @@ void basic_test() {
  */
 void position_resolved_test() {
     const std::valarray<double> d_list = {INFINITY, 100, 300, INFINITY};  // in nm
-    const std::valarray<std::complex<double>> n_list = {1, 2.2 + 0.2I, 3.3 + 0.3I, 1};
-    constexpr std::complex<double> th_0 = M_PI / 4;
+    const std::valarray<std::complex<double>> n_list = {1, 2.2 + 0.2i, 3.3 + 0.3i, 1};
+    constexpr std::complex<double> th_0 = std::numbers::pi / 4;
     constexpr double lam_vac = 400;
     std::size_t layer = 1;
     double dist = 37;  // dist may have the same type with d_list[i]
@@ -81,7 +90,7 @@ void position_resolved_test() {
 
     char pol = 'p';
     coh_tmm_dict<double> coh_tmm_data = coh_tmm(pol, n_list, d_list, th_0, lam_vac);
-    std::cout << df(std::get<std::valarray<std::complex<double>>>(coh_tmm_data.at("kz_list"))[1], 0.0327410685922732 + 0.003315885921866465I) << '\n';
+    std::cout << df(std::get<std::valarray<std::complex<double>>>(coh_tmm_data.at("kz_list"))[1], 0.0327410685922732 + 0.003315885921866465i) << '\n';
     std::unordered_map<std::string, std::variant<double, std::complex<double>>> data = position_resolved(layer, dist, coh_tmm_data);
     std::cout << df(std::get<double>(data.at("poyn")), 0.7094950598055798) << '\n';
     std::cout << df(std::get<double>(data.at("absor")), 0.005135049118053356) << '\n';
@@ -89,7 +98,7 @@ void position_resolved_test() {
 
     pol = 's';
     coh_tmm_data = coh_tmm(pol, n_list, d_list, th_0, lam_vac);
-    std::cout << df(std::get<std::valarray<std::complex<double>>>(coh_tmm_data.at("kz_list"))[1], 0.0327410685922732 + 0.003315885921866465I) << '\n';
+    std::cout << df(std::get<std::valarray<std::complex<double>>>(coh_tmm_data.at("kz_list"))[1], 0.0327410685922732 + 0.003315885921866465i) << '\n';
     data = position_resolved(layer, dist, coh_tmm_data);
     std::cout << df(std::get<double>(data.at("poyn")), 0.5422594735025152) << '\n';
     std::cout << df(std::get<double>(data.at("absor")), 0.004041912286816303) << '\n';
@@ -152,10 +161,13 @@ void position_resolved_test2() {
     // This is an easy way to generate th0,
     // ensuring that n0 * sin(th0) is real.
     constexpr std::complex<double> n00 = 1;
-    constexpr std::complex<double> th00 = M_PI / 4;
-    constexpr std::complex<double> n0 = 1 + 0.1I;
+    constexpr std::complex<double> th00 = std::numbers::pi / 4;
+    // In call to 'operator+(1., 0.100000000000000000001i)'
+    // constexpr variable 'n0' must be initialized by a constant expression
+    // template<_Tp> constexpr inline complex<_Tp> operator+(const _Tp &__x, const complex<_Tp> &__y)
+    constexpr std::complex<double> n0(1, 0.1);
     const std::complex<double> th_0 = snell(n00, n0, th00);
-    const std::valarray<std::complex<double>> n_list = {n0, 2.2 + 0.2I, 3.3 + 0.3I, 1 + 0.4I};
+    const std::valarray<std::complex<double>> n_list = {n0, 2.2 + 0.2i, 3.3 + 0.3i, 1.0 + 0.4i};
     constexpr double lam_vac = 400;
     std::size_t layer = 1;
     double dist = 37;
@@ -221,8 +233,8 @@ void position_resolved_test2() {
  */
 void absorp_analytic_fn_test() {
     const std::valarray<double> d_list = {INFINITY, 100, 300, INFINITY};  // in nm
-    const std::valarray<std::complex<double>> n_list = {1, 2.2 + 0.2I, 3.3 + 0.3I, 1};
-    constexpr std::complex<double> th_0 = M_PI / 4;
+    const std::valarray<std::complex<double>> n_list = {1, 2.2 + 0.2i, 3.3 + 0.3i, 1};
+    constexpr std::complex<double> th_0 = std::numbers::pi / 4;
     constexpr double lam_vac = 400;
     constexpr std::size_t layer = 1;
     const double d = d_list[layer];
@@ -258,7 +270,7 @@ void incoherent_test() {
     std::valarray<std::complex<double>> n_list = {n0, n1, n2};
     std::valarray<double> d_list = {INFINITY, 567, INFINITY};
     std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Incoherent, LayerType::Incoherent};
-    std::complex<double> th0 = M_PI / 3;
+    std::complex<double> th0 = std::numbers::pi / 3;
     const std::complex<double> th1 = snell(n0, n1, th0);
     std::complex<double> th2 = snell(n0, n2, th0);
     constexpr double lam_vac = 400;
@@ -286,7 +298,7 @@ void incoherent_test() {
     d_list = {INFINITY, 100, INFINITY};
     c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Incoherent};
     constexpr std::complex<double> n00 = 1;
-    constexpr std::complex<double> th00 = M_PI / 3;
+    constexpr std::complex<double> th00 = std::numbers::pi / 3;
     th0 = snell(n00, n0, th00);
     coh_tmm_dict<double> coh_data;
     std::vector<double> inc_each;
@@ -301,7 +313,7 @@ void incoherent_test() {
     // One finite layer with three incoherent layers.
     // Should agree with manual calculation + coherent program
     n2 = std::complex<double>(3, 0.004);
-    constexpr std::complex<double> n3 = 4 + 0.2I;
+    constexpr std::complex<double> n3(4, 0.2);
     constexpr double d1 = 100;
     constexpr double d2 = 10000;
     n_list = {n0, n1, n2, n3};
@@ -329,7 +341,7 @@ void incoherent_test() {
         R20 = std::get<double>(coh_bdata.at("R"));
         T02 = std::get<double>(coh_data.at("T"));
         T20 = std::get<double>(coh_bdata.at("T"));
-        P2 = std::exp(-4 * M_PI * d2 * (n2 * std::cos(th2)).imag() / lam_vac);  // fraction passing through
+        P2 = std::exp(-4 * std::numbers::pi * d2 * (n2 * std::cos(th2)).imag() / lam_vac);  // fraction passing through
         R23 = interface_R(pol, n2, n3, th2, th3);
         T23 = interface_T(pol, n2, n3, th2, th3);
         // T = T02 * P2 * T23 + T02 * P2 * R23 * P2 * R20 * P2 * T23 + ...
@@ -343,10 +355,10 @@ void incoherent_test() {
     }
     // The coherent program with a thick but randomly-varying-thickness substrate
     // should agree with the incoherent program.
-    constexpr std::complex<double> nair = 1 + 0.1I;
-    constexpr std::complex<double> nfilm = 2 + 0.2I;
+    constexpr std::complex<double> nair(1, 0.1);
+    constexpr std::complex<double> nfilm(2, 0.2);
     constexpr std::complex<double> nsub = 3;
-    constexpr std::complex<double> nf = 3 + 0.4I;
+    constexpr std::complex<double> nf(3, 0.4);
     n_list = {nair, nfilm, nsub, nf};
     std::valarray<double> d_list_inc;
     double dsub = NAN;
@@ -372,7 +384,7 @@ void incoherent_test() {
     // The coherent program with a thick substrate and randomly varying wavelength
     // should agree with the incoherent program.
     n0 = 1;
-    n_list = {n0, 2 + 0.0002I, 3 + 0.0001I, 3 + 0.4I};
+    n_list = {n0, 2.0 + 0.0002i, 3.0 + 0.0001i, 3.0 + 0.4i};
     th0 = snell(n00, n0, th00);
     d_list = {INFINITY, 10000, 10200, INFINITY};
     c_list = {LayerType::Incoherent, LayerType::Incoherent, LayerType::Incoherent, LayerType::Incoherent};
@@ -406,8 +418,8 @@ void RT_test() {
 
     // When ni is real [see manual], R+T should equal 1
     std::complex<double> ni = 2;
-    constexpr std::complex<double> nf = 3 + 0.2I;
-    std::complex<double> thi = M_PI / 5;
+    constexpr std::complex<double> nf(3, 0.2);
+    std::complex<double> thi = std::numbers::pi / 5;
     std::complex<double> thf = snell(ni, nf, thi);
     double T = NAN;
     double R = NAN;
@@ -436,10 +448,10 @@ void RT_test() {
  * Test whether very, very opaque layers will break the coherent program
  */
 void coh_overflow_test() {
-    const std::valarray<std::complex<double>> n_list = {1, 2 + 0.1I, 1 + 3I, 4, 5};
+    const std::valarray<std::complex<double>> n_list = {1, 2.0 + 0.1i, 1.0 + 3i, 4, 5};
     const std::valarray<double> d_list = {INFINITY, 50, 1e5, 50, INFINITY};
     constexpr double lam = 200;
-    const double alpha_d = n_list[2].imag() * 4 * M_PI * d_list[2] / lam;
+    const double alpha_d = n_list[2].imag() * 4 * std::numbers::pi * d_list[2] / lam;
     std::cout << "Very opaque layer: Calculation should involve e^(-" << alpha_d << ")!\n";
     coh_tmm_dict<double> data = coh_tmm('s', n_list, d_list, std::complex<double>(0, 0), lam);
     const std::valarray<std::complex<double>> n_list2 = std::valarray(n_list[std::slice(0, 3, 1)]);
@@ -455,11 +467,11 @@ void coh_overflow_test() {
  * Test whether very, very opaque layers will break the coherent program
  */
 void inc_overflow_test() {
-    const std::valarray<std::complex<double>> n_list = {1, 2, 1 + 3I, 4, 5};
+    const std::valarray<std::complex<double>> n_list = {1, 2, 1.0 + 3i, 4, 5};
     const std::valarray<double> d_list = {INFINITY, 50, 1e5, 50, INFINITY};
     const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Incoherent, LayerType::Incoherent, LayerType::Incoherent, LayerType::Incoherent};
     constexpr double lam = 200;
-    const double alpha_d = n_list[2].imag() * 4 * M_PI * d_list[2] / lam;
+    const double alpha_d = n_list[2].imag() * 4 * std::numbers::pi * d_list[2] / lam;
     std::cout << "Very opaque layer: Calculation should involve e^(-" << alpha_d << ")!\n";
     inc_tmm_dict<double> data = inc_tmm('s', n_list, d_list, c_list, std::complex<double>(0, 0), lam);
     const std::valarray<std::complex<double>> n_list2 = std::valarray(n_list[std::slice(0, 3, 1)]);

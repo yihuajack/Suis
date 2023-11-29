@@ -2,6 +2,8 @@
 // Created by Yihua on 2023/11/12.
 //
 
+// GCC has already forwarded <algorithm> from <valarray>, but it is not the case for MSVC.
+#include <algorithm>
 #include "tmm.h"
 #include "utils.h"
 
@@ -75,8 +77,10 @@ auto real_if_close(const std::complex<T> &a, T tol) -> std::variant<T, std::comp
     return a;
 }
 
+// We can write double tol = TOL for gcc but not for MSVC:
+// error C2765: real_if_close: an explicit specialization of a function template cannot have any default arguments
 template auto real_if_close(const std::complex<double> &a,
-                            double tol = TOL) -> std::variant<double, std::complex<double>>;
+                            double tol) -> std::variant<double, std::complex<double>>;
 
 template<typename T, std::size_t N>
 auto linspace(const T start, const T stop) -> std::array<T, N> {
@@ -107,3 +111,55 @@ auto linspace(const T start, const T stop, const std::size_t num) -> std::vector
 }
 
 template auto linspace(const double start, const double stop, const std::size_t num) -> std::vector<double>;
+
+// __GNUG__ is equivalent to (__GNUC__ && __cplusplus),
+// see https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
+// See https://gcc.gnu.org/onlinedocs/libstdc++/manual/ext_demangling.html
+// https://stackoverflow.com/questions/81870/is-it-possible-to-print-a-variables-type-in-standard-c
+// https://stackoverflow.com/questions/13777681/demangling-in-msvc
+#if defined(__GNUC__) || defined(__clang__)
+#include <cxxabi.h>
+auto demangle(const char *mangled_name) -> std::string {
+    int status = 0;
+    // Implicit conversion from char * to std::string.
+    // If using char *, we need to manually free it, which is not RAII.
+    std::string demangled_name = abi::__cxa_demangle(mangled_name, nullptr, nullptr, &status);
+    if (status == 0) {
+        std::string result(demangled_name);
+        return result;
+    }
+    // Demangling failed, return the mangled name
+    return mangled_name;
+}
+// Do not mix #if defined and #elifdef!
+#elif defined(_MSC_VER)
+auto demangle(const char *mangled_name) -> std::string {
+    // Assemble the command to run the 'undname' utility
+    std::string command = "undname -n\"" + std::string(mangled_name) + "\"";
+    // Open a pipe to the command
+    FILE* pipe = _popen(command.c_str(), "r");
+    if (!pipe) {
+        return mangled_name; // Return the mangled name if the command fails
+    }
+    // Read the demangled name from the pipe
+    char buffer[128];
+    std::string result = "";
+    while (fgets(buffer, sizeof(buffer), pipe)) {
+        result += buffer;
+    }
+    // Close the pipe
+    _pclose(pipe);
+    // Remove newline characters from the result
+    result.erase(std::remove(result.begin(), result.end(), '\n'), result.end());
+    return result;
+}
+#else
+auto demangle(const char *mangled_name) -> std::string {
+    return mangled_name;
+}
+#endif
+
+template<typename T>
+auto approx(auto expect4ed, const T rel, const T abs, const bool nan_ok = false) {
+
+}

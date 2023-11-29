@@ -61,4 +61,6 @@ auto print_spec2d_container(const Container &container) -> std::enable_if_t<std:
     }
 };
 
+auto demangle(const char* mangled_name) -> std::string;
+
 #endif //TMM_UTILS_H

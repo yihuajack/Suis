@@ -1,10 +1,21 @@
 cmake_minimum_required(VERSION 3.22)
 project(tmm)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 
-add_executable(tmm test_tmm.cpp ../src/optics/tmm.cpp
+add_executable(tmm-test test_tmm.cpp ../src/optics/tmm.cpp
+        ../src/optics/FixedMatrix.cpp
+        ../src/optics/utils.cpp)
+add_executable(tmm-vec-test test_tmm_vec.cpp ../src/optics/tmm_vec.cpp
+        ../src/optics/Approx.cpp
         ../src/optics/FixedMatrix.cpp
         ../src/optics/utils.cpp)
 
-target_include_directories(tmm PRIVATE ${CMAKE_SOURCE_DIR}/../src/optics)
+target_include_directories(tmm-test PRIVATE ${CMAKE_SOURCE_DIR}/../src/optics)
+target_include_directories(tmm-vec-test PRIVATE ${CMAKE_SOURCE_DIR}/../src/optics)
+
+# For MSVC Compatibility
+# See https://stackoverflow.com/questions/6563810/m-pi-works-with-math-h-but-not-with-cmath-in-visual-studio/6563891
+# add_compile_definitions(_USE_MATH_DEFINES)
+# Instead of using M_PI from <cmath> (included from <complex> for gcc/clang)
+# We use std::numeric::pi and std::numeric::pi_v<T> from <numeric> since C++20 for better compatibility.

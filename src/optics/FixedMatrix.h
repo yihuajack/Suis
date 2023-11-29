@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <stdexcept>
 
+// This matrix class is very coarse. Refer to Bjarne Stroustrup's "The C++ Programming Language" next time.
 template<typename T, std::size_t N, std::size_t M>
 class FixedMatrix {
 private:

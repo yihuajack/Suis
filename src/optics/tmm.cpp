@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <numbers>
 #include <numeric>
 #include <stdexcept>
 #include "FixedMatrix.h"
@@ -111,7 +112,7 @@ auto is_forward_angle(const std::complex<T> n, const std::complex<T> theta) -> b
 template<typename T>
 auto snell(const std::complex<T> n_1, const std::complex<T> n_2, const std::complex<T> th_1) -> std::complex<T> {
     const std::complex<T> th_2_guess = std::asin(n_1 * std::sin(th_1) / n_2);
-    return is_forward_angle(n_2, th_2_guess) ? th_2_guess : M_PI - th_2_guess;
+    return is_forward_angle(n_2, th_2_guess) ? th_2_guess : std::numbers::pi_v<T> - th_2_guess;
 }
 
 template auto snell(std::complex<double> n_1, std::complex<double> n_2,
@@ -126,10 +127,10 @@ auto list_snell(const std::valarray<std::complex<T>> &n_list,
                 const std::complex<T> th_0) -> std::valarray<std::complex<T>> {
     std::valarray<std::complex<T>> angles = std::asin(n_list[0] * std::sin(th_0) / n_list);
     if (not is_forward_angle(n_list[0], angles[0])) {
-        angles[0] = M_PI - angles[0];
+        angles[0] = std::numbers::pi_v<T> - angles[0];
     }
     if (not is_forward_angle(n_list[n_list.size() - 1], angles[angles.size() - 1])) {
-        angles[angles.size() - 1] = M_PI - angles[angles.size() - 1];
+        angles[angles.size() - 1] = std::numbers::pi_v<T> - angles[angles.size() - 1];
     }
     return angles;
 }
@@ -143,10 +144,10 @@ auto list_snell(const std::vector<std::complex<T>> &n_list,
         return std::asin(n_list_0 * std::sin(th_0) / n_list_i);
     });
     if (not is_forward_angle(n_list[0], angles[0])) {
-        angles[0] = M_PI - angles[0];
+        angles[0] = std::numbers::pi_v<T> - angles[0];
     }
     if (not is_forward_angle(n_list[n_list.size() - 1], angles[angles.size() - 1])) {
-        angles[angles.size() - 1] = M_PI - angles[angles.size() - 1];
+        angles[angles.size() - 1] = std::numbers::pi_v<T> - angles[angles.size() - 1];
     }
     return angles;
 }
@@ -176,19 +177,6 @@ auto interface_r(const char polarization, const std::complex<T> n_i, const std::
 template auto interface_r(const char polarization, const std::complex<double> n_i, const std::complex<double> n_f,
                           const std::complex<double> th_i, const std::complex<double> th_f) -> std::complex<double>;
 
-template<typename T>
-auto interface_r(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f,
-                 const std::valarray<std::complex<T>> &th_i,
-                 const std::valarray<std::complex<T>> &th_f) -> std::valarray<std::complex<T>> {
-    if (polarization == 's') {
-        return (n_i * std::cos(th_i) - n_f * std::cos(th_f)) / ((n_i * std::cos(th_i) + n_f * std::cos(th_f)));
-    }
-    if (polarization == 'p') {
-        return (n_f * std::cos(th_i) - n_i * std::cos(th_f)) / ((n_f * std::cos(th_i) + n_i * std::cos(th_f)));
-    }
-    throw std::invalid_argument("Polarization must be 's' or 'p'");
-}
-
 /*
  * transmission amplitude (from Fresnel equations)
  *
@@ -207,19 +195,6 @@ auto interface_t(const char polarization, const std::complex<T> n_i, const std::
     }
     if (polarization == 'p') {
         return 2.0 * n_i * std::cos(th_i) / ((n_f * std::cos(th_i) + n_i * std::cos(th_f)));
-    }
-    throw std::invalid_argument("Polarization must be 's' or 'p'");
-}
-
-template<typename T>
-auto interface_t(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f,
-                 const std::valarray<std::complex<T>> &th_i,
-                 const std::valarray<std::complex<T>> &th_f) -> std::valarray<std::complex<T>> {
-    if (polarization == 's') {
-        return 2 * n_i * std::cos(th_i) / ((n_i * std::cos(th_i) + n_f * std::cos(th_f)));
-    }
-    if (polarization == 'p') {
-        return 2 * n_i * std::cos(th_i) / ((n_f * std::cos(th_i) + n_i * std::cos(th_f)));
     }
     throw std::invalid_argument("Polarization must be 's' or 'p'");
 }
@@ -295,36 +270,6 @@ auto interface_R(const char polarization, const std::complex<T> n_i, const std::
 template auto interface_R(const char polarization, const std::complex<double> n_i, const std::complex<double> n_f,
                           const std::complex<double> th_i, const std::complex<double> th_f) -> double;
 
-template<typename T>
-auto interface_R(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f,
-                 const std::valarray<std::complex<T>> &th_i, const std::valarray<std::complex<T>> &th_f) -> T {
-    // Although solcore's tmm is inherited from an old version of sbyrnes321's tmm,
-    // they have independent development routes.
-    std::valarray<std::complex<T>> r = interface_r(polarization, n_i, n_f, th_i, th_f);
-    // If the outgoing angle is pi/2, that means the light is totally internally reflected, and we can set r = R = 1.
-    // If not, can get unphysical results for r.
-
-    // Note that while T actually CAN be > 1 (when you have incidence from an absorbing
-    // medium), I[solcore] don't think R can ever be > 1.
-
-    // For a given boolean (val)array mask,
-    // std::copy_if(numbers.begin(), numbers.end(), std::back_inserter(result), [&mask, i = 0](const int &)
-    // mutable {
-    //     return mask[i++];
-    // });
-    // Binary operation
-    std::transform(std::begin(r), std::end(r), std::begin(th_f), std::begin(r),
-                   [](const std::complex<T> r_value, const std::complex<T> th_f_value) {
-        return (th_f_value.real() > M_PI / 2 - 1e-6) ? 1 : r_value;
-    });
-    // An alternative equivalent way
-    std::replace_if(std::begin(r), std::end(r), [&th_i, i = 0](const int &) mutable {
-        return th_i[i++].real() > M_PI / 2 - 1e-6;
-    }, 1);
-
-    return R_from_r(r);
-}
-
 /*
  * Fraction of light intensity transmitted at an interface.
  */
@@ -336,23 +281,6 @@ auto interface_T(const char polarization, const std::complex<T> n_i, const std::
 
 template auto interface_T(const char polarization, const std::complex<double> n_i, const std::complex<double> n_f,
                           const std::complex<double> th_i, const std::complex<double> th_f) -> double;
-
-template<typename T>
-auto interface_T(const char polarization, const std::complex<T> n_i, const std::complex<T> n_f,
-                 const std::valarray<std::complex<T>> &th_i,
-                 const std::valarray<std::complex<T>> &th_f) -> std::valarray<T> {
-    std::valarray<std::complex<T>> t = interface_t(polarization, n_i, n_f, th_i, th_f);
-    // If the incoming angle is pi/2, that means (most likely) that the light was previously
-    // totally internally reflected. That means the light will never reach this interface, and
-    // we can safely set t = T = 0; otherwise we get numerical issues which give unphysically large
-    // values of T because in T_from_t we divide by cos(th_i) which is ~ 0.
-    std::transform(std::cbegin(t), std::cend(t), std::begin(th_i), std::begin(t),
-                   [](const std::complex<T> t_value, const std::complex<T> th_i_value) {
-                       return (th_i_value.real() > M_PI / 2 - 1e-6) ? 0 : t_value;
-                   });
-
-    return T_from_t(polarization, t, n_i, n_f, th_i, th_f);
-}
 
 /*
  * Main "coherent transfer matrix method" calc. Given parameters of a stack,
@@ -413,7 +341,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     const std::valarray<std::complex<T>> th_list = list_snell(n_list, th_0);
     // kz is the z-component of (complex) angular wave-vector for forward-moving
     // wave. Positive imaginary part means decaying.
-    const std::valarray<std::complex<T>> kz_list = 2 * M_PI * n_list * std::cos(th_list) / lam_vac;
+    const std::valarray<std::complex<T>> kz_list = 2 * std::numbers::pi_v<T> * n_list * std::cos(th_list) / lam_vac;
     // delta is the total phase accrued by traveling through a given layer.
     // Ignore warning about inf multiplication
     std::valarray<std::complex<T>> d_list_comp_temp(d_list.size());
@@ -527,7 +455,7 @@ auto coh_tmm(const char pol, const std::vector<std::complex<T>> &n_list, const s
     const std::valarray<std::complex<T>> th_list = list_snell(n_list, th_0);
     std::valarray<std::complex<T>> kz_list(n_list.size());  // also th_list.size()
     std::transform(std::begin(n_list), std::end(n_list), std::begin(kz_list), [&th_list, lam_vac, i = 0](const std::complex<T> n_list_i) mutable{
-        return 2 * M_PI * n_list_i * std::cos(th_list[i++]) / lam_vac;
+        return 2 * std::numbers::pi_v<T> * n_list_i * std::cos(th_list[i++]) / lam_vac;
     });
     std::valarray<std::complex<T>> d_list_comp_temp(d_list.size());
     std::transform(std::begin(d_list), std::end(d_list), std::begin(d_list_comp_temp), [](const T real) {
@@ -1074,7 +1002,7 @@ auto inc_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     std::size_t i;
     for (std::size_t inc_index = 1; inc_index < num_inc_layers - 1; inc_index++) {  // skip 0'th and last (infinite)
         i = all_from_inc[inc_index];
-        P_list[inc_index] = std::exp(-4 * M_PI * d_list[i] * (n_list[i] * std::cos(th_list[i])).imag() / lam_vac);
+        P_list[inc_index] = std::exp(-4 * std::numbers::pi_v<T> * d_list[i] * (n_list[i] * std::cos(th_list[i])).imag() / lam_vac);
         // For a very opaque layer, reset P to avoid divide-by-0 and similar
         // errors.
         if (P_list[inc_index] < 1e-30) {
