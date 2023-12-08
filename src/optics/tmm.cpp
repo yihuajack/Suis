@@ -359,12 +359,12 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
             delta[i] = std::complex<T>(delta[i].real(), 35);
             // We have to do try-catch here rather than in main.cpp; if not, the following calculation will not be done!
             try {
-                throw ValueWarning("Warning: Layers that are almost perfectly opaque "
-                                   "are modified to be slightly transmissive, "
-                                   "allowing 1 photon in 10^30 to pass through. It's "
-                                   "for numerical stability. This warning will not "
-                                   "be shown again.");
-            } catch (const ValueWarning &coh_value_warning) {
+                throw std::runtime_error("Warning: Layers that are almost perfectly opaque "
+                                         "are modified to be slightly transmissive, "
+                                         "allowing 1 photon in 10^30 to pass through. It's "
+                                         "for numerical stability. This warning will not "
+                                         "be shown again.");
+            } catch (const std::runtime_error &coh_value_warning) {
                 // Do nothing.
             }
         }
@@ -465,11 +465,11 @@ auto coh_tmm(const char pol, const std::vector<std::complex<T>> &n_list, const s
     for (std::size_t i = 1; i < num_layers - 1; i++) {
         if (delta[i].imag() > 35) {
             delta[i] = std::complex<T>(delta[i].real(), 35);
-            throw ValueWarning("Warning: Layers that are almost perfectly opaque "
-                               "are modified to be slightly transmissive, "
-                               "allowing 1 photon in 10^30 to pass through. It's "
-                               "for numerical stability. This warning will not "
-                               "be shown again.");
+            throw std::runtime_error("Warning: Layers that are almost perfectly opaque "
+                                     "are modified to be slightly transmissive, "
+                                     "allowing 1 photon in 10^30 to pass through. It's "
+                                     "for numerical stability. This warning will not "
+                                     "be shown again.");
         }
     }
     std::vector<std::vector<std::complex<T>>> t_list(num_layers, std::vector<std::complex<T>>(num_layers));

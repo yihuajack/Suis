@@ -44,6 +44,7 @@ public:
     // FixedMatrix<int, 2, 2> = {1, 0, 0, 1} will construct by the array<array> [MOVING] constructor;
     // others will construct by the initializer_list<initializer_list> constructor due to automatic brace elision.
     // See Item 7, Chapter 3 of Effective Modern C++
+    // Also see https://youtrack.jetbrains.com/issue/CPP-36190/Class-constructor-parameter-used-but-marked-dark-and-unused
     FixedMatrix(std::initializer_list<std::initializer_list<T>> init_list);
     ~FixedMatrix() = default;
     // See Scott Meyer's More Effective C++ "Techniques, Idioms, Patterns" Item 30 Proxy classes

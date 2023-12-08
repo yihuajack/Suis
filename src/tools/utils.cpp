@@ -4,10 +4,8 @@
 
 // GCC has already forwarded <algorithm> from <valarray>, but it is not the case for MSVC.
 #include <algorithm>
-#include "tmm.h"
+#include <vector>
 #include "utils.h"
-
-ValueWarning::ValueWarning(const std::string &message) : std::runtime_error(message) {}
 
 template auto complex_to_string_with_name(const std::complex<double> c, const std::string &name) -> std::string;
 
@@ -158,8 +156,3 @@ auto demangle(const char *mangled_name) -> std::string {
     return mangled_name;
 }
 #endif
-
-template<typename T>
-auto approx(auto expect4ed, const T rel, const T abs, const bool nan_ok = false) {
-
-}

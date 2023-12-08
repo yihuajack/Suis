@@ -106,12 +106,12 @@ auto coh_tmm(const char pol, const std::valarray<std::valarray<std::complex<T>>>
         if (delta[i].imag() > 35) {
             delta[i] = std::complex<T>(delta[i].real(), 35);
             try {
-                throw ValueWarning("Warning: Layers that are almost perfectly opaque "
-                                   "are modified to be slightly transmissive, "
-                                   "allowing 1 photon in 10^30 to pass through. It's "
-                                   "for numerical stability. This warning will not "
-                                   "be shown again.");
-            } catch (const ValueWarning &coh_value_warning) {
+                throw std::runtime_error("Warning: Layers that are almost perfectly opaque "
+                                         "are modified to be slightly transmissive, "
+                                         "allowing 1 photon in 10^30 to pass through. It's "
+                                         "for numerical stability. This warning will not "
+                                         "be shown again.");
+            } catch (const std::runtime_error &coh_value_warning) {
                 // Do nothing.
             }
         }

@@ -9,6 +9,11 @@
 #include "tmm.h"
 #include "utils.h"
 
+// Till the code is written (Dec. 5, 2023), only Clang libc++ completely supports formatting ranges (P2286R8)
+#if _LIBCPP_STD_VER >= 23
+#include <format>
+#endif
+
 // Only operator""if operator""i operator""il since C++14 are standard complex literals.
 // The capital complex literal "I" is a macro in GNU C Extension,
 // see https://gcc.gnu.org/onlinedocs/gcc/Complex.html.
@@ -459,8 +464,23 @@ void coh_overflow_test() {
     d_list2[d_list2.size() - 1] = INFINITY;
     const coh_tmm_dict<double> data2 = coh_tmm('s', n_list2, d_list2, std::complex<double>(0, 0), lam);
     std::cout << "First entries of the following two lists should agree:\n";
-    print_spec2d_container<std::vector<std::array<std::complex<double>, 2>>, double>(std::get<std::vector<std::array<std::complex<double>, 2>>>(data.at("vw_list")));
-    print_spec2d_container<std::vector<std::array<std::complex<double>, 2>>, double>(std::get<std::vector<std::array<std::complex<double>, 2>>>(data2.at("vw_list")));
+    // https://stackoverflow.com/questions/3496982/how-can-i-print-a-list-of-elements-separated-by-commas
+    // [P2197R0](https://fmt.dev/papers/p2197r0.html) Formatting for std::complex is closed
+    // See https://github.com/cplusplus/papers/issues/908
+    // https://wg21.link/P2197R0 (https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2020/p2197r0.html)
+    // Also have a look at https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2930r0.html
+    // Alternatively, use <print>
+    // std::print("{}", std::get<std::vector<std::array<std::complex<double>, 2>>>(data.at("vw_list")).real());
+    // #if _LIBCPP_STD_VER >= 23
+#ifdef __cpp_lib_format_ranges
+    std::cout << std::format("{}", std::get<std::vector<std::array<std::complex<double>, 2>>>(data.at("vw_list")).real();
+    std::cout << std::format("{}", std::get<std::vector<std::array<std::complex<double>, 2>>>(data2.at("vw_list")).real());
+    std::cout << std::format("{}", std::get<std::vector<std::array<std::complex<double>, 2>>>(data.at("vw_list")).imag();
+    std::cout << std::format("{}", std::get<std::vector<std::array<std::complex<double>, 2>>>(data2.at("vw_list")).imag());
+#else
+    print_spec2d_container<std::vector<std::array<std::complex<double>, 2>>>(std::get<std::vector<std::array<std::complex<double>, 2>>>(data.at("vw_list")));
+    print_spec2d_container<std::vector<std::array<std::complex<double>, 2>>>(std::get<std::vector<std::array<std::complex<double>, 2>>>(data2.at("vw_list")));
+#endif
 }
 
 /*
