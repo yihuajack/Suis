@@ -7,7 +7,7 @@ add_executable(tmm-test test_tmm.cpp ../src/optics/tmm.cpp
         ../src/optics/FixedMatrix.cpp
         ../src/tools/utils.cpp
 )
-add_executable(tmm-vec-test test_tmm_vec.cpp ../src/optics/tmm_vec.cpp
+add_executable(tmm-vec-test test_tmm_vec.cpp ../src/optics/tmm_vec.cpp ../src/optics/tmm.cpp
         ../src/tools/Approx.cpp
         ../src/optics/FixedMatrix.cpp
         ../src/tools/utils.cpp

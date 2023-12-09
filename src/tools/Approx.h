@@ -13,11 +13,8 @@
 #include <type_traits>
 
 // https://stackoverflow.com/questions/30736951/templated-class-check-if-complex-at-compile-time
-template<std::floating_point T> struct is_fp_complex : std::false_type {};
-template<std::floating_point T> struct is_fp_complex<std::complex<T>> : std::true_type {};
-
 template<typename T>
-concept FPScalar = std::floating_point<T> || is_fp_complex<T>::value;
+concept FPScalar = std::floating_point<T> or std::is_same_v<T, std::complex<typename T::value_type>> and std::is_floating_point_v<typename T:: value_type>;
 
 // Forward declaration for _approx_scalar()
 template<FPScalar U, std::floating_point T>
@@ -48,9 +45,8 @@ public:
     virtual auto operator==(const U &actual) const -> bool;
     // _yield_comparisons cannot be a pure virtual member function because ApproxScalar does not implement it.
     virtual auto _yield_comparisons(const U &actual) const -> std::any;
-    // Luckily, this member function is not a virtual member function, so we can template it.
-    template<typename V = U, typename = std::enable_if_t<FPScalar<V>>>
-    auto _approx_scalar(T x) const -> ApproxScalar<U, T>;
+    template<FPScalar V>
+    auto _approx_scalar(V x) const -> ApproxScalar<V, T>;
 };
 
 /*

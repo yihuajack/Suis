@@ -2,27 +2,21 @@
 // Created by Yihua on 2023/11/27.
 //
 
-#include <iostream>
-#include <list>
+#include <cassert>
 #include "tmm.h"
 #include "Approx.h"
 
+using namespace std::complex_literals;
+
 void test_snell() {
-    auto v1 = std::vector<double>{1, 2, 3};
-    auto v2 = std::list<short>{1, 2, 3, 4};
-    auto v3 = std::to_array({1, 2, 3, 4, 5});
-
-    bool result_bool = approx<double>(1.0) == 0.99;
-    bool result = approx<std::vector<double>, double>(v1) == std::vector<double>{1.01, 2, 3};
-
-    // We can write std::__cxx11::list<> for gcc but not for msvc:
-    // error C3083: the symbol to the left of a "__cxx11":"::" must be a type
-    // std::ranges::zip_view<std::ranges::ref_view<std::vector<float, std::allocator<float>>>,
-    //         std::ranges::ref_view<std::list<short, std::allocator<short>>>,
-    //                 std::ranges::ref_view<std::array<int, 5>>> sum = std::views::zip(v1, v2, v3);
-
-    std::cout << std::boolalpha << result_bool << '\n';
-    std::cout << result << '\n';
+    // assert() does not support comma operators. However, you can have a look at
+    // P2264 R1-[P2264R5](https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2264r5.html)
+    // https://github.com/cplusplus/papers/issues/957
+    // Make assert() macro user friendly for C and C++
+    // assert(snell(3.0 + 0i, 2.0 + 0i, 0.7 + 0i) == approx<std::complex<double>, double>(1.3105496419558818));
+    ApproxScalar<std::complex<double>, double> snell_approx = approx<std::complex<double>, double>(1.3105496419558818);
+    std::complex<double> snell_result = snell(3.0 + 0i, 2.0 + 0i, 0.7 + 0i);
+    assert(snell_result == snell_approx);
 }
 
 auto main() -> int {

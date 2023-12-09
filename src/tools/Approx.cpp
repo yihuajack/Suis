@@ -39,17 +39,20 @@ template<typename U, std::floating_point T>
 // requires std::ranges::sized_range<V>
 auto ApproxBase<U, T>::operator==(const U &actual) const -> bool {
     if constexpr (std::ranges::sized_range<U>) {
-        // if constexpr (std::same_as<std::ranges::range_value_t<U>, T>) {
+        // if constexpr does not have a short circuit evaluation
+        // Distinguish between std::is_same or std::is_same_v and std::same_as
+        // if constexpr (std::is_same_v<std::ranges::range_value_t<U>, T>)
         // For issue "In template: type constraint differs in template redeclaration",
         // see https://youtrack.jetbrains.com/issue/CPP-35055/CLion-false-error-on-using-C23-zip-feature.
+        // to refer to a type member of a template parameter, use 'typename U::value_type'
         return std::ranges::all_of(
-            // std::any_cast<decltype(std::views::zip(expected, actual))>(_yield_comparisons(actual)),
-            std::views::zip(expected, actual),
-            [this](const std::tuple<T, T> &elem) -> bool {
-                T a = std::get<0>(elem);
-                T x = std::get<1>(elem);
+            std::any_cast<decltype(std::views::zip(expected, actual))>(_yield_comparisons(actual)),
+            [this](const std::tuple<typename U::value_type, typename U::value_type> &elem) -> bool requires FPScalar<typename U::value_type> {
+                FPScalar auto a = std::get<0>(elem);
+                FPScalar auto x = std::get<1>(elem);
                 // Since C++20, given operator==, != implies !(==).
-                return a == _approx_scalar(x);
+                // _approx_scalar() cannot return ApproxScalar<U, T> for arbitrary type U, especially sequence-like U.
+                return a == _approx_scalar<typename U::value_type>(x);
             });
     }
     throw std::logic_error("The operator==() function of the base class ApproxBase<U, T> should only be called when"
@@ -66,9 +69,9 @@ auto ApproxBase<U, T>::_yield_comparisons(const U &actual) const -> std::any {
 }
 
 template<typename U, std::floating_point T>
-template<typename V, typename>
-auto ApproxBase<U, T>::_approx_scalar(T x) const -> ApproxScalar<U, T> {
-    return ApproxScalar<U, T>(x, abs, rel, nan_ok);
+template<FPScalar V>
+auto ApproxBase<U, T>::_approx_scalar(V x) const -> ApproxScalar<V, T> {
+    return ApproxScalar<V, T>(x, abs, rel, nan_ok);
 }
 
 template<std::ranges::sized_range U, std::floating_point T>
@@ -92,9 +95,7 @@ auto ApproxScalar<U, T>::operator==(const U &actual) const -> bool {
         return true;
     }
     // If either type is non-numeric, fall back to strict equality.
-    if constexpr (not std::is_floating_point_v<T> or not is_fp_complex<T>::value) {
-        return false;
-    }
+    // Constexpr checking the type of T (and U) is redundant.
     // Allow the user to control whether NaNs are considered equal to each or not.
     // The abs() calls are for compatibility with complex numbers.
     if (std::isnan(std::abs(this->expected))) {
@@ -161,5 +162,6 @@ auto approx(const U expected, const T rel, const T abs, const bool nan_ok) -> Ap
 }
 
 template auto approx(const std::vector<double> &expected, const double rel, const double abs, const bool nan_ok) -> ApproxSequenceLike<std::vector<double>, double>;
+template auto approx(const std::vector<std::complex<double>> &expected, const double rel, const double abs, const bool nan_ok) -> ApproxSequenceLike<std::vector<std::complex<double>>, double>;
 template auto approx(const double expected, const double rel, const double abs, const bool nan_ok) -> ApproxScalar<double, double>;
 template auto approx(const std::complex<double> expected, const double rel, const double abs, const bool nan_ok) -> ApproxScalar<std::complex<double>, double>;
