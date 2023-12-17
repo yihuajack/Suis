@@ -130,6 +130,7 @@ auto demangle(const char *mangled_name) -> std::string {
     return mangled_name;
 }
 // Do not mix #if defined and #elifdef!
+// Normally, `undname` command is only accessible under Developer Command Prompt/PowerShell for VS
 #elif defined(_MSC_VER)
 auto demangle(const char *mangled_name) -> std::string {
     // Assemble the command to run the 'undname' utility
@@ -156,3 +157,18 @@ auto demangle(const char *mangled_name) -> std::string {
     return mangled_name;
 }
 #endif
+
+template<typename T>
+auto va_2d_transpose(const std::valarray<T> &old_va, const std::size_t num_rows) -> std::valarray<T> {
+    std::valarray<T> new_va(old_va.size());
+    const std::size_t num_cols = old_va.size() / num_rows;
+    for (std::size_t i = 0; i < num_rows; i++) {
+        for (std::size_t j = 0; j < num_cols; j++) {
+            new_va[j * num_cols + i] = old_va[i * num_rows + j];
+        }
+    }
+    return new_va;
+}
+
+template auto va_2d_transpose(const std::valarray<std::complex<double>> &old_va,
+                              const std::size_t num_rows) -> std::valarray<std::complex<double>>;

@@ -79,7 +79,7 @@ template class AbsorpAnalyticFn<double>;
  * See https://arxiv.org/abs/1603.02720 appendix D. If theta is the forward
  * angle, then (pi-theta) is the backward angle and vice-versa.
  */
-template<typename T>
+template<std::floating_point T>
 auto is_forward_angle(const std::complex<T> n, const std::complex<T> theta) -> bool {
     if (n.real() * n.imag() < 0) {
         throw std::runtime_error("For materials with gain, it's ambiguous which "
@@ -109,7 +109,7 @@ auto is_forward_angle(const std::complex<T> n, const std::complex<T> theta) -> b
  * it has angle th_1 in layer with refractive index n_1. Use Snell's law. Note
  * that "angles" may be complex!!
  */
-template<typename T>
+template<std::floating_point T>
 auto snell(const std::complex<T> n_1, const std::complex<T> n_2, const std::complex<T> th_1) -> std::complex<T> {
     const std::complex<T> th_2_guess = std::asin(n_1 * std::sin(th_1) / n_2);
     return is_forward_angle(n_2, th_2_guess) ? th_2_guess : std::numbers::pi_v<T> - th_2_guess;
@@ -122,7 +122,7 @@ template auto snell(std::complex<double> n_1, std::complex<double> n_2,
  * n_list is index of refraction of each layer.
  * Note that "angles" may be complex!!
  */
-template<typename T>
+template<std::floating_point T>
 auto list_snell(const std::valarray<std::complex<T>> &n_list,
                 const std::complex<T> th_0) -> std::valarray<std::complex<T>> {
     std::valarray<std::complex<T>> angles = std::asin(n_list[0] * std::sin(th_0) / n_list);
@@ -135,7 +135,10 @@ auto list_snell(const std::valarray<std::complex<T>> &n_list,
     return angles;
 }
 
-template<typename T>
+template auto list_snell(const std::valarray<std::complex<double>> &n_list,
+                         const std::complex<double> th_0) -> std::valarray<std::complex<double>>;
+
+template<std::floating_point T>
 auto list_snell(const std::vector<std::complex<T>> &n_list,
                 const std::complex<T> th_0) -> std::valarray<std::complex<T>> {
     std::valarray<std::complex<T>> angles(n_list.size());
@@ -199,6 +202,9 @@ auto interface_t(const char polarization, const std::complex<T> n_i, const std::
     throw std::invalid_argument("Polarization must be 's' or 'p'");
 }
 
+template auto interface_t(const char polarization, const std::complex<double> n_i, const std::complex<double> n_f,
+                          const std::complex<double> th_i, const std::complex<double> th_f) -> std::complex<double>;
+
 /*
  * Calculate reflected power R, starting with reflection amplitude r.
  */
@@ -206,6 +212,8 @@ template<typename T>
 auto R_from_r(const std::complex<T> r) -> T {
     return std::norm(r);
 }
+
+template auto R_from_r(const std::complex<double> r) -> double;
 
 /*
  * Calculate transmitted power T, starting with transmission amplitude t.
@@ -224,13 +232,17 @@ template<typename T>
 auto T_from_t(const char pol, const std::complex<T> t, const std::complex<T> n_i, const std::complex<T> n_f,
               const std::complex<T> th_i, const std::complex<T> th_f) -> T {
     if (pol == 's') {
-        return std::abs(t * t) * (n_f * std::cos(th_f)).real() / (n_i * std::cos(th_i)).real();
+        return std::norm(t) * (n_f * std::cos(th_f)).real() / (n_i * std::cos(th_i)).real();
     }
     if (pol == 'p') {
-        return std::abs(t * t) * (n_f * std::conj(std::cos(th_f))).real() / (n_i * std::conj(std::cos(th_i))).real();
+        return std::norm(t) * (n_f * std::conj(std::cos(th_f))).real() / (n_i * std::conj(std::cos(th_i))).real();
     }
     throw std::invalid_argument("Polarization must be 's' or 'p'");
 }
+
+template auto T_from_t(const char pol, const std::complex<double> t, const std::complex<double> n_i,
+                       const std::complex<double> n_f, const std::complex<double> th_i,
+                       const std::complex<double> th_f) -> double;
 
 /*
  * Calculate the power entering the first interface of the stack, starting with
@@ -321,18 +333,18 @@ template auto interface_T(const char polarization, const std::complex<double> n_
  * - th_list--(complex) propagation angle (in radians) in each layer
  * - pol, n_list, d_list, th_0, lam_vac--same as input
  */
-template<typename T>
+template<std::floating_point T>
 auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
              const std::complex<T> th_0, const T lam_vac) -> coh_tmm_dict<T> {
     // Input tests
     if (n_list.size() not_eq d_list.size()) {
-        throw std::logic_error("n_list and d_list must have same length");
+        throw std::invalid_argument("n_list and d_list must have same length");
     }
     if (not std::isinf(d_list[0]) or not std::isinf(d_list[d_list.size() - 1])) {
-        throw std::runtime_error("d_list must start and end with inf!");
+        throw std::invalid_argument("d_list must start and end with inf!");
     }
     if (std::abs((n_list[0] * std::sin(th_0)).imag()) >= TOL * EPSILON<T> or not is_forward_angle(n_list[0], th_0)) {
-        throw std::runtime_error("Error in n0 or th0!");
+        throw std::invalid_argument("Error in n0 or th0!");
     }
     const std::size_t num_layers = n_list.size();
     // th_list is a list with, for each layer, the angle that the light travels
@@ -439,17 +451,17 @@ template auto coh_tmm(const char pol, const std::valarray<std::complex<double>> 
                       const std::valarray<double> &d_list, const std::complex<double> th_0,
                       const double lam_vac) -> coh_tmm_dict<double>;
 
-template<typename T>
+template<std::floating_point T>
 auto coh_tmm(const char pol, const std::vector<std::complex<T>> &n_list, const std::vector<T> &d_list,
              const std::complex<T> th_0, const T lam_vac) -> stack_coh_tmm_dict<T> {
     if (n_list.size() not_eq d_list.size()) {
-        throw std::logic_error("n_list and d_list must have same length");
+        throw std::invalid_argument("n_list and d_list must have same length");
     }
     if (not std::isinf(d_list[0]) or not std::isinf(d_list[d_list.size() - 1])) {
-        throw std::runtime_error("d_list must start and end with inf!");
+        throw std::invalid_argument("d_list must start and end with inf!");
     }
     if (std::abs((n_list[0] * std::sin(th_0)).imag()) >= TOL * EPSILON<T> or not is_forward_angle(n_list[0], th_0)) {
-        throw std::runtime_error("Error in n0 or th0!");
+        throw std::invalid_argument("Error in n0 or th0!");
     }
     const std::size_t num_layers = n_list.size();
     const std::valarray<std::complex<T>> th_list = list_snell(n_list, th_0);
@@ -959,7 +971,7 @@ auto inc_group_layers(const std::valarray<std::complex<T>> &n_list, const std::v
  *   (coherent or incoherent) layer.
  * - Plus, all the outputs of inc_group_layers
  */
-template<typename T>
+template<std::floating_point T>
 auto inc_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
              const std::valarray<LayerType> &c_list, const std::complex<T> th_0, const T lam_vac) -> inc_tmm_dict<T> {
     // Input tests

@@ -23,7 +23,7 @@ constexpr float TOL = 100;
 
 // Python sys.float_info.epsilon is DBL_EPSILON
 // For C++, epsilon can be false, 0, FLT_EPSILON, DBL_EPSILON, LDBL_EPSILON, or custom T()
-template<typename T>
+template<std::floating_point T>
 constexpr T EPSILON=std::numeric_limits<T>::epsilon();
 
 // size_t for C "stddef.h"; std::size_t for C++ <cstddef>
@@ -122,5 +122,8 @@ void print_spec2d_container(const Container &container) {
 };
 
 auto demangle(const char* mangled_name) -> std::string;
+
+template<typename T>
+auto va_2d_transpose(const std::valarray<T> &old_va, std::size_t num_rows) -> std::valarray<T>;
 
 #endif //UTILS_H

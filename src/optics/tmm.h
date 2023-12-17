@@ -86,12 +86,26 @@ public:
     auto add(const AbsorpAnalyticFn &b) -> AbsorpAnalyticFn;
 };
 
-template<typename T>
+template<std::floating_point T>
 auto snell(std::complex<T> n_1, std::complex<T> n_2, std::complex<T> th_1) -> std::complex<T>;
+
+template<std::floating_point T>
+auto list_snell(const std::valarray<std::complex<T>> &n_list, std::complex<T> th_0) -> std::valarray<std::complex<T>>;
 
 template<typename T>
 auto interface_r(char polarization, std::complex<T> n_i, std::complex<T> n_f, std::complex<T> th_i,
                  std::complex<T> th_f) -> std::complex<T>;
+
+template<typename T>
+auto interface_t(char polarization, std::complex<T> n_i, std::complex<T> n_f, std::complex<T> th_i,
+                 std::complex<T> th_f) -> std::complex<T>;
+
+template<typename T>
+auto R_from_r(std::complex<T> r) -> T;
+
+template<typename T>
+auto T_from_t(char pol, std::complex<T> t, std::complex<T> n_i, std::complex<T> n_f, std::complex<T> th_i,
+              std::complex<T> th_f) -> T;
 
 template<typename T>
 auto power_entering_from_r(char pol, std::complex<T> r, std::complex<T> n_i, std::complex<T> th_i) -> T;
@@ -100,13 +114,27 @@ template<typename T>
 auto interface_R(char polarization, std::complex<T> n_i, std::complex<T> n_f, std::complex<T> th_i,
                  std::complex<T> th_f) -> T;
 
+template<std::floating_point T>
+auto interface_R(char polarization, const std::valarray<std::complex<T>> &n_i,
+                 const std::valarray<std::complex<T>> &n_f, const std::valarray<std::complex<T>> &th_i,
+                 const std::valarray<std::complex<T>> &th_f) -> std::valarray<T>;
+
 template<typename T>
 auto interface_T(char polarization, std::complex<T> n_i, std::complex<T> n_f, std::complex<T> th_i,
                  std::complex<T> th_f) -> T;
 
-template<typename T>
+template<std::floating_point T>
+auto interface_T(char polarization, const std::valarray<std::complex<T>> &n_i,
+                 const std::valarray<std::complex<T>> &n_f, const std::valarray<std::complex<T>> &th_i,
+                 const std::valarray<std::complex<T>> &th_f) -> std::valarray<T>;
+
+template<std::floating_point T>
 auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
              std::complex<T> th_0, T lam_vac) -> coh_tmm_dict<T>;
+
+template<std::floating_point T>
+auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
+             std::complex<T> th_0, const std::valarray<T> &lam_vac) -> coh_tmm_dict<T>;
 
 template<typename T>
 auto ellips(const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list, std::complex<T> th_0,
@@ -119,7 +147,7 @@ auto position_resolved(std::size_t layer, T distance,
 template<typename T>
 auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<T>;
 
-template<typename T>
+template<std::floating_point T>
 auto inc_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
              const std::valarray<LayerType> &c_list, std::complex<T> th_0, T lam_vac) -> inc_tmm_dict<T>;
 

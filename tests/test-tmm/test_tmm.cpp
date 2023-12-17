@@ -10,7 +10,8 @@
 #include "utils.h"
 
 // Till the code is written (Dec. 5, 2023), only Clang libc++ completely supports formatting ranges (P2286R8)
-#if _LIBCPP_STD_VER >= 23
+// #if _LIBCPP_STD_VER >= 23
+#ifdef __cpp_lib_format
 #include <format>
 #endif
 
