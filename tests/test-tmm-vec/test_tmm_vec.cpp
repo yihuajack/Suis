@@ -103,7 +103,7 @@ void test_interface_T() {
 }
 
 // Test for coh_tmm
-void test_coh_tmm_exceptions() {
+void test_coh_tmm() {
     // An interesting discussion on VLA and std::dynarray:
     // https://stackoverflow.com/questions/1887097/why-arent-variable-length-arrays-part-of-the-c-standard/21519062
     // https://stackoverflow.com/questions/61141691/are-there-plans-to-implement-stddynarray-in-next-c-standard
@@ -114,11 +114,11 @@ void test_coh_tmm_exceptions() {
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
-    const coh_tmm_dict<double> result = coh_tmm('s', n_list, d_list, th_0, lam_vac);
+    const coh_tmm_vec_dict<double> result = coh_tmm('s', n_list, d_list, th_0, lam_vac);
     ApproxSequenceLike<std::valarray<std::complex<double>>, double> rs_approx = approx<std::valarray<std::complex<double>>, double>(std::valarray<std::complex<double>>{0.14017645 - 0.2132843i, 0.22307786 - 0.10704008i});
-    assert(result.at("r") == rs_approx);
+    assert(std::get<std::valarray<std::complex<double>>>(result.at("r")) == rs_approx);
 }
 
 auto main() -> int {
-    test_interface_T();
+    test_coh_tmm();
 }

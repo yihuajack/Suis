@@ -8,13 +8,40 @@
 #include <variant>
 #include <vector>
 
+/*
+ * r: std::complex<T>
+ * t: std::complex<T>
+ * R: T
+ * T: T
+ * power_entering: T
+ * vw_list: std::vector<std::array<std::complex<T>, 2>>
+ * kz_list: std::valarray<std::complex<T>>
+ * th_list: std::valarray<std::complex<T>>
+ * pol: char
+ * n_list: std::valarray<std::complex<T>>
+ * d_list: std::valarray<T>
+ * th_0: std::complex<T>
+ * lam_vac: T
+ */
 template<typename T>
 using coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<T>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
+/*
+ * r: std::complex<T>
+ * t: std::complex<T>
+ * R: T
+ * T: T
+ * power_entering: T
+ * vw_list: std::vector<std::array<std::complex<T>, 2>>
+ * kz_list: std::valarray<std::complex<T>>
+ * th_list: std::valarray<std::complex<T>>
+ * pol: char
+ * n_list: std::vector<std::complex<T>>
+ * d_list: std::vector<T>
+ * th_0: std::complex<T>
+ * lam_vac: T
+ */
 template<typename T>
 using stack_coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::vector<T>, std::vector<std::complex<T>>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
-template<typename T>
-using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t, std::vector<std::size_t>, std::vector<long long int>, std::vector<T>, std::vector<coh_tmm_dict<T>>, std::vector<stack_coh_tmm_dict<T>>, std::vector<std::vector<T>>, std::vector<std::vector<std::complex<T>>>, std::vector<std::vector<std::size_t>>, std::valarray<std::array<T, 2>>>>;
-
 /*
  * stack_d_list: std::vector<std::vector<T>>
  * stack_n_list: std::vector<std::vector<std::complex<T>>>
@@ -27,14 +54,31 @@ using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t
  * num_stacks: std::size_t
  * num_inc_layers: std::size_t
  * num_layers: std::size_t
- * T: T
- * R: T
  * VW_list: std::valarray<std::array<T, 2>>
  * coh_tmm_data_list: std::vector<stack_coh_tmm_dict<T>>
  * coh_tmm_bdata_list: std::vector<coh_tmm_dict<T>>
  * stackFB_list: std::valarray<std::array<T, 2>>
  * power_entering_list: std::vector<T>
  */
+template<typename T>
+using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t, std::vector<std::size_t>, std::vector<long long int>, std::vector<T>, std::vector<coh_tmm_dict<T>>, std::vector<stack_coh_tmm_dict<T>>, std::vector<std::vector<T>>, std::vector<std::vector<std::complex<T>>>, std::vector<std::vector<std::size_t>>, std::valarray<std::array<T, 2>>>>;
+/*
+ * r: std::valarray<std::complex<T>>
+ * t: std::valarray<std::complex<T>>
+ * R: std::valarray<T>
+ * T: std::valarray<T>
+ * power_entering: std::valarray<T>
+ * vw_list: std::vector<std::vector<std::array<std::complex<T>, 2>>>
+ * kz_list: std::valarray<std::complex<T>>
+ * th_list: std::valarray<std::complex<T>>
+ * pol: char
+ * n_list: std::valarray<std::complex<T>>
+ * d_list: std::valarray<T>
+ * th_0: std::complex<T>
+ * lam_vac: std::valarray<T>
+ */
+template<typename T>
+using coh_tmm_vec_dict = std::unordered_map<std::string, std::variant<char, std::complex<T>, std::valarray<T>, std::valarray<std::complex<T>>, std::vector<std::vector<std::array<std::complex<T>, 2>>>>>;
 
 enum class LayerType { Coherent, Incoherent };
 
@@ -87,6 +131,9 @@ public:
 };
 
 template<std::floating_point T>
+auto is_forward_angle(std::complex<T> n, std::complex<T> theta) -> bool;
+
+template<std::floating_point T>
 auto snell(std::complex<T> n_1, std::complex<T> n_2, std::complex<T> th_1) -> std::complex<T>;
 
 template<std::floating_point T>
@@ -134,7 +181,7 @@ auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::
 
 template<std::floating_point T>
 auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
-             std::complex<T> th_0, const std::valarray<T> &lam_vac) -> coh_tmm_dict<T>;
+             std::complex<T> th_0, const std::valarray<T> &lam_vac) -> coh_tmm_vec_dict<T>;
 
 template<typename T>
 auto ellips(const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list, std::complex<T> th_0,

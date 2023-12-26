@@ -88,7 +88,7 @@ auto is_forward_angle(const std::complex<T> n, const std::complex<T> theta) -> b
                                  complex_to_string_with_name(n, "n") + "\t" +
                                  complex_to_string_with_name(theta, "angle"));
     }
-    const std::complex<double> ncostheta = n * std::cos(theta);
+    const std::complex<T> ncostheta = n * std::cos(theta);
     const bool answer = std::abs(ncostheta.imag()) > TOL * EPSILON<T> ? ncostheta.imag() > 0 : ncostheta.real() > 0;
     if ((answer and (ncostheta.imag() <= -TOL * EPSILON<T> or
                      ncostheta.real() <= -TOL * EPSILON<T> or
@@ -103,6 +103,8 @@ auto is_forward_angle(const std::complex<T> n, const std::complex<T> theta) -> b
     }
     return answer;
 }
+
+template auto is_forward_angle(const std::complex<double> n, const std::complex<double> theta) -> bool;
 
 /*
  * return angle theta in layer 2 with refractive index n_2, assuming

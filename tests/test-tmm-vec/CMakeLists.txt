@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Windows")
+if (CMAKE_SYSTEM_NAME STREQUAL "Windows")  # == CMAKE_HOST_SYSTEM_NAME
     # https://stackoverflow.com/questions/28070810/cmake-generate-error-on-windows-as-it-uses-as-escape-seq
     file(TO_CMAKE_PATH $ENV{VCPKG_ROOT} VCPKG_ROOTDIR)
     # cmake_path(SET VCPKG_ROOTDIR $ENV{VCPKG_ROOT})

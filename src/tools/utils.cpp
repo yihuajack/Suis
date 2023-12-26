@@ -164,7 +164,7 @@ auto va_2d_transpose(const std::valarray<T> &old_va, const std::size_t num_rows)
     const std::size_t num_cols = old_va.size() / num_rows;
     for (std::size_t i = 0; i < num_rows; i++) {
         for (std::size_t j = 0; j < num_cols; j++) {
-            new_va[j * num_cols + i] = old_va[i * num_rows + j];
+            new_va[j * num_rows + i] = old_va[i * num_cols + j];
         }
     }
     return new_va;
@@ -172,3 +172,18 @@ auto va_2d_transpose(const std::valarray<T> &old_va, const std::size_t num_rows)
 
 template auto va_2d_transpose(const std::valarray<std::complex<double>> &old_va,
                               const std::size_t num_rows) -> std::valarray<std::complex<double>>;
+
+template<std::ranges::sized_range U, typename T>
+auto vec_va_transpose(const std::vector<U>& old_vec) -> std::vector<std::valarray<std::complex<T>>> {
+    const std::size_t num_rows = old_vec.size();
+    const std::size_t num_cols = old_vec.at(0).size();
+    std::vector<std::valarray<std::complex<T>>> new_vec(num_cols, std::valarray<std::complex<T>>(num_rows));
+    for (std::size_t i = 0; i < num_rows; i++) {
+        for (std::size_t j = 0; j < num_cols; j++) {
+            new_vec.at(j)[i] = old_vec.at(i)[j];
+        }
+    }
+    return new_vec;
+}
+
+// template auto vec_va_transpose(const std::vector<std::vector<std::complex<double>>>& old_vec) -> std::vector<std::valarray<std::complex<double>>>;
