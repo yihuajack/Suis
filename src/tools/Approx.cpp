@@ -46,18 +46,35 @@ auto ApproxBase<U, T>::operator==(const U &actual) const -> bool {
         // For issue "In template: type constraint differs in template redeclaration",
         // see https://youtrack.jetbrains.com/issue/CPP-35055/CLion-false-error-on-using-C23-zip-feature.
         // to refer to a type member of a template parameter, use 'typename U::value_type'
+        // Clang 17.0.6 and below used to have a bug with libstdc++ 13.2.0:
+        // ranges:4558:14: error: type constraint differs in template
+        //       redeclaration
+        // 4558 |     template<copy_constructible _Fp, input_range... _Ws>
+        // Reproducer:
+        // std::vector<double> v1 = {1, 2};
+        // std::vector<char> v2 = {'a', 'b'};
+        // std::cout << std::boolalpha << std::ranges::all_of(std::views::zip(v1, v2), [](std::tuple<double&, char&> elem) {
+        //     return std::get<0>(elem) > 0 and std::get<1>(elem) > 'a';
+        // }
+        // However, there is no problem using libc++. Besides, in the current clang trunk
+        // clang version 18.0.0git (https://github.com/llvm/llvm-project.git 5a402c56226e9b50bffdedd19d2acb8b61b408a3)
+        // This bug has been fixed.
+#if __clang_major__ < 18 and defined(__GLIBCXX__)
+        throw std::logic_error("Clang version less than 18 and is using libstdc++.");
+#else
         return std::ranges::all_of(
-            std::any_cast<decltype(std::views::zip(expected, actual))>(_yield_comparisons(actual)),
-            [this](const std::tuple<typename U::value_type, typename U::value_type> &elem) -> bool requires FPScalar<typename U::value_type> {
-                FPScalar auto a = std::get<0>(elem);
-                FPScalar auto x = std::get<1>(elem);
-                // Since C++20, given operator==, != implies !(==).
-                // _approx_scalar() cannot return ApproxScalar<U, T> for arbitrary type U, especially sequence-like U.
-                return a == _approx_scalar<typename U::value_type>(x);
-            });
+                std::any_cast<decltype(std::views::zip(expected, actual))>(_yield_comparisons(actual)),
+                [this](const std::tuple<typename U::value_type, typename U::value_type> &elem) -> bool requires FPScalar<typename U::value_type> {
+            FPScalar auto a = std::get<0>(elem);
+            FPScalar auto x = std::get<1>(elem);
+            // Since C++20, given operator==, != implies !(==).
+            // _approx_scalar() cannot return ApproxScalar<U, T> for arbitrary type U, especially sequence-like U.
+            return a == _approx_scalar<typename U::value_type>(x);
+        });
+#endif
     }
     throw std::logic_error("The operator==() function of the base class ApproxBase<U, T> should only be called when"
-                           "U is a container.");
+                           "U is a sized range.");
 }
 
 /*

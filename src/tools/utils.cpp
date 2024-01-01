@@ -154,7 +154,7 @@ auto demangle(const char *mangled_name) -> std::string {
 }
 #else
 auto demangle(const char *mangled_name) -> std::string {
-    return mangled_name;
+    throw std::logic_error("Demangling only by gcc, clang, and msvc is supported.");
 }
 #endif
 

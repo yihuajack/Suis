@@ -116,7 +116,6 @@ auto T_from_t(const char pol, const std::valarray<std::complex<T>> &t, const std
               const std::valarray<std::complex<T>> &n_f, const std::complex<T> th_i,
               const std::valarray<std::complex<T>> &th_f) -> std::valarray<T> {
     using F = T (*)(const std::complex<T> &);  // F cannot be noexcept
-    std::valarray<T> t_norm(t.size());
     // https://stackoverflow.com/questions/62807743/why-use-stdbind-front-over-lambdas-in-c20
     // https://stackoverflow.com/questions/73202679/problem-using-stdtransform-with-lambdas-vs-stdtransform-with-stdbind
     // https://godbolt.org/z/hPx7P6W3E
@@ -125,6 +124,7 @@ auto T_from_t(const char pol, const std::valarray<std::complex<T>> &t, const std
     // std::ranges::transform(f_prod, std::begin(f_prod_r), std::bind(static_cast<T (*)(const std::complex<T> &)>(std::real), std::placeholders::_1));
     // std::ranges::transform(f_prod, std::begin(f_prod_r), std::bind_front(static_cast<T (*)(const std::complex<T> &)>(std::real)));
     if (pol == 's') {
+        std::valarray<T> t_norm(t.size());
         const std::valarray<std::complex<T>> f_prod = n_f * std::cos(th_f);
         const std::valarray<std::complex<T>> i_prod = n_i * std::cos(th_i);
         std::valarray<T> f_prod_r(f_prod.size());
@@ -255,13 +255,15 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // std::complex<double> >' and 'std::ranges::views::__adaptor::_Partial<std::ranges::views::_Transform,
     // std::_Bind_front0<double (*)(const std::complex<double>&)> >')
     // (clang) See https://github.com/llvm/llvm-project/issues/76393
-    // Also see:
-    // https://stackoverflow.com/questions/62110985/add-of-stdvalarray-got-different-sizes-with-different-operand-orders
-    // We have to explicitly define:
-    std::valarray<std::complex<T>> temp_va = n_list[std::slice(0, num_wl, 1)] * std::sin(th_0);
-    if (std::ranges::any_of(temp_va |
-                            std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::imag)),
-                            // Note the order of front-binding!
+    // However, MSVC can properly distinguish it.
+    // For compatibility, we have to explicitly convert it to a valarray:
+#ifdef _MSC_VER
+    if (std::ranges::any_of(n_list[std::slice(0, num_wl, 1)] * std::sin(th_0) |
+#else
+    if (std::ranges::any_of(std::valarray<std::complex<T>>(n_list[std::slice(0, num_wl, 1)] * std::sin(th_0)) |
+#endif
+        std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::imag)),
+            // Note the order of front-binding!
                             std::bind_front(std::less_equal<>(), TOL * EPSILON<T>))) {
         throw std::invalid_argument("Error in n0 or th0!");
     }
@@ -290,14 +292,21 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     const std::valarray<std::complex<T>> kz_list = 2 * std::numbers::pi_v<T> * n_list * std::cos(th_list) / compvec_lam_vac;
     // Do the same thing to d_list.
     std::valarray<std::complex<T>> compvec_d_list(n_list.size());
-    std::ranges::move(std::views::repeat(d_list | std::views::transform([](const T real) {
+    std::ranges::copy(std::views::repeat(d_list | std::views::transform([](const T real) {
         return std::complex<T>(real, 0.0);
     }), num_layers) | std::views::join, std::begin(compvec_d_list));
-    // A weird exception once occurred Exception 0xc0000005 encountered at address 0x____________:
+    // (msvc) Exception 0x80000003 encountered at address 0x____________:
     // Access violation reading location 0x00000000 at valarray::_Grow(_Count) ->
     // _Myptr = _Allocate_for_op_delete<_Ty>(_Newsize) ->
     // return static_cast<_Ty*>(::operator new(_Bytes));
-    std::valarray<std::complex<T>> delta = kz_list * va_2d_transpose(compvec_d_list, num_wl);
+    // where _Count is 10, _Bytes is 100 for example.
+    // gdb SIGTRAP (Trace/breakpoint trap)
+    // valarray constructor _M_data(__valarray_get_storage<_Tp>(_M_size))
+    // return static_cast<_Tp*>(operator new(__n * sizeof(_Tp))); -> malloc -> RtlAllocateHeap -> EtwLogTraceEvent ->
+    // RtlRegisterSecureMemoryCacheCallback -> RtlAllocateHeap -> .misaligned_access -> RtlIsZeroMemory
+    // Return code -1073740940 (0xC0000374)
+    compvec_d_list = va_2d_transpose(compvec_d_list, num_layers);
+    std::valarray<std::complex<T>> delta = kz_list * compvec_d_list;
     // std::slice_array does not have std::begin() or std::end().
     std::ranges::transform(std::begin(delta) + num_wl, std::begin(delta) + (num_layers - 1) * num_wl, std::begin(delta) + num_wl, [](const std::complex<T> delta_i) {
         return delta_i.imag() > 100 ? std::complex<T>(delta_i.real(), 100) : delta_i;
@@ -309,6 +318,10 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
         r_list[i][i + 1] = interface_r(pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1]);
     }
     // boost::numeric::ublas::tensor<std::complex<T>, boost::numeric::ublas::last_order> M_list(boost::numeric::ublas::shape{num_layers, num_wl, 2, 2});
+    // boost 1.74.0 or to 1.81.0 does not accept the following code:
+    // /usr/include/boost/numeric/ublas/storage.hpp:79:30: error: ‘class std::allocator<std::complex<double> >’ has no member named ‘construct’
+    //   79 |                       alloc_.construct(d, value_type());
+    //      |                       ~~~~~~~^~~~~~~~~
     std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> M_list(boost::numeric::ublas::matrix<std::complex<T>>(2, 2), num_layers * num_wl);
     for (std::size_t i = 1; i < num_layers - 1; i++) {
         // Array Layout j=\sum_{r=1}^p{i_r\cdot w_r} with 1\leq i_r\leq n_r for 1\leq r\leq p.
@@ -392,8 +405,26 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
         return subarray;
     });
     const std::valarray<T> R = R_from_r(r);
-    const std::valarray<T> Tr = T_from_t(pol, t, n_list[std::slice(0, num_wl, 1)], n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)], th_0, th_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]);
-    const std::valarray<T> power_entering = power_entering_from_r(pol, r, n_list[std::slice(0, num_wl, 1)], th_0);
+    // libstdc++/libc++ replacement types do not match `const std::valarray<T> &`
+    // libstdc++:
+    // _Expr<_SClos<_ValArray, _Tp>, _Tp>, _Expr<_GClos<_ValArray, _Tp>, _Tp>, _Expr<_IClos<_ValArray, _Tp>, _Tp>
+    // libc++: __val_expr<__slice_expr<const valarray&> >, __val_expr<__indirect_expr<const valarray&> >,
+    // __val_expr<__mask_expr<const valarray&> >, __val_expr<__indirect_expr<const valarray&> >
+    // See https://en.cppreference.com/w/cpp/numeric/valarray/operator_at and
+    // Working Draft, Standard for Programming Language C++ (N4950)
+    // See https://github.com/llvm/llvm-project/issues/76450 and https://gcc.gnu.org/bugzilla/show_bug.cgi?id=113160
+#ifdef _MSC_VER
+    const std::valarray<T> Tr = T_from_t(pol, t, n_list[std::slice(0, num_wl, 1)],
+                                         n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)],
+                                         th_0,
+                                         th_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]);
+#else
+    const std::valarray<T> Tr = T_from_t(pol, t, std::valarray<std::complex<T>>(n_list[std::slice(0, num_wl, 1)]),
+                                         std::valarray<std::complex<T>>(n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]),
+                                         th_0,
+                                         std::valarray<std::complex<T>>(th_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]));
+#endif
+    const std::valarray<T> power_entering = power_entering_from_r(pol, r, std::valarray<std::complex<T>>(n_list[std::slice(0, num_wl, 1)]), th_0);
     return {{"r", r},
             {"t", t},
             {"R", R},
