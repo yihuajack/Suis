@@ -215,23 +215,25 @@ auto interface_T(const char polarization, const std::valarray<std::complex<T>> &
 }
 
 template<typename T>
-auto power_entering_from_r(const char pol, std::valarray<std::complex<T>> &r, const std::valarray<std::complex<T>> &n_i,
-                           const std::complex<T> th_i) -> std::valarray<T> {
+auto power_entering_from_r(const char pol, const std::valarray<std::complex<T>> &r,
+                           const std::valarray<std::complex<T>> &n_i, const std::complex<T> th_i) -> std::valarray<T> {
     std::valarray<T> power(r.size());
     // An interesting fact is that r or n_i marked non-const is enough if using ranges::transform,
     // depending on the order in the transform statement.
     // Yet it is better to remain the parameter n_list passed to coh_tmm const.
     if (pol == 's') {
-        std::ranges::transform(power, n_i, std::begin(r), [&th_i](const std::complex<T> n_value, const std::complex<T> r_value) {
-            return (n_value * std::cos(th_i) * (1.0 + std::conj(r_value)) * (1.0 - r_value)).real() / (n_value * std::cos(th_i)).real();
+        std::ranges::transform(n_i, r, std::begin(power), [&th_i](const std::complex<T> n_value, const std::complex<T> r_value) {
+            return (n_value * std::cos(th_i) * (1.0 + std::conj(r_value)) * (1.0 - r_value)).real() /
+                   (n_value * std::cos(th_i)).real();
         });
         return power;
     }
     if (pol == 'p') {
-        std::ranges::transform(power, n_i, std::begin(r), [&th_i](const std::complex<T> n_value, const std::complex<T> r_value) {
+        std::ranges::transform(n_i, r, std::begin(power), [&th_i](const std::complex<T> n_value, const std::complex<T> r_value) {
             return (n_value * std::conj(std::cos(th_i)) * (1.0 + r_value) * (1.0 - std::conj(r_value))).real() /
                    (n_value * std::conj(std::cos(th_i))).real();
         });
+        return power;
     }
     throw std::invalid_argument("Polarization must be 's' or 'p'");
 }
@@ -292,9 +294,12 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     const std::valarray<std::complex<T>> kz_list = 2 * std::numbers::pi_v<T> * n_list * std::cos(th_list) / compvec_lam_vac;
     // Do the same thing to d_list.
     std::valarray<std::complex<T>> compvec_d_list(n_list.size());
-    std::ranges::copy(std::views::repeat(d_list | std::views::transform([](const T real) {
+    std::ranges::move(std::views::repeat(d_list | std::views::transform([](const T real) {
         return std::complex<T>(real, 0.0);
-    }), num_layers) | std::views::join, std::begin(compvec_d_list));
+    }), num_wl) | std::views::join, std::begin(compvec_d_list));
+    // Note that if num_layers * d_list.size() greater than compvec_d_list.size(), by address sanitizer (ASAN),
+    // there will be a heap-buffer-overflow. Shadow bytes around the buggy address contain fa (Heap left redzone).
+    // Without ASAN, the problem emerges until executing the next line:
     // (msvc) Exception 0x80000003 encountered at address 0x____________:
     // Access violation reading location 0x00000000 at valarray::_Grow(_Count) ->
     // _Myptr = _Allocate_for_op_delete<_Ty>(_Newsize) ->
@@ -304,9 +309,9 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // valarray constructor _M_data(__valarray_get_storage<_Tp>(_M_size))
     // return static_cast<_Tp*>(operator new(__n * sizeof(_Tp))); -> malloc -> RtlAllocateHeap -> EtwLogTraceEvent ->
     // RtlRegisterSecureMemoryCacheCallback -> RtlAllocateHeap -> .misaligned_access -> RtlIsZeroMemory
-    // Return code -1073740940 (0xC0000374)
-    compvec_d_list = va_2d_transpose(compvec_d_list, num_layers);
-    std::valarray<std::complex<T>> delta = kz_list * compvec_d_list;
+    // Return code -1073740940 (0xC0000374) (STATUS_HEAP_CORRUPTION)
+    // Transpose num_wl * num_layers to num_layers * num_wl
+    std::valarray<std::complex<T>> delta = kz_list * va_2d_transpose(compvec_d_list, num_wl);
     // std::slice_array does not have std::begin() or std::end().
     std::ranges::transform(std::begin(delta) + num_wl, std::begin(delta) + (num_layers - 1) * num_wl, std::begin(delta) + num_wl, [](const std::complex<T> delta_i) {
         return delta_i.imag() > 100 ? std::complex<T>(delta_i.real(), 100) : delta_i;
@@ -314,15 +319,34 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     std::vector<std::vector<std::valarray<std::complex<T>>>> t_list(num_layers, std::vector<std::valarray<std::complex<T>>>(num_layers, std::valarray<std::complex<T>>(num_wl)));
     std::vector<std::vector<std::valarray<std::complex<T>>>> r_list(num_layers, std::vector<std::valarray<std::complex<T>>>(num_layers, std::valarray<std::complex<T>>(num_wl)));
     for (std::size_t i = 0; i < num_layers - 1; i++) {
-        t_list[i][i + 1] = interface_t(pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1]);
-        r_list[i][i + 1] = interface_r(pol, n_list[i], n_list[i + 1], th_list[i], th_list[i + 1]);
+#ifdef _MSC_VER
+        t_list.at(i).at(i + 1) = interface_t(pol, n_list[std::slice(i * num_wl, num_wl, 1)],
+                                             n_list[std::slice((i + 1) * num_wl, num_wl, 1)],
+                                             th_list[std::slice(i * num_wl, num_wl, 1)],
+                                             th_list[std::slice((i + 1) * num_wl, num_wl, 1)]);
+        r_list.at(i).at(i + 1) = interface_r(pol, n_list[std::slice(i * num_wl, num_wl, 1)],
+                                             n_list[std::slice((i + 1) * num_wl, num_wl, 1)],
+                                             th_list[std::slice(i * num_wl, num_wl, 1)],
+                                             th_list[std::slice((i + 1) * num_wl, num_wl, 1)]);
+#else
+        t_list.at(i).at(i + 1) = interface_t(pol, std::valarray<std::complex<T>>(n_list[std::slice(i * num_wl, num_wl, 1)]),
+                                             std::valarray<std::complex<T>>(n_list[std::slice((i + 1) * num_wl, num_wl, 1)]),
+                                             std::valarray<std::complex<T>>(th_list[std::slice(i * num_wl, num_wl, 1)]),
+                                             std::valarray<std::complex<T>>(th_list[std::slice((i + 1) * num_wl, num_wl, 1)]));
+        r_list.at(i).at(i + 1) = interface_r(pol, std::valarray<std::complex<T>>(n_list[std::slice(i * num_wl, num_wl, 1)]),
+                                             std::valarray<std::complex<T>>(n_list[std::slice((i + 1) * num_wl, num_wl, 1)]),
+                                             std::valarray<std::complex<T>>(th_list[std::slice(i * num_wl, num_wl, 1)]),
+                                             std::valarray<std::complex<T>>(th_list[std::slice((i + 1) * num_wl, num_wl, 1)]));
+#endif
     }
     // boost::numeric::ublas::tensor<std::complex<T>, boost::numeric::ublas::last_order> M_list(boost::numeric::ublas::shape{num_layers, num_wl, 2, 2});
     // boost 1.74.0 or to 1.81.0 does not accept the following code:
     // /usr/include/boost/numeric/ublas/storage.hpp:79:30: error: ‘class std::allocator<std::complex<double> >’ has no member named ‘construct’
     //   79 |                       alloc_.construct(d, value_type());
     //      |                       ~~~~~~~^~~~~~~~~
-    std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> M_list(boost::numeric::ublas::matrix<std::complex<T>>(2, 2), num_layers * num_wl);
+    // We have to initialize by zero_matrix if not setting every value.
+    // The default matrix constructor does not initialize to 0 + 0i but around 1e-6 + 1e-6i
+    std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> M_list(boost::numeric::ublas::zero_matrix<std::complex<T>>(2, 2), num_layers * num_wl);
     for (std::size_t i = 1; i < num_layers - 1; i++) {
         // Array Layout j=\sum_{r=1}^p{i_r\cdot w_r} with 1\leq i_r\leq n_r for 1\leq r\leq p.
         // First-order layout: w1 = 1, wk = nk-1 * wk-1 => j = i1 + i2n1 + i3n1n2 + ... + ipn1n2...np-1
@@ -341,15 +365,15 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
         std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> A(boost::numeric::ublas::matrix<std::complex<T>>(2, 2), num_wl);
         std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> B(boost::numeric::ublas::matrix<std::complex<T>>(2, 2), num_wl);
         for (std::size_t j = 0; j < num_wl; j++) {
-            A[j](0, 0) = std::exp(std::complex<T>(0, -1) * delta[i * num_layers + j]);
+            A[j](0, 0) = std::exp(std::complex<T>(0, -1) * delta[i * num_wl + j]);
             A[j](0, 1) = 0;
             A[j](1, 0) = 0;
-            A[j](1, 1) = std::exp(std::complex<T>(0, 1) * delta[i * num_layers + j]);
+            A[j](1, 1) = std::exp(std::complex<T>(0, 1) * delta[i * num_wl + j]);
             B[j](0, 0) = 1;
-            B[j](0, 1) = r_list[i][i + 1][j];
-            B[j](1, 0) = r_list[i][i + 1][j];
+            B[j](0, 1) = r_list.at(i).at(i + 1)[j];
+            B[j](1, 0) = r_list.at(i).at(i + 1)[j];
             B[j](1, 1) = 1;
-            M_list[i * num_layers + j] = boost::numeric::ublas::prod(A[j], B[j]) / t_list[i][i + 1][j];
+            M_list[i * num_wl + j] = boost::numeric::ublas::prod(A[j], B[j]) / t_list.at(i).at(i + 1)[j];
         }
         // The matrix multiplication of a matrix M1 and a matrix M2 is einsum('...ij,...jk', A, B)
         // where ellipses are used to enable and control broadcasting.
@@ -362,14 +386,14 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     }
     for (std::size_t i = 1; i < num_layers - 1; i++) {
         for (std::size_t j = 0; j < num_wl; j++) {
-            Mtilde[j] = boost::numeric::ublas::prod(Mtilde[j], M_list[i * num_layers + j]);
+            Mtilde[j] = boost::numeric::ublas::prod(Mtilde[j], M_list[i * num_wl + j]);
         }
     }
     std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> A(boost::numeric::ublas::matrix<std::complex<T>>(2, 2), num_wl);
     for (std::size_t i = 0; i < num_wl; i++) {
-        A[i] <<= 1,               r_list[0][1][i],
-                 r_list[0][1][i], 1;
-        Mtilde[i] = boost::numeric::ublas::prod(Mtilde[i], A[i]) / t_list[0][1][i];
+        A[i] <<= 1                    , r_list.at(0).at(1)[i],
+                 r_list.at(0).at(1)[i], 1;
+        Mtilde[i] = boost::numeric::ublas::prod(A[i], Mtilde[i]) / t_list.at(0).at(1)[i];
     }
     std::valarray<std::complex<T>> r(num_wl);
     std::valarray<std::complex<T>> t(num_wl);
@@ -391,7 +415,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     }
     for (std::size_t i = num_layers - 2; i > 0; i--) {
         for (std::size_t j = 0; j < num_wl; j++) {
-            vw[j] = boost::numeric::ublas::prod(M_list[i * num_layers + j], vw[j]);
+            vw[j] = boost::numeric::ublas::prod(M_list[i * num_wl + j], vw[j]);
             vw_list.at(i).at(j).at(0) = vw[j](0, 1);
             vw_list.at(i).at(j).at(1) = vw[j](1, 1);
         }
@@ -418,13 +442,14 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
                                          n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)],
                                          th_0,
                                          th_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]);
+    const std::valarray<T> power_entering = power_entering_from_r(pol, r, n_list[std::slice(0, num_wl, 1)], th_0);
 #else
     const std::valarray<T> Tr = T_from_t(pol, t, std::valarray<std::complex<T>>(n_list[std::slice(0, num_wl, 1)]),
                                          std::valarray<std::complex<T>>(n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]),
                                          th_0,
                                          std::valarray<std::complex<T>>(th_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]));
-#endif
     const std::valarray<T> power_entering = power_entering_from_r(pol, r, std::valarray<std::complex<T>>(n_list[std::slice(0, num_wl, 1)]), th_0);
+#endif
     return {{"r", r},
             {"t", t},
             {"R", R},

@@ -59,7 +59,8 @@ auto ApproxBase<U, T>::operator==(const U &actual) const -> bool {
         // However, there is no problem using libc++. Besides, in the current clang trunk
         // clang version 18.0.0git (https://github.com/llvm/llvm-project.git 5a402c56226e9b50bffdedd19d2acb8b61b408a3)
         // This bug has been fixed.
-#if __clang_major__ < 18 and defined(__GLIBCXX__)
+        // Attention: __clang__major__ < 18 is vacuum truth.
+#if defined(__clang__major__) and __clang_major__ < 18 and defined(__GLIBCXX__)
         throw std::logic_error("Clang version less than 18 and is using libstdc++.");
 #else
         return std::ranges::all_of(

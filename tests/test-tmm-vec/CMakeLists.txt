@@ -10,8 +10,9 @@ endif()
 project(test-tmm-vec)
 
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 
-# The current version of apt mantic packages 1.74.0 does not compile
+# apt mantic packages 1.74.0 does not compile
 find_package(Boost 1.83.0 REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
