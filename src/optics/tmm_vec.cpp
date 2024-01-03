@@ -425,7 +425,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // std::ranges::fill(ones, 1);
     // vw_list[boost::indices[num_layers - 1][boost::multi_array_types::index_range()][1]] = ones;
     std::ranges::transform(vw_list.at(num_layers - 1), vw_list.at(num_layers - 1).begin(), [](std::array<std::complex<T>, 2> &subarray) -> std::array<std::complex<T>, 2> {
-        subarray.at(1) = 1;
+        subarray.at(1) = 0;
         return subarray;
     });
     const std::valarray<T> R = R_from_r(r);

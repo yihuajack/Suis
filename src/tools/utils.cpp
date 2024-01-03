@@ -173,17 +173,23 @@ auto va_2d_transpose(const std::valarray<T> &old_va, const std::size_t num_rows)
 template auto va_2d_transpose(const std::valarray<std::complex<double>> &old_va,
                               const std::size_t num_rows) -> std::valarray<std::complex<double>>;
 
-template<std::ranges::sized_range U, typename T>
-auto vec_va_transpose(const std::vector<U>& old_vec) -> std::vector<std::valarray<std::complex<T>>> {
-    const std::size_t num_rows = old_vec.size();
-    const std::size_t num_cols = old_vec.at(0).size();
-    std::vector<std::valarray<std::complex<T>>> new_vec(num_cols, std::valarray<std::complex<T>>(num_rows));
-    for (std::size_t i = 0; i < num_rows; i++) {
-        for (std::size_t j = 0; j < num_cols; j++) {
-            new_vec.at(j)[i] = old_vec.at(i)[j];
-        }
-    }
-    return new_vec;
+template<typename T, std::size_t N>
+auto vva2_flatten(const std::vector<std::vector<std::array<T, N>>> &vvan) -> std::vector<T> {
+    // ranges::views::concat is in Range-v3 but still not in C++23, probably will be in C++26,
+    // see https://github.com/cplusplus/papers/issues/1204
+    // P2542 R0-R7 https://wg21.link/P2542R7 (https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2542r7.html)
+    //
+    std::vector<T> flattened;  // (vvan.size() * vvan.front().size() * N)
+    std::ranges::for_each(vvan, [&](const std::vector<std::array<T, N>> &vectorOfArrays) {
+        std::ranges::for_each(vectorOfArrays, [&](const std::array<T, N> &array) {
+#ifdef __cpp_lib_containers_ranges
+            flattened.append_range(array);
+#else
+            flattened.insert(flattened.end(), array.begin(), array.end());
+#endif
+        });
+    });
+    return flattened;
 }
 
-// template auto vec_va_transpose(const std::vector<std::vector<std::complex<double>>>& old_vec) -> std::vector<std::valarray<std::complex<double>>>;
+template auto vva2_flatten(const std::vector<std::vector<std::array<std::complex<double>, 2>>> &vvan) -> std::vector<std::complex<double>>;

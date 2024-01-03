@@ -126,4 +126,7 @@ auto demangle(const char* mangled_name) -> std::string;
 template<typename T>
 auto va_2d_transpose(const std::valarray<T> &old_va, std::size_t num_rows) -> std::valarray<T>;
 
+template<typename T, std::size_t N>
+auto vva2_flatten(const std::vector<std::vector<std::array<T, N>>> &vvan) -> std::vector<T>;
+
 #endif //UTILS_H

@@ -167,6 +167,122 @@ void test_coh_tmm_s_power_entering() {
     assert(std::get<std::valarray<double>>(result.at("power_entering")) == spower_approx);
 }
 
+void test_coh_tmm_s_vw_list() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    const coh_tmm_vec_dict<double> result = coh_tmm('s', n_list, d_list, th_0, lam_vac);
+    ApproxSequenceLike<std::vector<std::complex<double>>, double> svwl_approx = approx<std::vector<std::complex<double>>, double>(std::vector<std::complex<double>>{
+            0.00000000e+00 + 0.00000000e+00i,
+            0.00000000e+00 + 0.00000000e+00i,
+            0.00000000e+00 + 0.00000000e+00i,
+            0.00000000e+00 + 0.00000000e+00i,
+            1.18358724e+00 - 2.33272105e-01i,
+            -4.34107939e-02 + 1.99878010e-02i,
+            1.03160316e+00 - 7.28921467e-02i,
+            1.91474694e-01 - 3.41479380e-02i,
+            -8.59535500e-02 + 1.06568462e-01i,
+            -1.36521327e-09 + 2.83859953e-10i,
+            6.08369346e-01 + 5.06683493e-01i,
+            1.75320349e-01 - 9.58306162e-02i,
+            -1.23112929e-05 + 1.37276841e-05i,
+            -1.94390395e-06 + 2.16097082e-06i,
+            -6.54156818e-02 + 3.57104644e-01i,
+            3.38453387e-02 + 4.04808706e-02i,
+            1.78669633e-05 - 9.79824244e-06i,
+            0.00000000e+00 + 0.00000000e+00i,
+            -8.86075993e-02 - 4.05953564e-01i,
+            0.00000000e+00 + 0.00000000e+00i
+    });
+    const std::vector<std::complex<double>> s_vw_list = vva2_flatten<std::complex<double>, 2>(std::get<std::vector<std::vector<std::array<std::complex<double>, 2>>>>(result.at("vw_list")));
+    assert(s_vw_list == svwl_approx);
+}
+
+void test_coh_tmm_p_power_entering() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    const coh_tmm_vec_dict<double> result = coh_tmm('p', n_list, d_list, th_0, lam_vac);
+    ApproxSequenceLike<std::valarray<double>, double> ppower_approx = approx<std::valarray<double>, double>(std::valarray<double>{0.96244989, 0.94994018});
+    assert(std::get<std::valarray<double>>(result.at("power_entering")) == ppower_approx);
+}
+
+void test_coh_tmm_p_vw_list() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    const coh_tmm_vec_dict<double> result = coh_tmm('p', n_list, d_list, th_0, lam_vac);
+    ApproxSequenceLike<std::vector<std::complex<double>>, double> pvwl_approx = approx<std::vector<std::complex<double>>, double>(std::vector<std::complex<double>>{
+            0.00000000e+00 + 0.00000000e+00i,
+            0.00000000e+00 + 0.00000000e+00i,
+            0.00000000e+00 + 0.00000000e+00i,
+            0.00000000e+00 + 0.00000000e+00i,
+            1.17017431e+00 - 2.43748228e-01i,
+            4.40679361e-02 - 1.53940000e-02i,
+            1.02922989e+00 - 7.82628087e-02i,
+            -1.84573000e-01 + 1.79809491e-02i,
+            -8.59886075e-02 + 1.13689959e-01i,
+            1.39851113e-09 - 3.01497601e-10i,
+            6.07730278e-01 + 5.07144030e-01i,
+            -1.68609283e-01 + 8.64966880e-02i,
+            -1.23967610e-05 + 1.45623920e-05i,
+            1.93199813e-06 - 2.24107827e-06i,
+            -6.52504472e-02 + 3.60299246e-01i,
+            -3.33430797e-02 - 3.97852657e-02i,
+            1.82536479e-05 - 1.06422631e-05i,
+            0.00000000e+00 + 0.00000000e+00i,
+            -9.02947159e-02 - 4.09448171e-01i,
+            0.00000000e+00 + 0.00000000e+00i
+    });
+    const std::vector<std::complex<double>> p_vw_list = vva2_flatten<std::complex<double>, 2>(std::get<std::vector<std::vector<std::array<std::complex<double>, 2>>>>(result.at("vw_list")));
+    assert(p_vw_list == pvwl_approx);
+}
+
+void test_coh_tmm_kz_list() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    const coh_tmm_vec_dict<double> result = coh_tmm('s', n_list, d_list, th_0, lam_vac);
+    ApproxSequenceLike<std::valarray<std::complex<double>>, double> kzl_approx = approx<std::valarray<std::complex<double>>, double>(std::valarray<std::complex<double>>{
+            0.02250959+0.00000000e+00i, 0.00440866+0.00000000e+00i,
+            0.01435451+0.00687561i, 0.00404247+0.00074813i,
+            0.03118008+0.04748033i, 0.00515452+0.00110011i,
+            0.07823055+0.00000000e+00i, 0.01413365+0.00000000e+00i,
+            0.06246792+0.01579948i, 0.01056188+0.00035793i
+    }, 1e-5);
+    assert(std::get<std::valarray<std::complex<double>>>(result.at("kz_list")) == kzl_approx);
+}
+
+void test_coh_tmm_th_list() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    const coh_tmm_vec_dict<double> result = coh_tmm('s', n_list, d_list, th_0, lam_vac);
+    ApproxSequenceLike<std::valarray<std::complex<double>>, double> thl_approx = approx<std::valarray<std::complex<double>>, double>(std::valarray<std::complex<double>>{
+            0.3+0.i, 0.3+0.i,
+            0.38659626-0.16429512i, 0.3162772 -0.05459799i,
+            0.06789345-0.10235287i, 0.24849917-0.0507924i,
+            0.08877261+0.i        , 0.09619234+0.i,
+            0.10445527-0.02621521i, 0.12826687-0.00429919i
+    });
+    assert(std::get<std::valarray<std::complex<double>>>(result.at("th_list")) == thl_approx);
+}
+
 auto main() -> int {
-    test_coh_tmm_s_power_entering();
+    test_coh_tmm_th_list();
 }
