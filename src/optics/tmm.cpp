@@ -546,8 +546,7 @@ auto coh_tmm_reverse(const char pol, const std::valarray<std::complex<T>> &n_lis
 
 template<typename T>
 auto coh_tmm_reverse(const char pol, const std::vector<std::complex<T>> &n_list, const std::vector<T> &d_list,
-                     const std::complex<T> th_0,
-                     const T lam_vac) -> coh_tmm_dict<T> {
+                     const std::complex<T> th_0, const T lam_vac) -> coh_tmm_dict<T> {
     const std::complex<T> th_f = snell(n_list[0], n_list[n_list.size() - 1], th_0);
     // To keep references to n_list and d_list const, we have to use reverse_copy instead of reverse.
     std::valarray<std::complex<T>> reversed_n_list(n_list.size());

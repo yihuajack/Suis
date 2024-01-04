@@ -13,6 +13,18 @@
 #include "utils.h"
 
 template<std::floating_point T>
+auto snell(const std::valarray<std::complex<T>> &n_1, const std::valarray<std::complex<T>> &n_2,
+           const std::complex<T> th_1, const std::size_t num_wl) -> std::valarray<std::complex<T>> {
+    const std::valarray<std::complex<T>> th_2_guess = std::asin(n_1 * std::sin(th_1) / n_2);
+    for (std::size_t i = 0; i < num_wl; i++) {
+        if (not is_forward_angle(n_2[i], th_2_guess[i])) {
+            th_2_guess[i] = std::numbers::pi_v<T> - th_2_guess[i];
+        }
+    }
+    return th_2_guess;
+}
+
+template<std::floating_point T>
 auto list_snell(const std::valarray<std::complex<T>> &n_list, const std::complex<T> th_0,
                 const std::size_t num_wl) -> std::valarray<std::complex<T>> {
     const std::size_t num_layers = n_list.size() / num_wl;
@@ -53,19 +65,6 @@ auto interface_r(const char polarization, const std::valarray<std::complex<T>> &
 template<typename T>
 auto interface_t(const char polarization, const std::valarray<std::complex<T>> &n_i,
                  const std::valarray<std::complex<T>> &n_f, const std::valarray<std::complex<T>> &th_i,
-                 const std::valarray<std::complex<T>> &th_f) -> std::valarray<std::complex<T>> {
-    if (polarization == 's') {
-        return 2 * n_i * std::cos(th_i) / ((n_i * std::cos(th_i) + n_f * std::cos(th_f)));
-    }
-    if (polarization == 'p') {
-        return 2 * n_i * std::cos(th_i) / ((n_f * std::cos(th_i) + n_i * std::cos(th_f)));
-    }
-    throw std::invalid_argument("Polarization must be 's' or 'p'");
-}
-
-template<typename T>
-auto interface_t(const char polarization, const std::valarray<std::complex<T>> &n_i,
-                 const std::valarray<std::complex<T>> &n_f, const std::complex<T> th_i,
                  const std::valarray<std::complex<T>> &th_f) -> std::valarray<std::complex<T>> {
     if (polarization == 's') {
         return 2 * n_i * std::cos(th_i) / ((n_i * std::cos(th_i) + n_f * std::cos(th_f)));
@@ -201,18 +200,6 @@ template auto interface_T(const char polarization, const std::valarray<std::comp
                           const std::valarray<std::complex<double>> &n_f,
                           const std::valarray<std::complex<double>> &th_i,
                           const std::valarray<std::complex<double>> &th_f) -> std::valarray<double>;
-
-template<std::floating_point T>
-auto interface_T(const char polarization, const std::valarray<std::complex<T>> &n_i,
-                 const std::valarray<std::complex<T>> &n_f, const std::complex<T> th_i,
-                 const std::valarray<std::complex<T>> &th_f) -> std::valarray<T> {
-    std::valarray<std::complex<T>> t = interface_t(polarization, n_i, n_f, th_i, th_f);
-    std::ranges::transform(t, std::begin(t), [&th_i](const std::complex<T> t_value) {
-        return (th_i.real() > std::numbers::pi_v<T> / 2 - 1e-6) ? 0 : t_value;
-    });
-
-    return T_from_t(polarization, t, n_i, n_f, th_i, th_f);
-}
 
 template<typename T>
 auto power_entering_from_r(const char pol, const std::valarray<std::complex<T>> &r,
@@ -468,3 +455,24 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
 template auto coh_tmm(const char pol, const std::valarray<std::complex<double>> &n_list,
                       const std::valarray<double> &d_list, const std::complex<double> th_0,
                       const std::valarray<double> &lam_vac) -> coh_tmm_vec_dict<double>;
+
+template<typename T>
+auto coh_tmm_reverse(const char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
+                     const std::complex<T> th_0, const std::valarray<T> &lam_vac) -> coh_tmm_dict<T> {
+    const std::size_t num_wl = lam_vac.size();
+    const std::size_t num_layers = d_list.size();
+#ifdef _MSC_VER
+    const std::complex<T> th_f = snell(n_list[std::slice(0, num_wl, 1)],
+                                       n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)],
+                                       th_0);
+#else
+    const std::complex<T> th_f = snell(std::valarray<std::complex<T>>(n_list[std::slice(0, num_wl, 1)]),
+                                       std::valarray<std::complex<T>>(n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]),
+                                       th_0);
+#endif
+    std::valarray<std::complex<T>> reversed_n_list(n_list.size());
+    std::reverse_copy(n_list.cbegin(), n_list.cend(), std::begin(reversed_n_list));
+    std::valarray<T> reversed_d_list(d_list.size());
+    std::reverse_copy(d_list.cbegin(), d_list.cend(), std::begin(reversed_d_list));
+    return coh_tmm(pol, reversed_n_list, reversed_d_list, th_f, lam_vac);
+}

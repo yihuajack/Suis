@@ -4,6 +4,7 @@
 
 #include <cassert>
 #include <numbers>
+#include <functional>
 #include "tmm.h"
 #include "utils.h"
 #include "Approx.h"
@@ -283,6 +284,39 @@ void test_coh_tmm_th_list() {
     assert(std::get<std::valarray<std::complex<double>>>(result.at("th_list")) == thl_approx);
 }
 
+void test_coh_tmm_inputs() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    const coh_tmm_vec_dict<double> result = coh_tmm('s', n_list, d_list, th_0, lam_vac);
+    assert(std::get<char>(result.at("pol")) == 's');
+    // Method 1: indirect way using operator- of valarray.
+#ifdef _MSC_VER
+    assert(std::ranges::all_of(std::get<std::valarray<std::complex<double>>>(result.at("n_list")) - n_list, std::bind_front(std::equal_to<>(), 0.0)));
+#else
+    assert(std::ranges::all_of(std::valarray<std::complex<double>>(std::get<std::valarray<std::complex<double>>>(result.at("n_list")) - n_list), std::bind_front(std::equal_to<>(), 0.0)));
+#endif
+    // Method 2: direct way to compare two ranges. There is also a traditional version std::equal.
+    assert(std::ranges::equal(std::get<std::valarray<double>>(result.at("d_list")), d_list));
+    assert(std::get<std::complex<double>>(result.at("th_0")) == th_0);
+    assert(std::ranges::equal(std::get<std::valarray<double>>(result.at("lam_vac")), lam_vac));
+}
+// end of tests for coh_tmm
+
+void test_coh_tmm_reverse() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    const coh_tmm_vec_dict<double> result = coh_tmm_reverse('s', n_list, d_list, th_0, lam_vac);
+    assert(std::get<char>(result.at("pol")) == 's');
+}
+
 auto main() -> int {
-    test_coh_tmm_th_list();
+    test_coh_tmm_inputs();
 }
