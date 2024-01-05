@@ -2,6 +2,8 @@
 // Created by Yihua on 2023/11/27.
 //
 
+// GCC/Clang has already forwarded <algorithm> from <valarray>, but it is not the case for MSVC.
+#include <algorithm>
 #include <cassert>
 #include <numbers>
 #include <functional>
@@ -314,9 +316,194 @@ void test_coh_tmm_reverse() {
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
     const coh_tmm_vec_dict<double> result = coh_tmm_reverse('s', n_list, d_list, th_0, lam_vac);
-    assert(std::get<char>(result.at("pol")) == 's');
+    ApproxSequenceLike<std::valarray<std::complex<double>>, double> r_approx = approx<std::valarray<std::complex<double>>, double>({0.44495594 - 0.08125146i, 0.13483962 - 0.37537464i});
+    ApproxSequenceLike<std::valarray<std::complex<double>>, double> t_approx = approx<std::valarray<std::complex<double>>, double>({5.64612420e-05 - 1.46509665e-05i, -1.94928443e-01 - 9.82812305e-01i});
+    ApproxSequenceLike<std::valarray<double>, double> R_approx = approx<std::valarray<double>, double>({0.20458758, 0.15908784});
+    ApproxSequenceLike<std::valarray<double>, double> T_approx = approx<std::valarray<double>, double>({1.22605928e-09, 4.19050975e-01});
+    ApproxSequenceLike<std::valarray<double>, double> power_approx = approx<std::valarray<double>, double>({0.75431194, 0.84091216});
+    ApproxSequenceLike<std::vector<std::complex<double>>, double> vwl_approx = approx<std::vector<std::complex<double>>, double>({
+            0.00000000e+00 + 0.00000000e+00i,
+            0.00000000e+00 + 0.00000000e+00i,
+            0.00000000e+00 + 0.00000000e+00i,
+            0.00000000e+00 + 0.00000000e+00i,
+            9.35877457e-01 + 4.78628162e-02i,
+            5.09078478e-01 - 1.29114277e-01i,
+            8.90678139e-01 - 4.74324242e-02i,
+            2.44161483e-01 - 3.27942215e-01i,
+            -1.22416652e+00 - 1.12459390e-01i,
+            -1.29313936e-08 + 6.59495568e-09i,
+            -1.13691217e+00 + 6.36142041e-01i,
+            -2.07647974e-02 - 4.70097431e-02i,
+            -2.63661542e-04 + 6.60611182e-05i,
+            -4.98027806e-07 - 4.91628647e-06i,
+            -1.06956388e+00 - 5.45729218e-01i,
+            5.53546526e-02 + 6.76305892e-02i,
+            5.64612420e-05 - 1.46509665e-05i,
+            0.00000000e+00 + 0.00000000e+00i,
+            -1.94928443e-01 - 9.82812305e-01i,
+            0.00000000e+00 + 0.00000000e+00i
+    });
+    ApproxSequenceLike<std::valarray<std::complex<double>>, double> kzl_approx = approx<std::valarray<std::complex<double>>, double>({
+            0.06246792+0.01579948i, 0.01056179+0.i        ,
+            0.07823055+0.i        , 0.01413365+0.i        ,
+            0.03118008+0.04748033i, 0.00515452+0.00110011i,
+            0.01435451+0.00687561i, 0.00404247+0.00074813i,
+            0.02250959+0.i        , 0.00440866+0.i
+    }, 1e-5);
+    ApproxSequenceLike<std::valarray<std::complex<double>>, double> thl_approx = approx<std::valarray<std::complex<double>>, double>({
+            0.10445527-0.02621521i, 0.12841137+0.i        ,
+            0.08877261+0.i        , 0.09619234+0.i        ,
+            0.06789345-0.10235287i, 0.24849917-0.0507924i ,
+            0.38659626-0.16429512i, 0.3162772 -0.05459799i,
+            0.3       +0.i        , 0.3       +0.i
+    });
+    assert(std::get<std::valarray<std::complex<double>>>(result.at("r")) == r_approx);
+    assert(std::get<std::valarray<std::complex<double>>>(result.at("t")) == t_approx);
+    assert(std::get<std::valarray<double>>(result.at("R")) == R_approx);
+    assert(std::get<std::valarray<double>>(result.at("T")) == T_approx);
+    assert(std::get<std::valarray<double>>(result.at("power_entering")) == power_approx);
+    const std::vector<std::complex<double>> vw_list = vva2_flatten<std::complex<double>, 2>(std::get<std::vector<std::vector<std::array<std::complex<double>, 2>>>>(result.at("vw_list")));
+    assert(vw_list == vwl_approx);
+    assert(std::get<std::valarray<std::complex<double>>>(result.at("th_list")) == thl_approx);
+    assert(std::get<std::valarray<std::complex<double>>>(result.at("kz_list")) == kzl_approx);
+}
+
+void test_ellips_psi() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    const std::unordered_map<std::string, std::valarray<double>> psi_result = ellips(n_list, d_list, th_0, lam_vac);
+    ApproxSequenceLike<std::valarray<double>, double> psi_approx = approx<std::valarray<double>, double>(std::valarray<double>{0.64939282, 0.73516374});
+    assert(psi_result.at("psi") == psi_approx);
+}
+
+void test_ellips_Delta() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    const std::unordered_map<std::string, std::valarray<double>> Delta_result = ellips(n_list, d_list, th_0, lam_vac);
+    ApproxSequenceLike<std::valarray<double>, double> Delta_approx = approx<std::valarray<double>, double>(std::valarray<double>{0.64939282, 0.73516374});
+    assert(Delta_result.at("psi") == Delta_approx);
+}
+
+void test_unpolarized_RT_R() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    const std::unordered_map<std::string, std::valarray<double>> RT_result = unpolarized_RT(n_list, d_list, th_0, lam_vac);
+    ApproxSequenceLike<std::valarray<double>, double> RT_R_approx = approx<std::valarray<double>, double>(std::valarray<double>{0.05134487, 0.05564057});
+    assert(RT_result.at("R") == RT_R_approx);
+}
+
+void test_unpolarized_RT_T() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    const std::unordered_map<std::string, std::valarray<double>> RT_result = unpolarized_RT(n_list, d_list, th_0, lam_vac);
+    ApproxSequenceLike<std::valarray<double>, double> RT_T_approx = approx<std::valarray<double>, double>(std::valarray<double>{1.19651603e-09, 4.17401823e-01});
+    assert(RT_result.at("T") == RT_T_approx);
+}
+
+void test_position_resolved_s_poyn() {
+    const coh_tmm_vec_dict<double> coh_tmm_data = {
+            {"r", std::valarray<std::complex<double>>{0.14017645 - 0.2132843i, 0.22307786 - 0.10704008i}},
+            {"t", std::valarray<std::complex<double>>{1.78669633e-05 - 9.79824244e-06i, -8.86075993e-02 - 4.05953564e-01i}},
+            {"R", std::valarray<double>{0.06513963, 0.06122131}},
+            {"T", std::valarray<double>{1.15234466e-09, 4.13619185e-01}},
+            {"power_entering", std::valarray<double>{0.93486037, 0.93877869}},
+            {"vw_list", std::vector<std::vector<std::array<std::complex<double>, 2>>>{
+                    {{0.00000000e+00 + 0.00000000e+00i,
+                      0.00000000e+00 + 0.00000000e+00i},
+                     {0.00000000e+00 + 0.00000000e+00i,
+                      0.00000000e+00 + 0.00000000e+00i}},
+                    {{1.18358724e+00 - 2.33272105e-01i,
+                      -4.34107939e-02 + 1.99878010e-02i},
+                     {1.03160316e+00 - 7.28921467e-02i,
+                      1.91474694e-01 - 3.41479380e-02i}},
+                    {{-8.59535500e-02 + 1.06568462e-01i,
+                      -1.36521327e-09 + 2.83859953e-10i},
+                     {6.08369346e-01 + 5.06683493e-01i,
+                      1.75320349e-01 - 9.58306162e-02i}},
+                    {{-1.23112929e-05 + 1.37276841e-05i,
+                      -1.94390395e-06 + 2.16097082e-06i},
+                     {-6.54156818e-02 + 3.57104644e-01i,
+                      3.38453387e-02 + 4.04808706e-02i}},
+                    {{1.78669633e-05 - 9.79824244e-06i,
+                      0.00000000e+00 + 0.00000000e+00i},
+                     {-8.86075993e-02 - 4.05953564e-01i,
+                      0.00000000e+00 + 0.00000000e+00i}}
+            }},
+            {"kz_list", std::valarray<std::complex<double>>{
+                    0.02250959+0.i        , 0.00440866+0.i        ,
+                    0.01435451+0.00687561i, 0.00404247+0.00074813i,
+                    0.03118008+0.04748033i, 0.00515452+0.00110011i,
+                    0.07823055+0.i        , 0.01413365+0.i        ,
+                    0.06246792+0.01579948i, 0.01056188+0.00035793i
+            }},
+            {"th_list", std::valarray<std::complex<double>>{
+                    0.3       +0.i        , 0.3       +0.i        ,
+                    0.38659626-0.16429512i, 0.3162772 -0.05459799i,
+                    0.06789345-0.10235287i, 0.24849917-0.0507924i ,
+                    0.08877261+0.i        , 0.09619234+0.i        ,
+                    0.10445527-0.02621521i, 0.12826687-0.00429919i
+            }},
+            {"pol", 's'},
+            {"n_list", std::valarray<std::complex<double>>{
+                    1.5+0.i , 1.3+0.i ,
+                    1. +0.4i, 1.2+0.2i,
+                    2. +3.i , 1.5+0.3i,
+                    5. +0.i , 4. +0.i ,
+                    4. +1.i , 3. +0.1i
+            }},
+            {"d_list", std::valarray<double>{INFINITY, 200, 187.3, 1973.5, INFINITY}},
+            {"th_0", 0.3},
+            {"lam_vac", std::valarray<double>{400, 1770}}
+    };
+    const std::unordered_map<std::string, std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> result = position_resolved({0, 1, 1, 2, 2, 3, 3, 4, 4},
+                                                                                                                                               {20, 10, 200, 20, 50.8, 10, 2000, 0, 200},
+                                                                                                                                               coh_tmm_data);
+}
+
+void runall() {
+    test_snell();
+    test_list_snell();
+    test_interface_r();
+    test_interface_t();
+    test_R_from_r();
+    test_T_from_t();
+    test_power_entering_from_r();
+    test_interface_R();
+    test_interface_T();
+    test_coh_tmm_s_r();
+    test_coh_tmm_s_t();
+    test_coh_tmm_s_R();
+    test_coh_tmm_s_T();
+    test_coh_tmm_s_power_entering();
+    test_coh_tmm_s_vw_list();
+    test_coh_tmm_p_power_entering();
+    test_coh_tmm_p_vw_list();
+    test_coh_tmm_kz_list();
+    test_coh_tmm_th_list();
+    test_coh_tmm_inputs();
+    test_ellips_psi();
+    test_ellips_Delta();
+    test_unpolarized_RT_R();
+    test_unpolarized_RT_T();  // Error: [7.12e-4, 1.86e-5].
+    test_position_resolved_s_poyn();
 }
 
 auto main() -> int {
-    test_coh_tmm_inputs();
+    test_position_resolved_s_poyn();
 }

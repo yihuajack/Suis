@@ -2,7 +2,7 @@
 // Created by Yihua on 2023/11/27.
 //
 
-// GCC has already forwarded <algorithm> from <valarray>, but it is not the case for MSVC.
+// GCC/Clang has already forwarded <algorithm> from <valarray>, but it is not the case for MSVC.
 // If valarray operations are not needed, then just use vectors, because vectors have at() method.
 #include <algorithm>
 #include <functional>
@@ -12,10 +12,11 @@
 #include "tmm.h"
 #include "utils.h"
 
-template<std::floating_point T>
+template<typename T, typename TH_T>
+requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<TH_T, std::complex<T>>
 auto snell(const std::valarray<std::complex<T>> &n_1, const std::valarray<std::complex<T>> &n_2,
-           const std::complex<T> th_1, const std::size_t num_wl) -> std::valarray<std::complex<T>> {
-    const std::valarray<std::complex<T>> th_2_guess = std::asin(n_1 * std::sin(th_1) / n_2);
+           const TH_T &th_1, const std::size_t num_wl) -> std::valarray<std::complex<T>> {
+    std::valarray<std::complex<T>> th_2_guess = std::asin(n_1 * std::sin(th_1) / n_2);
     for (std::size_t i = 0; i < num_wl; i++) {
         if (not is_forward_angle(n_2[i], th_2_guess[i])) {
             th_2_guess[i] = std::numbers::pi_v<T> - th_2_guess[i];
@@ -24,8 +25,9 @@ auto snell(const std::valarray<std::complex<T>> &n_1, const std::valarray<std::c
     return th_2_guess;
 }
 
-template<std::floating_point T>
-auto list_snell(const std::valarray<std::complex<T>> &n_list, const std::complex<T> th_0,
+template<std::floating_point T, typename TH_T>
+requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<TH_T, std::complex<T>>
+auto list_snell(const std::valarray<std::complex<T>> &n_list, const TH_T &th_0,
                 const std::size_t num_wl) -> std::valarray<std::complex<T>> {
     const std::size_t num_layers = n_list.size() / num_wl;
     std::valarray<std::complex<T>> angles(num_layers * num_wl);
@@ -84,11 +86,20 @@ auto R_from_r(const std::valarray<std::complex<T>> &r) -> std::valarray<T> {
     return R_array;
 }
 
-template<typename T>
+template<typename T, typename TH_T>
+requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<TH_T, std::complex<T>>
 auto T_from_t(const char pol, const std::valarray<std::complex<T>> &t, const std::valarray<std::complex<T>> &n_i,
-              const std::valarray<std::complex<T>> &n_f, const std::valarray<std::complex<T>> &th_i,
+              const std::valarray<std::complex<T>> &n_f, const TH_T &th_i,
               const std::valarray<std::complex<T>> &th_f) -> std::valarray<T> {
-    using F = T (*)(const std::complex<T> &);
+    using F = T (*)(const std::complex<T> &);  // F cannot be noexcept
+    using G = std::complex<T> (*)(const std::complex<T> &);
+    // https://stackoverflow.com/questions/62807743/why-use-stdbind-front-over-lambdas-in-c20
+    // https://stackoverflow.com/questions/73202679/problem-using-stdtransform-with-lambdas-vs-stdtransform-with-stdbind
+    // https://godbolt.org/z/hPx7P6W3E
+    // https://stackoverflow.com/questions/6610046/stdfunction-and-stdbind-what-are-they-and-when-should-they-be-used
+    // Effective Modern C++ Chapter 6 Lambda Expressions Item 34 Prefer lambdas to std::bind
+    // std::ranges::transform(f_prod, std::begin(f_prod_r), std::bind(static_cast<T (*)(const std::complex<T> &)>(std::real), std::placeholders::_1));
+    // std::ranges::transform(f_prod, std::begin(f_prod_r), std::bind_front(static_cast<T (*)(const std::complex<T> &)>(std::real)));
     std::valarray<T> t_norm(t.size());
     if (pol == 's') {
         const std::valarray<std::complex<T>> f_prod = n_f * std::cos(th_f);
@@ -101,44 +112,16 @@ auto T_from_t(const char pol, const std::valarray<std::complex<T>> &t, const std
         return t_norm * f_prod_r / i_prod_r;
     }
     if (pol == 'p') {
-        std::valarray<T> p_res(t.size());
-        for (std::size_t i = 0; i < t.size() ; i++) {
-            p_res[i] = std::norm(t[i]) * (n_f[i] * std::conj(std::cos(th_f[i]))).real() / (n_i[i] * std::conj(std::cos(th_i[i]))).real();
-        }
-        return p_res;
-    }
-    throw std::invalid_argument("Polarization must be 's' or 'p'");
-}
-
-template<typename T>
-auto T_from_t(const char pol, const std::valarray<std::complex<T>> &t, const std::valarray<std::complex<T>> &n_i,
-              const std::valarray<std::complex<T>> &n_f, const std::complex<T> th_i,
-              const std::valarray<std::complex<T>> &th_f) -> std::valarray<T> {
-    using F = T (*)(const std::complex<T> &);  // F cannot be noexcept
-    // https://stackoverflow.com/questions/62807743/why-use-stdbind-front-over-lambdas-in-c20
-    // https://stackoverflow.com/questions/73202679/problem-using-stdtransform-with-lambdas-vs-stdtransform-with-stdbind
-    // https://godbolt.org/z/hPx7P6W3E
-    // https://stackoverflow.com/questions/6610046/stdfunction-and-stdbind-what-are-they-and-when-should-they-be-used
-    // Effective Modern C++ Chapter 6 Lambda Expressions Item 34 Prefer lambdas to std::bind
-    // std::ranges::transform(f_prod, std::begin(f_prod_r), std::bind(static_cast<T (*)(const std::complex<T> &)>(std::real), std::placeholders::_1));
-    // std::ranges::transform(f_prod, std::begin(f_prod_r), std::bind_front(static_cast<T (*)(const std::complex<T> &)>(std::real)));
-    if (pol == 's') {
-        std::valarray<T> t_norm(t.size());
-        const std::valarray<std::complex<T>> f_prod = n_f * std::cos(th_f);
-        const std::valarray<std::complex<T>> i_prod = n_i * std::cos(th_i);
-        std::valarray<T> f_prod_r(f_prod.size());
-        std::valarray<T> i_prod_r(i_prod.size());
-        std::ranges::transform(f_prod, std::begin(f_prod_r), std::bind_front<F>(std::real));
-        std::ranges::transform(i_prod, std::begin(i_prod_r), std::bind_front<F>(std::real));
+        std::valarray<std::complex<T>> f_prod = n_f * std::cos(th_f);
+        std::valarray<std::complex<T>> i_prod = n_i * std::cos(th_i);
+        std::valarray<T> f_prod_cr(f_prod.size());
+        std::valarray<T> i_prod_cr(i_prod.size());
+        std::ranges::transform(f_prod, std::begin(f_prod), std::bind_front<G>(std::conj));
+        std::ranges::transform(i_prod, std::begin(i_prod), std::bind_front<G>(std::conj));
+        std::ranges::transform(f_prod, std::begin(f_prod_cr), std::bind_front<F>(std::real));
+        std::ranges::transform(i_prod, std::begin(i_prod_cr), std::bind_front<F>(std::real));
         std::ranges::transform(t, std::begin(t_norm), std::bind_front<F>(std::norm));
-        return t_norm * f_prod_r / i_prod_r;
-    }
-    if (pol == 'p') {
-        std::valarray<T> p_res(t.size());
-        for (std::size_t i = 0; i < t.size() ; i++) {
-            p_res[i] = std::norm(t[i]) * (n_f[i] * std::conj(std::cos(th_f[i]))).real() / (n_i[i] * std::conj(std::cos(th_i))).real();
-        }
-        return p_res;
+        return t_norm * f_prod_cr / i_prod_cr;
     }
     throw std::invalid_argument("Polarization must be 's' or 'p'");
 }
@@ -201,37 +184,60 @@ template auto interface_T(const char polarization, const std::valarray<std::comp
                           const std::valarray<std::complex<double>> &th_i,
                           const std::valarray<std::complex<double>> &th_f) -> std::valarray<double>;
 
-template<typename T>
+template<typename T, typename TH_T>
+requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<TH_T, std::complex<T>>
 auto power_entering_from_r(const char pol, const std::valarray<std::complex<T>> &r,
-                           const std::valarray<std::complex<T>> &n_i, const std::complex<T> th_i) -> std::valarray<T> {
+                           const std::valarray<std::complex<T>> &n_i, const TH_T &th_i) -> std::valarray<T> {
     std::valarray<T> power(r.size());
-    // An interesting fact is that r or n_i marked non-const is enough if using ranges::transform,
-    // depending on the order in the transform statement.
-    // Yet it is better to remain the parameter n_list passed to coh_tmm const.
+    using F = T (*)(const std::complex<T> &);
+    using G = std::complex<T> (*)(const std::complex<T> &);
+    std::valarray<std::complex<T>> r_conj(r.size());
+    std::ranges::transform(r, std::begin(r_conj), std::bind_front<G>(std::conj));
+    std::valarray<T> real_numerator(n_i.size());
+    std::valarray<T> real_denominator(n_i.size());
     if (pol == 's') {
-        std::ranges::transform(n_i, r, std::begin(power), [&th_i](const std::complex<T> n_value, const std::complex<T> r_value) {
-            return (n_value * std::cos(th_i) * (1.0 + std::conj(r_value)) * (1.0 - r_value)).real() /
-                   (n_value * std::cos(th_i)).real();
-        });
-        return power;
+        std::valarray<std::complex<T>> complex_denominator = n_i * std::cos(th_i);
+        std::valarray<std::complex<T>> complex_numerator = complex_denominator * (1 + r_conj) * (1 - r);
+        std::ranges::transform(complex_numerator, std::begin(real_numerator), std::bind_front<F>(std::real));
+        std::ranges::transform(complex_denominator, std::begin(real_denominator), std::bind_front<F>(std::real));
+        return real_numerator / real_denominator;
     }
     if (pol == 'p') {
-        std::ranges::transform(n_i, r, std::begin(power), [&th_i](const std::complex<T> n_value, const std::complex<T> r_value) {
-            return (n_value * std::conj(std::cos(th_i)) * (1.0 + r_value) * (1.0 - std::conj(r_value))).real() /
-                   (n_value * std::conj(std::cos(th_i))).real();
-        });
-        return power;
+        std::valarray<std::complex<T>> complex_denominator(n_i.size());
+        if constexpr (std::is_same_v<TH_T, std::valarray<std::complex<T>>>) {
+            std::ranges::transform(n_i, th_i, std::begin(complex_denominator), [](const std::complex<T> n, std::complex<T> th) {
+                return n * std::conj(std::cos(th));
+            });
+            // A std::bind() functional version:
+            // std::ranges::transform(n_i, th_i, std::begin(complex_denominator),
+            //                        std::bind(std::multiplies<>(),
+            //                                  std::placeholders::_1,
+            //                                  std::bind<G>(std::conj, std::bind<G>(std::cos, std::placeholders::_2))));
+        } else {
+            complex_denominator = n_i * std::conj(std::cos(th_i));
+        }
+        std::valarray<std::complex<T>> complex_numerator = complex_denominator * (1 + r) * (1 - r_conj);
+        std::ranges::transform(complex_numerator, std::begin(real_numerator), std::bind_front<F>(std::real));
+        std::ranges::transform(complex_denominator, std::begin(real_denominator), std::bind_front<F>(std::real));
+        return real_numerator / real_denominator;
     }
     throw std::invalid_argument("Polarization must be 's' or 'p'");
 }
 
-template<std::floating_point T>
+template<typename T, typename TH_T>
+requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<TH_T, std::complex<T>>
 auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
-             const std::complex<T> th_0, const std::valarray<T> &lam_vac) -> coh_tmm_vec_dict<T> {
+             const TH_T &th_0, const std::valarray<T> &lam_vac) -> coh_tmm_vec_dict<T> {
     // th_0 is std::complex<T>
     // This function is not vectorized for angles; you need to run one angle calculation at a time.
     const std::size_t num_wl = lam_vac.size();
     const std::size_t num_layers = n_list.size() / num_wl;
+    if constexpr (std::is_same_v<TH_T, std::valarray<std::complex<T>>>) {
+        if (th_0.size() not_eq lam_vac.size()) {
+            throw std::invalid_argument("th_0 and lam_vac have different sizes;"
+                                        "you need to run one angle calculation at a time.");
+        }
+    }
     if (num_layers not_eq d_list.size()) {
         throw std::invalid_argument("n_list and d_list must have same length");
     }
@@ -453,26 +459,145 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
 }
 
 template auto coh_tmm(const char pol, const std::valarray<std::complex<double>> &n_list,
-                      const std::valarray<double> &d_list, const std::complex<double> th_0,
+                      const std::valarray<double> &d_list, const std::complex<double> &th_0,
                       const std::valarray<double> &lam_vac) -> coh_tmm_vec_dict<double>;
 
-template<typename T>
+template<std::floating_point T>
 auto coh_tmm_reverse(const char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
-                     const std::complex<T> th_0, const std::valarray<T> &lam_vac) -> coh_tmm_dict<T> {
+                     const std::complex<T> th_0, const std::valarray<T> &lam_vac) -> coh_tmm_vec_dict<T> {
     const std::size_t num_wl = lam_vac.size();
     const std::size_t num_layers = d_list.size();
 #ifdef _MSC_VER
-    const std::complex<T> th_f = snell(n_list[std::slice(0, num_wl, 1)],
-                                       n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)],
-                                       th_0);
+    const std::valarray<std::complex<T>> th_f = snell(n_list[std::slice(0, num_wl, 1)],
+                                                n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)],
+                                                th_0, num_wl);
 #else
-    const std::complex<T> th_f = snell(std::valarray<std::complex<T>>(n_list[std::slice(0, num_wl, 1)]),
-                                       std::valarray<std::complex<T>>(n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]),
-                                       th_0);
+    const std::valarray<std::complex<T>> th_f = snell(std::valarray<std::complex<T>>(n_list[std::slice(0, num_wl, 1)]),
+                                                      std::valarray<std::complex<T>>(n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]),
+                                                      th_0, num_wl);
 #endif
     std::valarray<std::complex<T>> reversed_n_list(n_list.size());
-    std::reverse_copy(n_list.cbegin(), n_list.cend(), std::begin(reversed_n_list));
+    std::complex<T> *rev_nl_it = std::begin(reversed_n_list);
+    // General Method: use views and iterators.
+    for (const auto &row : n_list | std::views::chunk(num_wl) | std::views::reverse) {
+        std::ranges::move(row, rev_nl_it);
+        std::ranges::advance(rev_nl_it, num_wl);
+    }
+    // Valarray Method: use slices and indices.
+    // [Pseudocode]
+    // reversed_n_list[std::slice((num_layers - 1 - i) * num_wl, num_wl, 1)] = n_list[std::slice(i * num_wl, num_wl, 1)];
     std::valarray<T> reversed_d_list(d_list.size());
-    std::reverse_copy(d_list.cbegin(), d_list.cend(), std::begin(reversed_d_list));
+    std::ranges::reverse_copy(d_list, std::begin(reversed_d_list));
     return coh_tmm(pol, reversed_n_list, reversed_d_list, th_f, lam_vac);
 }
+
+template auto coh_tmm_reverse(const char pol, const std::valarray<std::complex<double>> &n_list,
+                              const std::valarray<double> &d_list, const std::complex<double> th_0,
+                              const std::valarray<double> &lam_vac) -> coh_tmm_vec_dict<double>;
+
+template<typename T>
+auto ellips(const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list, const std::complex<T> th_0,
+            const std::valarray<T> &lam_vac) -> std::unordered_map<std::string, std::valarray<T>> {
+    const coh_tmm_vec_dict<T> s_data = coh_tmm('s', n_list, d_list, th_0, lam_vac);
+    const coh_tmm_vec_dict<T> p_data = coh_tmm('p', n_list, d_list, th_0, lam_vac);
+    const std::valarray<std::complex<T>> rs = std::get<std::valarray<std::complex<T>>>(s_data.at("r"));
+    const std::valarray<std::complex<T>> rp = std::get<std::valarray<std::complex<T>>>(p_data.at("r"));
+    std::valarray<T> psi(rs.size());
+    std::valarray<T> Delta(rs.size());
+    std::ranges::transform(rs, rp, std::begin(psi), [](const std::complex<T> rs_v, const std::complex<T> rp_v) -> T {
+        return std::atan(std::abs(rp_v / rs_v));
+    });
+    std::ranges::transform(rs, rp, std::begin(Delta), [](const std::complex<T> rs_v, const std::complex<T> rp_v) -> T {
+        return std::arg(-rp_v / rs_v);
+    });
+    return {{"psi", psi}, {"Delta", Delta}};
+}
+
+template auto ellips(const std::valarray<std::complex<double>> &n_list, const std::valarray<double> &d_list,
+                     const std::complex<double> th_0,
+                     const std::valarray<double> &lam_vac) -> std::unordered_map<std::string, std::valarray<double>>;
+
+/*
+ * This function is vectorized.
+ * Calculates reflected and transmitted power for unpolarized light.
+ */
+template<typename T>
+auto unpolarized_RT(const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
+                    const std::complex<T> th_0,
+                    const std::valarray<T> &lam_vac) -> std::unordered_map<std::string, std::valarray<T>> {
+    const coh_tmm_vec_dict<T> s_data = coh_tmm('s', n_list, d_list, th_0, lam_vac);
+    const coh_tmm_vec_dict<T> p_data = coh_tmm('p', n_list, d_list, th_0, lam_vac);
+    const std::valarray<T> R = (std::get<std::valarray<T>>(s_data.at("R")) + std::get<std::valarray<T>>(p_data.at("R"))) / 2;
+    const std::valarray<T> Tr = (std::get<std::valarray<T>>(s_data.at("T")) + std::get<std::valarray<T>>(p_data.at("T"))) / 2;
+    return {{"R", R}, {"T", Tr}};
+}
+
+template auto unpolarized_RT(const std::valarray<std::complex<double>> &n_list, const std::valarray<double> &d_list,
+                             const std::complex<double> th_0,
+                             const std::valarray<double> &lam_vac) -> std::unordered_map<std::string, std::valarray<double>>;
+
+template<typename T>
+auto position_resolved(const std::valarray<std::size_t> &layer, const std::valarray<T> &distance,
+                       const coh_tmm_vec_dict<T> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<std::valarray<T>, std::valarray<std::complex<T>>>> {
+    std::vector<std::vector<std::array<std::complex<T>, 2>>> vw_list_l(layer.size());
+    for (std::size_t i = 0; i < layer.size(); i++) {
+        vw_list_l[i] = std::get<std::vector<std::vector<std::array<std::complex<T>, 2>>>>(coh_tmm_data.at("vw_list")).at(layer[i]);
+    }
+    const std::size_t num_wl = vw_list_l.size();
+    std::valarray<std::complex<T>> v(vw_list_l.size(), 1);
+    std::valarray<std::complex<T>> w = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("r"));
+    if (layer > 0) {
+        std::ranges::transform(vw_list_l, std::begin(v), [](const std::vector<std::array<std::complex<T>, 2>> &inner_vec) {
+            std::vector<std::complex<T>> result;
+            std::ranges::transform(inner_vec, std::back_inserter(result), [](const std::array<std::complex<T>, 2> &array) {
+                return array.front();
+            });
+            return result;
+        });
+        std::ranges::transform(vw_list_l, std::begin(w), [](const std::array<std::complex<T>, 2> &array) {
+            return array.back();
+        });
+    }
+    const std::valarray<std::complex<T>> kz = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("kz_list"))[std::slice(layer * num_wl, num_wl, 1)];
+    const std::valarray<std::complex<T>> th = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("th_list"))[std::slice(layer * num_wl, num_wl, 1)];
+    const std::valarray<std::complex<T>> n = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[std::slice(layer * num_wl, num_wl, 1)];
+    const std::valarray<std::complex<T>> n_0 = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[std::slice(0, num_wl, 1)];
+    const std::complex<T> th_0 = std::get<std::complex<T>>(coh_tmm_data.at("th_0"));
+    const char pol = std::get<char>(coh_tmm_data.at("pol"));
+    if ((layer < 1 || 0 > distance || distance > std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer]) && (layer != 0 || distance > 0)) {
+        throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(layer));
+    }
+    const std::valarray<std::complex<T>> Ef = v * std::exp(std::complex<T>(0, 1) * kz * distance);
+    const std::valarray<std::complex<T>> Eb = w * std::exp(std::complex<T>(0, -1) * kz * distance);
+    std::valarray<T> poyn(num_wl);
+    if (pol == 's') {
+        for (std::size_t i = 0; i < num_wl; i++) {
+            poyn = (n[i] * std::cos(th[i]) * std::conj(Ef[i] + Eb[i]) * (Ef[i] - Eb[i])).real() /
+                   (n_0[i] * std::cos(th_0)).real();
+        }
+    } else if (pol == 'p') {
+        for (std::size_t i = 0; i < num_wl; i++) {
+            poyn = (n[i] * std::conj(std::cos(th[i])) * (Ef[i] + Eb[i]) * std::conj(Ef[i] - Eb[i])).real() /
+                   (n_0[i] * std::conj(std::cos(th_0))).real();
+        }
+    }
+    std::valarray<T> absor(num_wl);
+    if (pol == 's') {
+        for (std::size_t i = 0; i < num_wl; i++) {
+            poyn = (n[i] * std::cos(th[i]) * kz[i] * std::pow(std::abs(Ef[i] + Eb[i]), 2)).imag() /
+                   (n_0[i] * std::cos(th_0)).real();
+        }
+    } else if (pol == 'p') {
+        for (std::size_t i = 0; i < num_wl; i++) {
+            poyn = (n[i] * std::conj(std::cos(th[i])) * (kz[i] * std::pow(std::abs(Ef[i] - Eb[i]), 2) - std::conj(kz[i]) * std::pow(std::abs(Ef[i] + Eb[i]), 2))).imag() /
+                   (n_0[i] * std::conj(std::cos(th_0))).real();
+        }
+    }
+    const std::valarray<std::complex<T>> Ex = pol == 's' ? std::valarray<std::complex<T>>{0} : (Ef - Eb) * std::cos(th);
+    const std::valarray<std::complex<T>> Ey = pol == 's' ? Ef + Eb : std::valarray<std::complex<T>>{0};
+    const std::valarray<std::complex<T>> Ez = pol == 's' ? std::valarray<std::complex<T>>{0} : -(Ef + Eb) * std::sin(th);
+    return {{"poyn", poyn}, {"absor", absor}, {"Ex", Ex}, {"Ey", Ey}, {"Ez", Ez}};
+}
+
+template auto position_resolved(const std::valarray<std::size_t> &layer, const std::valarray<double> &distance,
+                                const coh_tmm_vec_dict<double> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<std::valarray<double>, std::valarray<std::complex<double>>>>;

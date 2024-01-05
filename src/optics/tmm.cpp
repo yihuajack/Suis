@@ -145,7 +145,7 @@ auto list_snell(const std::vector<std::complex<T>> &n_list,
                 const std::complex<T> th_0) -> std::valarray<std::complex<T>> {
     std::valarray<std::complex<T>> angles(n_list.size());
     const std::complex<T> n_list_0 = n_list.front();
-    std::transform(n_list.cbegin(), n_list.cend(), std::begin(angles), [&n_list_0, &th_0](const std::complex<T> n_list_i) {
+    std::ranges::transform(n_list, std::begin(angles), [&n_list_0, &th_0](const std::complex<T> n_list_i) {
         return std::asin(n_list_0 * std::sin(th_0) / n_list_i);
     });
     if (not is_forward_angle(n_list[0], angles[0])) {
@@ -360,7 +360,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // Ignore warning about inf multiplication
     std::valarray<std::complex<T>> d_list_comp_temp(d_list.size());
     // Unfortunately, we cannot directly multiply a double and a complex.
-    std::transform(std::begin(d_list), std::end(d_list), std::begin(d_list_comp_temp), [](const T real) {
+    std::ranges::transform(d_list, std::begin(d_list_comp_temp), [](const T real) {
         return std::complex<T>(real, 0.0);
     });
     std::valarray<std::complex<T>> delta = kz_list * d_list_comp_temp;
@@ -468,11 +468,11 @@ auto coh_tmm(const char pol, const std::vector<std::complex<T>> &n_list, const s
     const std::size_t num_layers = n_list.size();
     const std::valarray<std::complex<T>> th_list = list_snell(n_list, th_0);
     std::valarray<std::complex<T>> kz_list(n_list.size());  // also th_list.size()
-    std::transform(std::begin(n_list), std::end(n_list), std::begin(kz_list), [&th_list, lam_vac, i = 0](const std::complex<T> n_list_i) mutable{
+    std::ranges::transform(n_list, std::begin(kz_list), [&th_list, lam_vac, i = 0](const std::complex<T> n_list_i) mutable -> std::complex<T> {
         return 2 * std::numbers::pi_v<T> * n_list_i * std::cos(th_list[i++]) / lam_vac;
     });
     std::valarray<std::complex<T>> d_list_comp_temp(d_list.size());
-    std::transform(std::begin(d_list), std::end(d_list), std::begin(d_list_comp_temp), [](const T real) {
+    std::ranges::transform(d_list, std::begin(d_list_comp_temp), [](const T real) {
         return std::complex<T>(real, 0.0);
     });
     std::valarray<std::complex<T>> delta = kz_list * d_list_comp_temp;
@@ -532,27 +532,15 @@ auto coh_tmm(const char pol, const std::vector<std::complex<T>> &n_list, const s
 /*
  * Reverses the order of the stack then runs coh_tmm.
  */
-template<typename T>
-auto coh_tmm_reverse(const char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
-                     const std::complex<T> th_0,
+template<typename T, std::ranges::sized_range NL_T, std::ranges::sized_range DL_T>
+auto coh_tmm_reverse(const char pol, const NL_T &n_list, const DL_T &d_list, const std::complex<T> th_0,
                      const T lam_vac) -> coh_tmm_dict<T> {
-    const std::complex<T> th_f = snell(n_list[0], n_list[n_list.size() - 1], th_0);
-    std::valarray<std::complex<T>> reversed_n_list(n_list.size());
-    std::reverse_copy(std::cbegin(n_list), std::cend(n_list), std::begin(reversed_n_list));
-    std::valarray<T> reversed_d_list(d_list.size());
-    std::reverse_copy(std::cbegin(d_list), std::cend(d_list), std::begin(reversed_d_list));
-    return coh_tmm(pol, reversed_n_list, reversed_d_list, th_f, lam_vac);
-}
-
-template<typename T>
-auto coh_tmm_reverse(const char pol, const std::vector<std::complex<T>> &n_list, const std::vector<T> &d_list,
-                     const std::complex<T> th_0, const T lam_vac) -> coh_tmm_dict<T> {
     const std::complex<T> th_f = snell(n_list[0], n_list[n_list.size() - 1], th_0);
     // To keep references to n_list and d_list const, we have to use reverse_copy instead of reverse.
     std::valarray<std::complex<T>> reversed_n_list(n_list.size());
-    std::reverse_copy(n_list.cbegin(), n_list.cend(), std::begin(reversed_n_list));
+    std::ranges::reverse_copy(n_list, std::begin(reversed_n_list));
     std::valarray<T> reversed_d_list(d_list.size());
-    std::reverse_copy(d_list.cbegin(), d_list.cend(), std::begin(reversed_d_list));
+    std::ranges::reverse_copy(d_list, std::begin(reversed_d_list));
     return coh_tmm(pol, reversed_n_list, reversed_d_list, th_f, lam_vac);
 }
 
@@ -579,12 +567,12 @@ template auto ellips(const std::valarray<std::complex<double>> &n_list, const st
  * Calculates reflected and transmitted power for unpolarized light.
  */
 template<typename T>
-auto unpolarized_RT(std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
+auto unpolarized_RT(const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
                     const std::complex<T> th_0, const T lam_vac) -> std::unordered_map<std::string, T> {
     const coh_tmm_dict<T> s_data = coh_tmm('s', n_list, d_list, th_0, lam_vac);
     const coh_tmm_dict<T> p_data = coh_tmm('p', n_list, d_list, th_0, lam_vac);
-    const T R = (s_data["R"] + p_data["R"]) / 2;
-    const T Tr = (s_data["T"] + p_data["T"]) / 2;
+    const T R = (std::get<T>(s_data.at("R")) + std::get<T>(p_data.at("R"))) / 2;
+    const T Tr = (std::get<T>(s_data.at("T")) + std::get<T>(p_data.at("T"))) / 2;
     return {{"R", R}, {"T", Tr}};
 }
 
@@ -604,24 +592,31 @@ auto unpolarized_RT(std::valarray<std::complex<T>> &n_list, const std::valarray<
  * The E-field is in units where the incoming |E|=1; see
  * https://arxiv.org/pdf/1603.02720.pdf for formulas.
  */
-template<typename T>
+template<typename T, typename COH_TMM_T>
+requires std::is_same_v<COH_TMM_T, coh_tmm_dict<T>> || std::is_same_v<COH_TMM_T, stack_coh_tmm_dict<T>>
 auto position_resolved(const std::size_t layer, const T distance,
-                       const coh_tmm_dict<T> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<T, std::complex<T>>> {
+                       const COH_TMM_T &coh_tmm_data) -> std::unordered_map<std::string, std::variant<T, std::complex<T>>> {
     // Notice that operator[] of std::unordered_map accepts both const Key& key and Key&& key,
     // allowing both accessing and inserting!
     // Instead, at() only accepts const Key& key allowing only accessing (with bounds checking), safer.
     // If using operator[], "No viable overloaded operator[] for type 'const coh_tmm_dict<double>'"
     // because our parameter is const reference qualified
-    const std::complex<T> v = (layer > 0) ? std::get<std::vector<std::array<std::complex<T>, 2>>>(coh_tmm_data.at("vw_list"))[layer][0] : 1;
-    const std::complex<T> w = (layer > 0) ? std::get<std::vector<std::array<std::complex<T>, 2>>>(coh_tmm_data.at("vw_list"))[layer][1] : std::get<std::complex<T>>(coh_tmm_data.at("r"));
+    const std::complex<T> v = (layer > 0) ? std::get<std::vector<std::array<std::complex<T>, 2>>>(coh_tmm_data.at("vw_list")).at(layer).at(0) : 1;
+    const std::complex<T> w = (layer > 0) ? std::get<std::vector<std::array<std::complex<T>, 2>>>(coh_tmm_data.at("vw_list")).at(layer).at(1) : std::get<std::complex<T>>(coh_tmm_data.at("r"));
     const std::complex<T> kz = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("kz_list"))[layer];
     const std::complex<T> th = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("th_list"))[layer];
     const std::complex<T> n = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[layer];
     const std::complex<T> n_0 = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[0];
     const std::complex<T> th_0 = std::get<std::complex<T>>(coh_tmm_data.at("th_0"));
     const char pol = std::get<char>(coh_tmm_data.at("pol"));
-    if ((layer < 1 || 0 > distance || distance > std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer]) && (layer != 0 || distance > 0)) {
-        throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(layer));
+    if constexpr (std::is_same_v<COH_TMM_T, coh_tmm_dict<T>>) {
+        if ((layer < 1 || 0 > distance || distance > std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer]) && (layer != 0 || distance > 0)) {
+            throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(layer));
+        }
+    } else {
+        if ((layer < 1 || 0 > distance || distance > std::get<std::vector<T>>(coh_tmm_data.at("d_list")).at(layer)) && (layer != 0 || distance > 0)) {
+            throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(layer));
+        }
     }
     // The amplitude of forward-moving wave is Ef, backwards is Eb
     const std::complex<T> Ef = v * std::exp(std::complex<T>(0, 1) * kz * distance);
@@ -641,32 +636,6 @@ auto position_resolved(const std::size_t layer, const T distance,
 
 template auto position_resolved(const std::size_t layer, const double distance,
                                 const coh_tmm_dict<double> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<double, std::complex<double>>>;
-
-template<typename T>
-auto position_resolved(const std::size_t layer, const T distance,
-                       const stack_coh_tmm_dict<T> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<T, std::complex<T>>> {
-    const std::complex<T> v = (layer > 0) ? std::get<std::vector<std::array<std::complex<T>, 2>>>(coh_tmm_data.at("vw_list"))[layer][0] : 1;
-    const std::complex<T> w = (layer > 0) ? std::get<std::vector<std::array<std::complex<T>, 2>>>(coh_tmm_data.at("vw_list"))[layer][1] : std::get<std::complex<T>>(coh_tmm_data.at("r"));
-    const std::complex<T> kz = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("kz_list"))[layer];
-    const std::complex<T> th = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("th_list"))[layer];
-    const std::complex<T> n = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[layer];
-    const std::complex<T> n_0 = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[0];
-    const std::complex<T> th_0 = std::get<std::complex<T>>(coh_tmm_data.at("th_0"));
-    const char pol = std::get<char>(coh_tmm_data.at("pol"));
-    if ((layer < 1 || 0 > distance || distance > std::get<std::vector<T>>(coh_tmm_data.at("d_list"))[layer]) && (layer != 0 || distance > 0)) {
-        throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(layer));
-    }
-    const std::complex<T> Ef = v * std::exp(std::complex<T>(0, 1) * kz * distance);
-    const std::complex<T> Eb = w * std::exp(std::complex<T>(0, -1) * kz * distance);
-    const T poyn = pol == 's' ? (n * std::cos(th) * std::conj(Ef + Eb) * (Ef - Eb)).real() / (n_0 * std::cos(th_0)).real() :
-            (n * std::conj(std::cos(th)) * (Ef + Eb) * std::conj(Ef - Eb)).real() / (n_0 * std::conj(std::cos(th_0))).real();
-    const T absor = pol == 's' ? (n * std::cos(th) * kz * std::pow(std::abs(Ef + Eb), 2)).imag() / (n_0 * std::cos(th_0)).real() :
-            (n * std::conj(std::cos(th)) * (kz * std::pow(std::abs(Ef - Eb), 2) - std::conj(kz) * std::pow(std::abs(Ef + Eb), 2))).imag() / (n_0 * std::conj(std::cos(th_0))).real();
-    const std::complex<T> Ex = pol == 's' ? 0 : (Ef - Eb) * std::cos(th);
-    const std::complex<T> Ey = pol == 's' ? Ef + Eb : 0;
-    const std::complex<T> Ez = pol == 's' ? 0 : -(Ef + Eb) * std::sin(th);
-    return {{"poyn", poyn}, {"absor", absor}, {"Ex", Ex}, {"Ey", Ey}, {"Ez", Ez}};
-}
 
 /*
  * d_list is a list of thicknesses of layers, all of which are finite.

@@ -2,7 +2,7 @@
 // Created by Yihua on 2023/11/12.
 //
 
-// GCC has already forwarded <algorithm> from <valarray>, but it is not the case for MSVC.
+// GCC/Clang has already forwarded <algorithm> from <valarray>, but it is not the case for MSVC.
 #include <algorithm>
 #include <vector>
 #include "utils.h"

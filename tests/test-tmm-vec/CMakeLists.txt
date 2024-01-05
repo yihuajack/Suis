@@ -5,6 +5,8 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Windows")  # == CMAKE_HOST_SYSTEM_NAME
     file(TO_CMAKE_PATH $ENV{VCPKG_ROOT} VCPKG_ROOTDIR)
     # cmake_path(SET VCPKG_ROOTDIR $ENV{VCPKG_ROOT})
     set(CMAKE_TOOLCHAIN_FILE ${VCPKG_ROOTDIR}/scripts/buildsystems/vcpkg.cmake)
+else ()
+
 endif()
 
 project(test-tmm-vec)
@@ -21,7 +23,7 @@ add_executable(test-tmm-vec test_tmm_vec.cpp
         ../../src/optics/tmm_vec.cpp
         ../../src/optics/tmm.cpp
         ../../src/tools/Approx.cpp
-        ../../src/optics/FixedMatrix.cpp
+        ../../src/optics/FixedMatrix.cpp  # Unfortunately, this file is not used but coupled with this project.
         ../../src/tools/utils.cpp
 )
 
