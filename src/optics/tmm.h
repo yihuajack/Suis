@@ -68,7 +68,7 @@ using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t
  * R: std::valarray<T>
  * T: std::valarray<T>
  * power_entering: std::valarray<T>
- * vw_list: std::vector<std::vector<std::array<std::complex<T>, 2>>>
+ * vw_list: std::valarray<std::vector<std::array<std::complex<T>, 2>>>
  * kz_list: std::valarray<std::complex<T>>
  * th_list: std::valarray<std::complex<T>>
  * pol: char
@@ -78,7 +78,7 @@ using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t
  * lam_vac: std::valarray<T>
  */
 template<typename T>
-using coh_tmm_vec_dict = std::unordered_map<std::string, std::variant<char, std::complex<T>, std::valarray<T>, std::valarray<std::complex<T>>, std::vector<std::vector<std::array<std::complex<T>, 2>>>>>;
+using coh_tmm_vec_dict = std::unordered_map<std::string, std::variant<char, std::complex<T>, std::valarray<T>, std::valarray<std::complex<T>>, std::valarray<std::vector<std::array<std::complex<T>, 2>>>>>;
 
 enum class LayerType { Coherent, Incoherent };
 
@@ -208,6 +208,10 @@ auto position_resolved(std::size_t layer, T distance,
 template<typename T>
 auto position_resolved(const std::valarray<std::size_t> &layer, const std::valarray<T> &distance,
                        const coh_tmm_vec_dict<T> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<std::valarray<T>, std::valarray<std::complex<T>>>>;
+
+template<typename T>
+auto find_in_structure(const std::valarray<std::complex<T>> &d_list,
+                       const std::valarray<T> &dist) -> std::pair<std::valarray<std::size_t>, std::valarray<T>>;
 
 template<typename T>
 auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<T>;

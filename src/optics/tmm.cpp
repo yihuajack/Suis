@@ -6,6 +6,8 @@
 #include "tmm.h"
 #include "utils.h"
 
+using namespace std::complex_literals;
+
 template<typename T>
 void AbsorpAnalyticFn<T>::fill_in(const coh_tmm_dict<T> &coh_tmm_data, const std::size_t layer) {
     const char pol = std::get<char>(coh_tmm_data.at("pol"));
@@ -36,7 +38,7 @@ void AbsorpAnalyticFn<T>::fill_in(const coh_tmm_dict<T> &coh_tmm_data, const std
 
 template<typename T>
 auto AbsorpAnalyticFn<T>::run(const T z) const -> std::complex<T> {
-    return A1 * std::exp(a1 * z) + A2 * std::exp(-a1 * z) + A3 * std::exp(std::complex<T>(0, 1) * a3 * z) + std::conj(A3) * std::exp(std::complex<T>(0, -1) * a3 * z);
+    return A1 * std::exp(a1 * z) + A2 * std::exp(-a1 * z) + A3 * std::exp(1i * a3 * z) + std::conj(A3) * std::exp(-1i * a3 * z);
 }
 
 template<typename T>
@@ -46,7 +48,7 @@ auto AbsorpAnalyticFn<T>::flip() -> AbsorpAnalyticFn<T> {  // can be discarded
     // In C++, the left operand of comma operator has no effect!
     A1 = newA1;
     A2 = newA2;
-    A3 = std::conj(A3 * std::exp(std::complex<T>(0, 1) * a3 * d));
+    A3 = std::conj(A3 * std::exp(1i * a3 * d));
     return *this;
 }
 
@@ -360,8 +362,8 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // Ignore warning about inf multiplication
     std::valarray<std::complex<T>> d_list_comp_temp(d_list.size());
     // Unfortunately, we cannot directly multiply a double and a complex.
-    std::ranges::transform(d_list, std::begin(d_list_comp_temp), [](const T real) {
-        return std::complex<T>(real, 0.0);
+    std::ranges::transform(d_list, std::begin(d_list_comp_temp), [](const T real) -> std::complex<T> {
+        return real;
     });
     std::valarray<std::complex<T>> delta = kz_list * d_list_comp_temp;
     // For a very opaque layer, reset delta to avoid divide-by-0 and similar
@@ -370,7 +372,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // matter.
     for (std::size_t i = 1; i < num_layers - 1; i++) {
         if (delta[i].imag() > 35) {
-            delta[i] = std::complex<T>(delta[i].real(), 35);
+            delta[i] = delta[i].real() + 35i;
             // We have to do try-catch here rather than in main.cpp; if not, the following calculation will not be done!
             try {
                 throw std::runtime_error("Warning: Layers that are almost perfectly opaque "
@@ -403,7 +405,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // std::vector<std::array<std::array<std::complex<T>, 2>, 2>> M_list;
     std::vector<FixedMatrix<std::complex<T>, 2, 2>> M_list(num_layers, FixedMatrix<std::complex<T>, 2, 2>());
     for (std::size_t i = 1; i < num_layers - 1; i++) {
-        M_list[i] = dot(FixedMatrix<std::complex<T>, 2, 2>({{std::exp(std::complex<T>(0, -1) * delta[i]), 0}, {0, std::exp(std::complex<T>(0, 1) * delta[i])}}),
+        M_list[i] = dot(FixedMatrix<std::complex<T>, 2, 2>({{std::exp(-1i * delta[i]), 0}, {0, std::exp(1i * delta[i])}}),
                         FixedMatrix<std::complex<T>, 2, 2>({{1, r_list[i][i + 1]}, {r_list[i][i + 1], 1}})) / t_list[i][i + 1];
     }
     // std::array<std::array<std::complex<T>, 2>, 2> Mtilde = {{1, 0}, {0, 1}};
@@ -472,13 +474,13 @@ auto coh_tmm(const char pol, const std::vector<std::complex<T>> &n_list, const s
         return 2 * std::numbers::pi_v<T> * n_list_i * std::cos(th_list[i++]) / lam_vac;
     });
     std::valarray<std::complex<T>> d_list_comp_temp(d_list.size());
-    std::ranges::transform(d_list, std::begin(d_list_comp_temp), [](const T real) {
-        return std::complex<T>(real, 0.0);
+    std::ranges::transform(d_list, std::begin(d_list_comp_temp), [](const T real) -> std::complex<T> {
+        return real;
     });
     std::valarray<std::complex<T>> delta = kz_list * d_list_comp_temp;
     for (std::size_t i = 1; i < num_layers - 1; i++) {
         if (delta[i].imag() > 35) {
-            delta[i] = std::complex<T>(delta[i].real(), 35);
+            delta[i] = delta[i].real() + 35i;
             throw std::runtime_error("Warning: Layers that are almost perfectly opaque "
                                      "are modified to be slightly transmissive, "
                                      "allowing 1 photon in 10^30 to pass through. It's "
@@ -494,7 +496,7 @@ auto coh_tmm(const char pol, const std::vector<std::complex<T>> &n_list, const s
     }
     std::vector<FixedMatrix<std::complex<T>, 2, 2>> M_list(num_layers, FixedMatrix<std::complex<T>, 2, 2>());
     for (std::size_t i = 1; i < num_layers - 1; i++) {
-        M_list[i] = dot(FixedMatrix<std::complex<T>, 2, 2>({{std::exp(std::complex<T>(0, -1) * delta[i]), 0}, {0, std::exp(std::complex<T>(0, 1) * delta[i])}}),
+        M_list[i] = dot(FixedMatrix<std::complex<T>, 2, 2>({{std::exp(-1i * delta[i]), 0}, {0, std::exp(1i * delta[i])}}),
                         FixedMatrix<std::complex<T>, 2, 2>({{1, r_list[i][i + 1]}, {r_list[i][i + 1], 1}})) / t_list[i][i + 1];
     }
     FixedMatrix<std::complex<T>, 2, 2> Mtilde = {{1, 0}, {0, 1}};
@@ -610,23 +612,23 @@ auto position_resolved(const std::size_t layer, const T distance,
     const std::complex<T> th_0 = std::get<std::complex<T>>(coh_tmm_data.at("th_0"));
     const char pol = std::get<char>(coh_tmm_data.at("pol"));
     if constexpr (std::is_same_v<COH_TMM_T, coh_tmm_dict<T>>) {
-        if ((layer < 1 || 0 > distance || distance > std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer]) && (layer != 0 || distance > 0)) {
+        if ((layer < 1 or 0 > distance or distance > std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer]) and (layer not_eq 0 or distance > 0)) {
             throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(layer));
         }
     } else {
-        if ((layer < 1 || 0 > distance || distance > std::get<std::vector<T>>(coh_tmm_data.at("d_list")).at(layer)) && (layer != 0 || distance > 0)) {
+        if ((layer < 1 or 0 > distance or distance > std::get<std::vector<T>>(coh_tmm_data.at("d_list")).at(layer)) and (layer not_eq 0 or distance > 0)) {
             throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(layer));
         }
     }
     // The amplitude of forward-moving wave is Ef, backwards is Eb
-    const std::complex<T> Ef = v * std::exp(std::complex<T>(0, 1) * kz * distance);
-    const std::complex<T> Eb = w * std::exp(std::complex<T>(0, -1) * kz * distance);
+    const std::complex<T> Ef = v * std::exp(1i * kz * distance);
+    const std::complex<T> Eb = w * std::exp(-1i * kz * distance);
     // Poynting vector
     const T poyn = pol == 's' ? (n * std::cos(th) * std::conj(Ef + Eb) * (Ef - Eb)).real() / (n_0 * std::cos(th_0)).real() :
             (n * std::conj(std::cos(th)) * (Ef + Eb) * std::conj(Ef - Eb)).real() / (n_0 * std::conj(std::cos(th_0))).real();
     // Absorbed energy density
-    const T absor = pol == 's' ? (n * std::cos(th) * kz * std::pow(std::abs(Ef + Eb), 2)).imag() / (n_0 * std::cos(th_0)).real() :
-            (n * std::conj(std::cos(th)) * (kz * std::pow(std::abs(Ef - Eb), 2) - std::conj(kz) * std::pow(std::abs(Ef + Eb), 2))).imag() / (n_0 * std::conj(std::cos(th_0))).real();
+    const T absor = pol == 's' ? (n * std::cos(th) * kz * std::norm(Ef + Eb)).imag() / (n_0 * std::cos(th_0)).real() :
+            (n * std::conj(std::cos(th)) * (kz * std::norm(Ef - Eb) - std::conj(kz) * std::norm(Ef + Eb))).imag() / (n_0 * std::conj(std::cos(th_0))).real();
     // Electric field
     const std::complex<T> Ex = pol == 's' ? 0 : (Ef - Eb) * std::cos(th);
     const std::complex<T> Ey = pol == 's' ? Ef + Eb : 0;
@@ -653,12 +655,12 @@ template auto position_resolved(const std::size_t layer, const double distance,
  * For negative distance, return [-1, distance]
  */
 template<typename T>
-auto find_in_structure(const std::valarray<std::complex<T>> &d_list, T distance) -> std::pair<std::size_t, T> {
+auto find_in_structure(const std::valarray<std::complex<T>> &d_list, T distance) -> std::pair<long long int, T> {
     if (std::isinf(d_list.sum())) {
         throw std::runtime_error("This function expects finite arguments");
     }
     if (distance < 0) {
-        throw std::runtime_error("Should return [-1, distance]");
+        return std::pair(-1, distance);
     }
     std::size_t layer = 0;
     while (layer < d_list.size() and distance >= d_list[layer]) {
@@ -687,8 +689,8 @@ auto find_in_structure_inf(const std::valarray<std::complex<T>> &d_list, T dista
     if (distance < 0) {
         return std::pair(0, distance);
     }
-    const std::pair<std::size_t, T> found = find_in_structure(d_list[std::slice(1, d_list.size() - 2, 1)], distance);
-    return std::pair(found.first + 1, found.second);
+    const std::pair<long long int, T> found = find_in_structure(d_list[std::slice(1, d_list.size() - 2, 1)], distance);
+    return std::pair(found.first + 1, found.second);  // min(found.first) == -1 so min(found.first + 1) == 0
 }
 
 /*

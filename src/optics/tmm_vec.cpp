@@ -7,10 +7,13 @@
 #include <algorithm>
 #include <functional>
 #include <numbers>
+#include <numeric>
 #include <boost/numeric/ublas/assignment.hpp>
 #include <boost/numeric/ublas/matrix.hpp>
 #include "tmm.h"
 #include "utils.h"
+
+using namespace std::complex_literals;
 
 template<typename T, typename TH_T>
 requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<TH_T, std::complex<T>>
@@ -281,14 +284,14 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // std::(ranges::)views::iota (std::ranges::iota_view) rather than a range adaptor.
     // The repeated view is repeating transform_view of ref_view of valarray, so it must be joined (flatten).
     // Numpy can do vectorization automatically, but we have to manually vectorize the valarray lam_vac.
-    std::ranges::move(std::views::repeat(lam_vac | std::views::transform([](const T real) {
-        return std::complex<T>(real, 0.0);
+    std::ranges::move(std::views::repeat(lam_vac | std::views::transform([](const T real) -> std::complex<T> {
+        return real;
     }), num_layers) | std::views::join, std::begin(compvec_lam_vac));
     const std::valarray<std::complex<T>> kz_list = 2 * std::numbers::pi_v<T> * n_list * std::cos(th_list) / compvec_lam_vac;
     // Do the same thing to d_list.
-    std::valarray<std::complex<T>> compvec_d_list(n_list.size());
-    std::ranges::move(std::views::repeat(d_list | std::views::transform([](const T real) {
-        return std::complex<T>(real, 0.0);
+    std::valarray<std::complex<T>> compvec_d_list(d_list.size());
+    std::ranges::move(std::views::repeat(d_list | std::views::transform([](const T real) -> std::complex<T> {
+        return real;
     }), num_wl) | std::views::join, std::begin(compvec_d_list));
     // Note that if num_layers * d_list.size() greater than compvec_d_list.size(), by address sanitizer (ASAN),
     // there will be a heap-buffer-overflow. Shadow bytes around the buggy address contain fa (Heap left redzone).
@@ -307,7 +310,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     std::valarray<std::complex<T>> delta = kz_list * va_2d_transpose(compvec_d_list, num_wl);
     // std::slice_array does not have std::begin() or std::end().
     std::ranges::transform(std::begin(delta) + num_wl, std::begin(delta) + (num_layers - 1) * num_wl, std::begin(delta) + num_wl, [](const std::complex<T> delta_i) {
-        return delta_i.imag() > 100 ? std::complex<T>(delta_i.real(), 100) : delta_i;
+        return delta_i.imag() > 100 ? delta_i.real() + 100i : delta_i;
     });
     std::vector<std::vector<std::valarray<std::complex<T>>>> t_list(num_layers, std::vector<std::valarray<std::complex<T>>>(num_layers, std::valarray<std::complex<T>>(num_wl)));
     std::vector<std::vector<std::valarray<std::complex<T>>>> r_list(num_layers, std::vector<std::valarray<std::complex<T>>>(num_layers, std::valarray<std::complex<T>>(num_wl)));
@@ -358,10 +361,10 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
         std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> A(boost::numeric::ublas::matrix<std::complex<T>>(2, 2), num_wl);
         std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> B(boost::numeric::ublas::matrix<std::complex<T>>(2, 2), num_wl);
         for (std::size_t j = 0; j < num_wl; j++) {
-            A[j](0, 0) = std::exp(std::complex<T>(0, -1) * delta[i * num_wl + j]);
+            A[j](0, 0) = std::exp(-1i * delta[i * num_wl + j]);
             A[j](0, 1) = 0;
             A[j](1, 0) = 0;
-            A[j](1, 1) = std::exp(std::complex<T>(0, 1) * delta[i * num_wl + j]);
+            A[j](1, 1) = std::exp(1i * delta[i * num_wl + j]);
             B[j](0, 0) = 1;
             B[j](0, 1) = r_list.at(i).at(i + 1)[j];
             B[j](1, 0) = r_list.at(i).at(i + 1)[j];
@@ -396,28 +399,28 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     }
     // boost::multi_array<std::complex<T>, 3> vw_list(boost::extents[num_layers][num_wl][2]);
     // It is not necessary to use <boost/multi_array.hpp> here.
-    std::vector<std::vector<std::array<std::complex<T>, 2>>> vw_list(num_layers, std::vector<std::array<std::complex<T>, 2>>(num_wl));
+    std::valarray<std::vector<std::array<std::complex<T>, 2>>> vw_list(std::vector<std::array<std::complex<T>, 2>>(num_wl), num_layers);
     std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> vw(boost::numeric::ublas::zero_matrix<std::complex<T>>(2, 2), num_wl);
     for (std::size_t i = 0; i < num_wl; i++) {
         vw[i](0, 0) = t[i];
         vw[i](0, 1) = t[i];
     }
     for (std::size_t i = 0; i < num_wl; i++) {
-        vw_list.at(num_layers - 1).at(i).at(0) = vw[i](0, 0);
-        vw_list.at(num_layers - 1).at(i).at(1) = vw[i](0, 1);
+        vw_list[num_layers - 1].at(i).at(0) = vw[i](0, 0);
+        vw_list[num_layers - 1].at(i).at(1) = vw[i](0, 1);
     }
     for (std::size_t i = num_layers - 2; i > 0; i--) {
         for (std::size_t j = 0; j < num_wl; j++) {
             vw[j] = boost::numeric::ublas::prod(M_list[i * num_wl + j], vw[j]);
-            vw_list.at(i).at(j).at(0) = vw[j](0, 1);
-            vw_list.at(i).at(j).at(1) = vw[j](1, 1);
+            vw_list[i].at(j).at(0) = vw[j](0, 1);
+            vw_list[i].at(j).at(1) = vw[j](1, 1);
         }
     }
     // It should be better if using plain for-loop.
     // boost::multi_array<std::complex<T>, 1> ones(boost::extents[num_wl]);
     // std::ranges::fill(ones, 1);
     // vw_list[boost::indices[num_layers - 1][boost::multi_array_types::index_range()][1]] = ones;
-    std::ranges::transform(vw_list.at(num_layers - 1), vw_list.at(num_layers - 1).begin(), [](std::array<std::complex<T>, 2> &subarray) -> std::array<std::complex<T>, 2> {
+    std::ranges::transform(vw_list[num_layers - 1], vw_list[num_layers - 1].begin(), [](std::array<std::complex<T>, 2> &subarray) -> std::array<std::complex<T>, 2> {
         subarray.at(1) = 0;
         return subarray;
     });
@@ -536,61 +539,117 @@ template auto unpolarized_RT(const std::valarray<std::complex<double>> &n_list, 
                              const std::complex<double> th_0,
                              const std::valarray<double> &lam_vac) -> std::unordered_map<std::string, std::valarray<double>>;
 
+/*
+ * This function is vectorized.
+ * Starting with output of coh_tmm(), calculate the Poynting vector
+ * and absorbed energy density a distance "dist" into layer number "layer"
+ */
 template<typename T>
 auto position_resolved(const std::valarray<std::size_t> &layer, const std::valarray<T> &distance,
                        const coh_tmm_vec_dict<T> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<std::valarray<T>, std::valarray<std::complex<T>>>> {
-    std::vector<std::vector<std::array<std::complex<T>, 2>>> vw_list_l(layer.size());
-    for (std::size_t i = 0; i < layer.size(); i++) {
-        vw_list_l[i] = std::get<std::vector<std::vector<std::array<std::complex<T>, 2>>>>(coh_tmm_data.at("vw_list")).at(layer[i]);
+    const std::size_t num_layers = layer.size();
+    boost::numeric::ublas::matrix<T> vw_mat;
+    std::valarray<std::vector<std::array<std::complex<T>, 2>>> vw_list = std::get<std::valarray<std::vector<std::array<std::complex<T>, 2>>>>(coh_tmm_data.at("vw_list"));
+    const std::size_t num_wl = vw_list[0].size();
+    const std::valarray<std::vector<std::array<std::complex<T>, 2>>> vw_list_l = vw_list[layer];
+    std::valarray<std::complex<T>> v(1, num_layers * num_wl);
+    std::valarray<std::complex<T>> w(num_layers * num_wl);
+    std::ranges::move(std::views::repeat(std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("r")), num_layers) | std::views::join, std::begin(w));
+    for (std::size_t i = 0; i < num_layers; i++) {
+        if (layer[i] > 0) {
+            for (std::size_t j = 0; j < num_wl; j++) {
+                v[i * num_wl + j] = vw_list_l[i].at(j).at(0);
+                w[i * num_wl + j] = vw_list_l[i].at(j).at(1);
+            }
+        }
     }
-    const std::size_t num_wl = vw_list_l.size();
-    std::valarray<std::complex<T>> v(vw_list_l.size(), 1);
-    std::valarray<std::complex<T>> w = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("r"));
-    if (layer > 0) {
-        std::ranges::transform(vw_list_l, std::begin(v), [](const std::vector<std::array<std::complex<T>, 2>> &inner_vec) {
-            std::vector<std::complex<T>> result;
-            std::ranges::transform(inner_vec, std::back_inserter(result), [](const std::array<std::complex<T>, 2> &array) {
-                return array.front();
-            });
-            return result;
-        });
-        std::ranges::transform(vw_list_l, std::begin(w), [](const std::array<std::complex<T>, 2> &array) {
-            return array.back();
-        });
-    }
-    const std::valarray<std::complex<T>> kz = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("kz_list"))[std::slice(layer * num_wl, num_wl, 1)];
-    const std::valarray<std::complex<T>> th = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("th_list"))[std::slice(layer * num_wl, num_wl, 1)];
-    const std::valarray<std::complex<T>> n = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[std::slice(layer * num_wl, num_wl, 1)];
-    const std::valarray<std::complex<T>> n_0 = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"))[std::slice(0, num_wl, 1)];
+    const std::valarray<std::complex<T>> kz_list = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("kz_list"));
+#ifdef _MSC_VER
+    auto kz_view = layer * num_wl |
+#else
+    auto kz_view = std::valarray<std::size_t>(layer * num_wl) |
+#endif
+                   std::views::transform([&kz_list, num_wl](const std::size_t layer_index) {
+                       return std::ranges::subrange(std::begin(kz_list) + layer_index, std::begin(kz_list) + layer_index + num_wl);
+                   }) | std::views::join;
+    std::valarray<std::complex<T>> kz(num_layers * num_wl);
+    std::ranges::move(kz_view, std::begin(kz));
+    const std::valarray<std::complex<T>> th_list = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("th_list"));
+#ifdef _MSC_VER
+    auto kz_view = layer * num_wl |
+#else
+    auto th_view = std::valarray<std::size_t>(layer * num_wl) |
+#endif
+                   std::views::transform([&th_list, num_wl](const std::size_t layer_index) {
+                       return std::ranges::subrange(std::begin(th_list) + layer_index, std::begin(th_list) + layer_index + num_wl);
+                   }) | std::views::join;
+    std::valarray<std::complex<T>> th(num_layers * num_wl);
+    std::ranges::move(th_view, std::begin(th));
+    const std::valarray<std::complex<T>> n_list = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"));
+#ifdef _MSC_VER
+    auto kz_view = layer * num_wl |
+#else
+    auto n_view = std::valarray<std::size_t>(layer * num_wl) |
+#endif
+                   std::views::transform([&n_list, num_wl](const std::size_t layer_index) {
+                       return std::ranges::subrange(std::begin(n_list) + layer_index, std::begin(n_list) + layer_index + num_wl);
+                   }) | std::views::join;
+    std::valarray<std::complex<T>> n(num_layers * num_wl);
+    std::ranges::move(n_view, std::begin(n));
+    const std::valarray<std::complex<T>> n_0 = n_list[std::slice(0, num_wl, 1)];
     const std::complex<T> th_0 = std::get<std::complex<T>>(coh_tmm_data.at("th_0"));
     const char pol = std::get<char>(coh_tmm_data.at("pol"));
-    if ((layer < 1 || 0 > distance || distance > std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer]) && (layer != 0 || distance > 0)) {
-        throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(layer));
+    // std::ranges::any_of(layer, std::bind_front(std::greater_equal<>(), 1)) or
+    // std::ranges::any_of(layer, std::bind_front(std::greater<>(), 0)) or
+    std::valarray<bool> cond = (layer < 1 or 0 > distance or distance > std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer]) and (layer not_eq 0 or distance > 0);
+    bool *pos = std::ranges::find(cond, true);
+    if (pos not_eq std::cend(cond)) {
+        throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(std::ranges::distance(std::begin(cond), pos)));
     }
-    const std::valarray<std::complex<T>> Ef = v * std::exp(std::complex<T>(0, 1) * kz * distance);
-    const std::valarray<std::complex<T>> Eb = w * std::exp(std::complex<T>(0, -1) * kz * distance);
-    std::valarray<T> poyn(num_wl);
+    std::valarray<std::complex<T>> comp_dist(num_layers * num_wl);
+    std::ranges::move(std::views::repeat(distance | std::views::transform([](const T real) -> std::complex<T> {
+        return real;
+    }), num_wl) | std::views::join, std::begin(comp_dist));
+    comp_dist = va_2d_transpose(comp_dist, num_wl);
+    const std::valarray<std::complex<T>> Ef = v * std::exp(1i * kz * comp_dist);
+    const std::valarray<std::complex<T>> Eb = w * std::exp(-1i * kz * comp_dist);
+    std::valarray<T> poyn(num_layers * num_wl);
     if (pol == 's') {
-        for (std::size_t i = 0; i < num_wl; i++) {
-            poyn = (n[i] * std::cos(th[i]) * std::conj(Ef[i] + Eb[i]) * (Ef[i] - Eb[i])).real() /
-                   (n_0[i] * std::cos(th_0)).real();
+        for (std::size_t i = 0; i < num_layers; i++) {
+            for (std::size_t j = 0; j < num_wl; j++) {
+                poyn[i * num_wl + j] = (n[i * num_wl + j] * std::cos(th[i * num_wl + j]) *
+                                        std::conj(Ef[i * num_wl + j] + Eb[i * num_wl + j]) *
+                                        (Ef[i * num_wl + j] - Eb[i * num_wl + j])).real() /
+                                       (n_0[j] * std::cos(th_0)).real();
+            }
         }
     } else if (pol == 'p') {
-        for (std::size_t i = 0; i < num_wl; i++) {
-            poyn = (n[i] * std::conj(std::cos(th[i])) * (Ef[i] + Eb[i]) * std::conj(Ef[i] - Eb[i])).real() /
-                   (n_0[i] * std::conj(std::cos(th_0))).real();
+        for (std::size_t i = 0; i < num_layers; i++) {
+            for (std::size_t j = 0; j < num_wl; j++) {
+                poyn[i * num_wl + j] = (n[i * num_wl + j] * std::conj(std::cos(th[i * num_wl + j])) *
+                                        (Ef[i * num_wl + j] + Eb[i * num_wl + j]) *
+                                        std::conj(Ef[i * num_wl + j] - Eb[i * num_wl + j])).real() /
+                                       (n_0[j] * std::conj(std::cos(th_0))).real();
+            }
         }
     }
-    std::valarray<T> absor(num_wl);
+    std::valarray<T> absor(num_layers * num_wl);
     if (pol == 's') {
-        for (std::size_t i = 0; i < num_wl; i++) {
-            poyn = (n[i] * std::cos(th[i]) * kz[i] * std::pow(std::abs(Ef[i] + Eb[i]), 2)).imag() /
-                   (n_0[i] * std::cos(th_0)).real();
+        for (std::size_t i = 0; i < num_layers; i++) {
+            for (std::size_t j = 0; j < num_wl; j++) {
+                absor[i * num_wl + j] = (n[i * num_wl + j] * std::cos(th[i * num_wl + j]) *
+                                         kz[i * num_wl + j] * std::norm(Ef[i * num_wl + j] + Eb[i * num_wl + j])).imag() /
+                                        (n_0[j] * std::cos(th_0)).real();
+            }
         }
     } else if (pol == 'p') {
-        for (std::size_t i = 0; i < num_wl; i++) {
-            poyn = (n[i] * std::conj(std::cos(th[i])) * (kz[i] * std::pow(std::abs(Ef[i] - Eb[i]), 2) - std::conj(kz[i]) * std::pow(std::abs(Ef[i] + Eb[i]), 2))).imag() /
-                   (n_0[i] * std::conj(std::cos(th_0))).real();
+        for (std::size_t i = 0; i < num_layers; i++) {
+            for (std::size_t j = 0; j < num_wl; j++) {
+                absor[i * num_wl + j] = (n[i * num_wl + j] * std::conj(std::cos(th[i * num_wl + j])) *
+                                         (kz[i * num_wl + j] * std::norm(Ef[i * num_wl + j] - Eb[i * num_wl + j]) -
+                                          std::conj(kz[i * num_wl + j]) * std::norm(Ef[i * num_wl + j] + Eb[i * num_wl + j]))).imag() /
+                                        (n_0[j] * std::conj(std::cos(th_0))).real();
+            }
         }
     }
     const std::valarray<std::complex<T>> Ex = pol == 's' ? std::valarray<std::complex<T>>{0} : (Ef - Eb) * std::cos(th);
@@ -601,3 +660,108 @@ auto position_resolved(const std::valarray<std::size_t> &layer, const std::valar
 
 template auto position_resolved(const std::valarray<std::size_t> &layer, const std::valarray<double> &distance,
                                 const coh_tmm_vec_dict<double> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<std::valarray<double>, std::valarray<std::complex<double>>>>;
+
+/*
+ * This function is vectorized.
+ * d_list is a list of thicknesses of layers, all of which are finite.
+
+ * distance is the distance from the front of the whole multilayer structure
+ * (i.e., from the start of layer 0.)
+
+ * Function returns [layer, z], where:
+
+ * - layer is what number layer you are at.
+ * - z is the distance into that layer.
+
+ * For large distance, layer = len(d_list), even though d_list[layer] does not
+ * exist in this case.
+ * For negative distance, return [-1, distance]
+ */
+template<typename T>
+auto find_in_structure(const std::valarray<std::complex<T>> &d_list,
+                       const std::valarray<T> &dist) -> std::pair<std::valarray<long long int>, std::valarray<T>> {
+    if (std::isinf(std::abs(d_list.sum()))) {
+        throw std::runtime_error("This function expects finite arguments");
+    }
+    std::valarray<long long int> layers(d_list.size());
+    if (std::any_of()) {
+        throw std::runtime_error("Should return [-1, distance]");
+    }
+    // See N4950 Page 1145 Chapter 26.5.7.2 Range conversions ranges::to [range.utility.conv.to]
+    // > The range conversion functions construct an object (usually a container) from a range, by using a constructor
+    // taking a range, a from_range_t tagged constructor, or a constructor taking a pair of iterators, or by inserting
+    // each element of the range into the default-constructed object.
+    // Since GCC/libstdc++ 14.0, std::ranges::to() is available.
+    // using C = std::valarray<double>; (or std::vector<double>)
+    // using R = std::ranges::take_view<std::ranges::ref_view<C>>;  (or transform_view, etc.)
+    // (or std::ranges::take_view<std::ranges::ref_view<std::vector<double, std::allocator<double>>>>)
+    // (2.1) First see if the non-recursive case applies -- the conversion target is either:
+    // - a range with a convertible value type;
+    // - a non-range type which might support being created from the input argument(s) (e.g. an `optional`).
+    // C does satisfy std::ranges::input_range, but
+    // std::convertible_to<std::ranges::range_reference_t<R>, std::ranges::range_value_t<C>> is true.
+    // i.e. !std::ranges::input_range<Container> || std::convertible_to<std::ranges::range_reference_t<Range>, std::ranges::range_value_t<Container>> is false.
+    // (2.1.1) Case 1 -- construct directly from the given range.
+    // C(std::forward<R>(r), std::forward<Args>(args)...)
+    // std::constructible_from<C, R, Args...> is false.
+    // If we write va | std::ranges::to<std::valarray<double>>() then it is true.
+    // (2.1.2) Case 2 -- construct using the `from_range_t` tagged constructor.
+    // C(from_range, std::forward<R>(r), std::forward<Args>(args)...)
+    // std::constructible_from<C, std::from_range_t, R, Args...> is true for vector, false for valarray, because
+    // std::vector<T, Alloator> constructor etc. use std::from_range_t but std::valarray<T> constructor does not.
+    // See https://en.cppreference.com/w/cpp/ranges/from_range.
+    // (2.1.3) Case 3 -- construct from a begin-end iterator pair.
+    // C(ranges::begin(r), ranges::end(r), std::forward<Args>(args)...)
+    // template <class Container, class Range, class... Args>
+    // concept constructible_from_iter_pair =
+    // std::ranges::common_range<Range> &&  // (2.1.3.1)
+    // requires { typename std::iterator_traits<std::ranges::iterator_t<Range>>::iterator_category; } &&
+    // std::derived_from<typename std::iterator_traits<std::ranges::iterator_t<Range>>::iterator_category, std::input_iterator_tag> &&  // (2.1.3.2)
+    // std::constructible_from<Container, std::ranges::iterator_t<Range>, std::ranges::sentinel_t<Range>, Args...>;  // (2.1.3.3)
+    // std::constructible_from<C, from_range_t, R, _Args...> is true for vector, false for valarray.
+    // (2.1.4) Case 4 -- default-construct (or construct from the extra arguments) and insert, reserving the size if possible.
+    // C c(std::forward<Args>(args)...);
+    // if constexpr (sized_range<R> && reservable-container <C>)
+    // c.reserve(static_cast<range_size_t<C>>(ranges::size(r)));
+    // ranges::copy(r, container-inserter <range_reference_t<R>>(c));
+    // template <class Container, class Ref>
+    // constexpr bool container_insertable = requires(Container& c, Ref&& ref) {
+    //     requires(
+    //     requires { c.push_back(std::forward<Ref>(ref)); } ||
+    //     requires { c.insert(c.end(), std::forward<Ref>(ref)); });
+    // };
+    // std::constructible_from<C, Args> && container_insertable<C, std::ranges::range_reference_t<R>> is true for vector, false for valarray:
+    // (gcc 14.0.0) error: 'class std::valarray<double>' has no member named 'insert'
+    // (gcc 14.0.0) error: 'class std::valarray<double>' has no member named 'end'
+    // (2.2) Try the recursive case.
+    // std::ranges::input_range<std::ranges::range_reference_t<R> is false.
+    // Also see <range/v3/range/conversion.hpp>
+    // ranges::detail::convertible_to_cont<R, C> is true for vector, false for valarray.
+    // - ranges::detail::range_and_not_view<C> is true
+    // - std::move_constructible<C> is true (move_constructible = constructible_from<T, T> && convertible_to<T, T>)
+    // - ranges::detail::convertible_to_cont_impl_concept<R, C> is true for vector, false for valarray.
+    // -- std::constructible_from<std::ranges::range_value_t<R>, std::ranges::range_reference_t<C>>
+    // -- std::constructible_from<C, ranges::detail::range_cpp17_iterator_t<R>, ranges::detail::range_cpp17_iterator_t<R>> is true for vector, false for valarray.
+    // See https://github.com/ericniebler/range-v3/issues/1803 and https://eel.is/c++draft/range.utility.conv.
+    // For linear algebra support to the C++ standard library, see [P1385](https://wg21.link/P1385R7)
+    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p1385r7.pdf
+    // https://github.com/cplusplus/papers/issues/169
+
+    // Reference implementation on GitHub: https://github.com/BobSteagall/wg21
+    // on Conan: https://conan.io/center/recipes/wg21-linear_algebra.
+    // It aims to interface [P1673R13](https://wg21.link/p1673)
+    // [A free function linear algebra interface based on the BLAS](https://isocpp.org/files/papers/P1673R13.html)
+    // Reference implementation on GitHub: https://github.com/kokkos/stdBLAS
+    // Hope we can use the feature test macro __cpp_lib_linalg = 202311L in the near future.
+    std::vector<T> d_array(0, dist.size() + 1);
+    std::ranges::move(d_list, d_array.cbegin() + 1);
+    std::valarray<T> cum_sum(d_array.size());
+    std::partial_sum(d_array.cbegin(), d_array.cend(), std::begin(cum_sum));
+    const T *it = std::ranges::lower_bound(cum_sum, dist);
+    std::valarray<std::size_t> layer = std::ranges::distance(cum_sum, it);
+    dist -= cum_sum[layer - 1];
+    return std::pair(layer, dist);
+}
+
+template auto find_in_structure(const std::valarray<std::complex<double>> &d_list,
+                                const std::valarray<double> &dist) -> std::pair<std::valarray<std::size_t>, std::valarray<double>>;

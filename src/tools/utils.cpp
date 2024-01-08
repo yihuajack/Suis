@@ -172,9 +172,12 @@ auto va_2d_transpose(const std::valarray<T> &old_va, const std::size_t num_rows)
 
 template auto va_2d_transpose(const std::valarray<std::complex<double>> &old_va,
                               const std::size_t num_rows) -> std::valarray<std::complex<double>>;
+template auto va_2d_transpose(const std::valarray<double> &old_va,
+                              const std::size_t num_rows) -> std::valarray<double>;
 
-template<typename T, std::size_t N>
-auto vva2_flatten(const std::vector<std::vector<std::array<T, N>>> &vvan) -> std::vector<T> {
+template<std::ranges::sized_range U, typename T, std::size_t N>
+requires std::is_same_v<std::ranges::range_value_t<U>, std::vector<std::array<T, N>>>
+auto vva2_flatten(const U &vvan) -> std::vector<T> {
     // ranges::views::concat is in Range-v3 but still not in C++23, probably will be in C++26,
     // see https://github.com/cplusplus/papers/issues/1204
     // P2542 R0-R7 https://wg21.link/P2542R7 (https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2542r7.html)
@@ -192,4 +195,4 @@ auto vva2_flatten(const std::vector<std::vector<std::array<T, N>>> &vvan) -> std
     return flattened;
 }
 
-template auto vva2_flatten(const std::vector<std::vector<std::array<std::complex<double>, 2>>> &vvan) -> std::vector<std::complex<double>>;
+template auto vva2_flatten<std::valarray<std::vector<std::array<std::complex<double>, 2>>>, std::complex<double>, 2>(const std::valarray<std::vector<std::array<std::complex<double>, 2>>> &vvan) -> std::vector<std::complex<double>>;
