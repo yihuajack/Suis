@@ -8,7 +8,7 @@
 #include <functional>
 #include <numbers>
 #include <numeric>
-#include <boost/numeric/ublas/assignment.hpp>
+#include <boost/numeric/ublas/assignment.hpp>  // operator<<=
 #include <boost/numeric/ublas/matrix.hpp>
 #include "tmm.h"
 #include "utils.h"
@@ -234,7 +234,8 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // th_0 is std::complex<T>
     // This function is not vectorized for angles; you need to run one angle calculation at a time.
     const std::size_t num_wl = lam_vac.size();
-    const std::size_t num_layers = n_list.size() / num_wl;
+    const std::size_t num_elems = n_list.size();
+    const std::size_t num_layers = num_elems / num_wl;
     if constexpr (std::is_same_v<TH_T, std::valarray<std::complex<T>>>) {
         if (th_0.size() not_eq lam_vac.size()) {
             throw std::invalid_argument("th_0 and lam_vac have different sizes;"
@@ -266,7 +267,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
         throw std::invalid_argument("Error in n0 or th0!");
     }
     const std::valarray<std::complex<T>> th_list = list_snell(n_list, th_0, num_wl);
-    std::valarray<std::complex<T>> compvec_lam_vac(n_list.size());
+    std::valarray<std::complex<T>> compvec_lam_vac(num_elems);
     // #ifdef __cpp_lib_ranges_repeat
     // Till this code is written (Dec. 13, 2023), [P2328R1](https://wg21.link/P2328R1)
     // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p2328r1.html
@@ -289,7 +290,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     }), num_layers) | std::views::join, std::begin(compvec_lam_vac));
     const std::valarray<std::complex<T>> kz_list = 2 * std::numbers::pi_v<T> * n_list * std::cos(th_list) / compvec_lam_vac;
     // Do the same thing to d_list.
-    std::valarray<std::complex<T>> compvec_d_list(d_list.size());
+    std::valarray<std::complex<T>> compvec_d_list(num_elems);
     std::ranges::move(std::views::repeat(d_list | std::views::transform([](const T real) -> std::complex<T> {
         return real;
     }), num_wl) | std::views::join, std::begin(compvec_d_list));
@@ -342,7 +343,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     //      |                       ~~~~~~~^~~~~~~~~
     // We have to initialize by zero_matrix if not setting every value.
     // The default matrix constructor does not initialize to 0 + 0i but around 1e-6 + 1e-6i
-    std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> M_list(boost::numeric::ublas::zero_matrix<std::complex<T>>(2, 2), num_layers * num_wl);
+    std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> M_list(boost::numeric::ublas::zero_matrix<std::complex<T>>(2, 2), num_elems);
     for (std::size_t i = 1; i < num_layers - 1; i++) {
         // Array Layout j=\sum_{r=1}^p{i_r\cdot w_r} with 1\leq i_r\leq n_r for 1\leq r\leq p.
         // First-order layout: w1 = 1, wk = nk-1 * wk-1 => j = i1 + i2n1 + i3n1n2 + ... + ipn1n2...np-1
@@ -409,7 +410,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
         vw_list[num_layers - 1].at(i).at(0) = vw[i](0, 0);
         vw_list[num_layers - 1].at(i).at(1) = vw[i](0, 1);
     }
-    for (std::size_t i = num_layers - 2; i > 0; i--) {
+    for (std::size_t i = num_layers - 2; i > 0; --i) {
         for (std::size_t j = 0; j < num_wl; j++) {
             vw[j] = boost::numeric::ublas::prod(M_list[i * num_wl + j], vw[j]);
             vw_list[i].at(j).at(0) = vw[j](0, 1);
@@ -567,7 +568,7 @@ auto position_resolved(const std::valarray<std::size_t> &layer, const std::valar
 #ifdef _MSC_VER
     auto kz_view = layer * num_wl |
 #else
-    auto kz_view = std::valarray<std::size_t>(layer * num_wl) |
+    auto kz_view = std::valarray(layer * num_wl) |
 #endif
                    std::views::transform([&kz_list, num_wl](const std::size_t layer_index) {
                        return std::ranges::subrange(std::begin(kz_list) + layer_index, std::begin(kz_list) + layer_index + num_wl);
@@ -576,9 +577,9 @@ auto position_resolved(const std::valarray<std::size_t> &layer, const std::valar
     std::ranges::move(kz_view, std::begin(kz));
     const std::valarray<std::complex<T>> th_list = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("th_list"));
 #ifdef _MSC_VER
-    auto kz_view = layer * num_wl |
+    auto th_view = layer * num_wl |
 #else
-    auto th_view = std::valarray<std::size_t>(layer * num_wl) |
+    auto th_view = std::valarray(layer * num_wl) |
 #endif
                    std::views::transform([&th_list, num_wl](const std::size_t layer_index) {
                        return std::ranges::subrange(std::begin(th_list) + layer_index, std::begin(th_list) + layer_index + num_wl);
@@ -587,9 +588,9 @@ auto position_resolved(const std::valarray<std::size_t> &layer, const std::valar
     std::ranges::move(th_view, std::begin(th));
     const std::valarray<std::complex<T>> n_list = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("n_list"));
 #ifdef _MSC_VER
-    auto kz_view = layer * num_wl |
+    auto n_view = layer * num_wl |
 #else
-    auto n_view = std::valarray<std::size_t>(layer * num_wl) |
+    auto n_view = std::valarray(layer * num_wl) |
 #endif
                    std::views::transform([&n_list, num_wl](const std::size_t layer_index) {
                        return std::ranges::subrange(std::begin(n_list) + layer_index, std::begin(n_list) + layer_index + num_wl);
@@ -603,7 +604,14 @@ auto position_resolved(const std::valarray<std::size_t> &layer, const std::valar
     // std::ranges::any_of(layer, std::bind_front(std::greater<>(), 0)) or
     std::valarray<bool> cond = (layer < 1 or 0 > distance or distance > std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer]) and (layer not_eq 0 or distance > 0);
     bool *pos = std::ranges::find(cond, true);
-    if (pos not_eq std::cend(cond)) {
+    // If std::cend(cond): Substitution failed: expression ::std::end(_Cont) is ill-formed.
+    // error C2672: “std::cend”: 未找到匹配的重载函数
+    // MSVC's <xutility> cbegin() and cend() requires const _Container& _Cont
+    // while begin() and end() requires _Ty (&_Array)[_Size].
+    // libstdc++ begin() and end(): valarray<_Tp>& or const valarray<_Tp>&
+    // However, libstdc++ can accept std::cbegin(cond) or std::cend(cond),
+    // although the C++ standard does not list the two non-member functions.
+    if (pos not_eq std::end(cond)) {
         throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(std::ranges::distance(std::begin(cond), pos)));
     }
     std::valarray<std::complex<T>> comp_dist(num_layers * num_wl);
@@ -678,15 +686,18 @@ template auto position_resolved(const std::valarray<std::size_t> &layer, const s
  * For negative distance, return [-1, distance]
  */
 template<typename T>
-auto find_in_structure(const std::valarray<std::complex<T>> &d_list,
-                       const std::valarray<T> &dist) -> std::pair<std::valarray<long long int>, std::valarray<T>> {
+auto find_in_structure(const std::valarray<T> &d_list,
+                       const std::vector<T> &dist) -> std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::vector<T>> {
     if (std::isinf(std::abs(d_list.sum()))) {
         throw std::runtime_error("This function expects finite arguments");
     }
-    std::valarray<long long int> layers(d_list.size());
-    if (std::any_of()) {
-        throw std::runtime_error("Should return [-1, distance]");
+    // distance >= 0 because d_list and dist have different sizes!
+    if (std::ranges::any_of(dist, std::bind_front(std::greater<>(), 0))) {
+        throw std::runtime_error("Any dist < 0. Should return [-1, distance].");
     }
+    const std::size_t dlist_size = d_list.size();
+    const std::size_t dist_size = dist.size();
+    std::valarray<std::size_t> layers(dlist_size);
     // See N4950 Page 1145 Chapter 26.5.7.2 Range conversions ranges::to [range.utility.conv.to]
     // > The range conversion functions construct an object (usually a container) from a range, by using a constructor
     // taking a range, a from_range_t tagged constructor, or a constructor taking a pair of iterators, or by inserting
@@ -753,15 +764,26 @@ auto find_in_structure(const std::valarray<std::complex<T>> &d_list,
     // [A free function linear algebra interface based on the BLAS](https://isocpp.org/files/papers/P1673R13.html)
     // Reference implementation on GitHub: https://github.com/kokkos/stdBLAS
     // Hope we can use the feature test macro __cpp_lib_linalg = 202311L in the near future.
-    std::vector<T> d_array(0, dist.size() + 1);
-    std::ranges::move(d_list, d_array.cbegin() + 1);
-    std::valarray<T> cum_sum(d_array.size());
+    std::vector<T> d_array(dlist_size + 1, 0);
+    std::ranges::move(d_list, d_array.begin() + 1);
+    std::valarray<T> cum_sum(dlist_size + 1);
     std::partial_sum(d_array.cbegin(), d_array.cend(), std::begin(cum_sum));
-    const T *it = std::ranges::lower_bound(cum_sum, dist);
-    std::valarray<std::size_t> layer = std::ranges::distance(cum_sum, it);
-    dist -= cum_sum[layer - 1];
-    return std::pair(layer, dist);
+    std::valarray<typename std::iterator_traits<T *>::difference_type> layer(dist_size);
+    std::vector<T> distance = dist;
+    // dist -= cum_sum[layer - 1];
+    for (std::size_t i = 0; i < dist_size; i++) {
+        // lower_bound for searchsorted left
+        // upper_bound for searchsorted right
+        const T *it = std::ranges::upper_bound(cum_sum, dist.at(i));
+        if (dist.at(i) < 0) {
+            layer[i] = -1;
+        } else {
+            layer[i] = std::ranges::distance(std::begin(cum_sum), it);
+            distance.at(i) -= layer[i] == 0 ? cum_sum[dlist_size] : cum_sum[layer[i] - 1];
+        }
+    }
+    return std::pair(layer, distance);
 }
 
-template auto find_in_structure(const std::valarray<std::complex<double>> &d_list,
-                                const std::valarray<double> &dist) -> std::pair<std::valarray<std::size_t>, std::valarray<double>>;
+template auto find_in_structure(const std::valarray<double> &d_list,
+                                const std::vector<double> &dist) -> std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::vector<double>>;

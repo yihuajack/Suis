@@ -210,8 +210,8 @@ auto position_resolved(const std::valarray<std::size_t> &layer, const std::valar
                        const coh_tmm_vec_dict<T> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<std::valarray<T>, std::valarray<std::complex<T>>>>;
 
 template<typename T>
-auto find_in_structure(const std::valarray<std::complex<T>> &d_list,
-                       const std::valarray<T> &dist) -> std::pair<std::valarray<std::size_t>, std::valarray<T>>;
+auto find_in_structure(const std::valarray<T> &d_list,
+                       const std::vector<T> &dist) -> std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::vector<T>>;
 
 template<typename T>
 auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<T>;

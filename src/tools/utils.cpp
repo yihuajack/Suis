@@ -85,7 +85,7 @@ auto linspace(const T start, const T stop) -> std::array<T, N> {
     std::array<T, N> result{};
     T step = (stop - start) / static_cast<T>(N - 1);
     T current = start;
-    std::generate(result.begin(), result.end(), [&current, step]() {
+    std::ranges::generate(result, [&current, step]() {
         T value = current;
         current += step;
         return value;
@@ -100,7 +100,7 @@ auto linspace(const T start, const T stop, const std::size_t num) -> std::vector
     std::vector<T> result(num);
     T step = (stop - start) / static_cast<T>(num - 1);
     T current = start;
-    std::generate(result.begin(), result.end(), [&current, step]() {
+    std::ranges::generate(result, [&current, step]() {
         T value = current;
         current += step;
         return value;
