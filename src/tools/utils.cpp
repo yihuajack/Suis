@@ -100,7 +100,7 @@ auto linspace(const T start, const T stop, const std::size_t num) -> std::vector
     std::vector<T> result(num);
     T step = (stop - start) / static_cast<T>(num - 1);
     T current = start;
-    std::ranges::generate(result, [&current, step]() {
+    std::ranges::generate(result, [&current, &step] -> T {
         T value = current;
         current += step;
         return value;
@@ -108,7 +108,22 @@ auto linspace(const T start, const T stop, const std::size_t num) -> std::vector
     return result;
 }
 
-template auto linspace(const double start, const double stop, const std::size_t num) -> std::vector<double>;
+template auto linspace(double start, double stop, std::size_t num) -> std::vector<double>;
+
+template<typename T>
+auto linspace_va(const T start, const T stop, const std::size_t num) -> std::valarray<T> {
+    std::valarray<T> result(num);
+    T step = (stop - start) / static_cast<T>(num - 1);
+    T current = start;
+    std::ranges::generate(result, [&current, &step] -> T {
+        T value = current;
+        current += step;
+        return value;
+    });
+    return result;
+}
+
+template auto linspace_va(double start, double stop, std::size_t num) -> std::valarray<double>;
 
 // __GNUG__ is equivalent to (__GNUC__ && __cplusplus),
 // see https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
@@ -171,9 +186,11 @@ auto va_2d_transpose(const std::valarray<T> &old_va, const std::size_t num_rows)
 }
 
 template auto va_2d_transpose(const std::valarray<std::complex<double>> &old_va,
-                              const std::size_t num_rows) -> std::valarray<std::complex<double>>;
+                              std::size_t num_rows) -> std::valarray<std::complex<double>>;
 template auto va_2d_transpose(const std::valarray<double> &old_va,
-                              const std::size_t num_rows) -> std::valarray<double>;
+                              std::size_t num_rows) -> std::valarray<double>;
+template auto va_2d_transpose(const std::valarray<std::size_t> &old_va,
+                              std::size_t num_rows) -> std::valarray<std::size_t>;
 
 template<std::ranges::sized_range U, typename T, std::size_t N>
 requires std::is_same_v<std::ranges::range_value_t<U>, std::vector<std::array<T, N>>>
@@ -181,7 +198,6 @@ auto vva2_flatten(const U &vvan) -> std::vector<T> {
     // ranges::views::concat is in Range-v3 but still not in C++23, probably will be in C++26,
     // see https://github.com/cplusplus/papers/issues/1204
     // P2542 R0-R7 https://wg21.link/P2542R7 (https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2023/p2542r7.html)
-    //
     std::vector<T> flattened;  // (vvan.size() * vvan.front().size() * N)
     std::ranges::for_each(vvan, [&](const std::vector<std::array<T, N>> &vectorOfArrays) {
         std::ranges::for_each(vectorOfArrays, [&](const std::array<T, N> &array) {
@@ -195,4 +211,21 @@ auto vva2_flatten(const U &vvan) -> std::vector<T> {
     return flattened;
 }
 
-template auto vva2_flatten<std::valarray<std::vector<std::array<std::complex<double>, 2>>>, std::complex<double>, 2>(const std::valarray<std::vector<std::array<std::complex<double>, 2>>> &vvan) -> std::vector<std::complex<double>>;
+template auto vva2_flatten<std::valarray<std::vector<std::array<std::complex<double>, 2>>>, std::complex<double>, 2>(
+    const std::valarray<std::vector<std::array<std::complex<double>, 2>>> &vvan) -> std::vector<std::complex<double>>;
+
+template<std::ranges::sized_range U, typename T>
+requires std::is_same_v<std::ranges::range_value_t<U>, std::valarray<T>>
+auto vv_flatten(const U &vv) -> std::vector<T> {
+    std::vector<T> flattened;
+    std::ranges::for_each(vv, [&](const std::valarray<T> &va) {
+#ifdef __cpp_lib_containers_ranges
+        flattened.append_range(va);
+#else
+        flattened.insert(flattened.end(), std::begin(va), std::end(va));
+#endif
+    });
+    return flattened;
+}
+
+template auto vv_flatten(const std::valarray<std::valarray<double>> &vv) -> std::vector<double>;

@@ -106,6 +106,17 @@ void test_interface_T() {
 }
 
 // Test for coh_tmm
+void test_coh_tmm_exceptions() {
+    std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
+                                                  1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
+    n_list = va_2d_transpose(n_list, 2);
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {400, 1770};
+    coh_tmm_vec_dict<double> result = coh_tmm('s', n_list, {10, 200, 187.3, 1973.5, INFINITY}, th_0, lam_vac);
+    result = coh_tmm('s', n_list, d_list, 0.2 + 0.2i, lam_vac);
+}
+
 void test_coh_tmm_s_r() {
     // An interesting discussion on VLA and std::dynarray:
     // https://stackoverflow.com/questions/1887097/why-arent-variable-length-arrays-part-of-the-c-standard/21519062
@@ -693,15 +704,467 @@ void test_position_resolved_p_absor() {
     assert(std::get<std::valarray<double>>(pr_result.at("absor")) == absor_approx);
 }
 
-void test_find_in_structure() {
-  // Approx only applies to std::floating_point
-  const std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::vector<double>> result = find_in_structure({200, 187.3, 1973.5}, linspace<double>(0, 700, 10));
-  const std::valarray<std::size_t> layer_approx{1, 1, 1, 2, 2, 3, 3, 3, 3, 3};
-  assert(std::ranges::equal(result.first, layer_approx));
-  const ApproxSequenceLike<std::vector<double>, double> dist_approx = approx<std::vector<double>, double>({0., 77.77777778, 155.55555556, 33.33333333, 111.11111111,
-                                                       1.58888889, 79.36666667,157.14444444, 234.92222222, 312.7});
-  assert(result.second == dist_approx);
+void test_find_in_structure_exception() {
+    const std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::vector<double>> result = find_in_structure<double>(
+            {INFINITY, 100, 200, INFINITY}, {0, 100, 200});
 }
+
+void test_find_in_structure() {
+    // Approx only applies to std::floating_point
+    const std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::vector<double>> result = find_in_structure({200, 187.3, 1973.5}, linspace<double>(0, 700, 10));
+    const std::valarray<std::iterator_traits<double *>::difference_type> layer_approx{1, 1, 1, 2, 2, 3, 3, 3, 3, 3};
+    assert(std::ranges::equal(result.first, layer_approx));
+    const ApproxSequenceLike<std::vector<double>, double> dist_approx = approx<std::vector<double>, double>({0., 77.77777778, 155.55555556, 33.33333333, 111.11111111,
+                                                         1.58888889, 79.36666667,157.14444444, 234.92222222, 312.7});
+    assert(result.second == dist_approx);
+}
+
+void test_find_in_structure_inf() {
+    const std::pair<std::valarray<std::size_t>, std::vector<double>> result = find_in_structure_inf({INFINITY, 200, 187.3, 1973.5, INFINITY}, linspace<double>(0, 700, 10));
+    const std::valarray<std::iterator_traits<double *>::difference_type> layer_approx{1, 1, 1, 2, 2, 3, 3, 3, 3, 3};
+    assert(std::ranges::equal(result.first, layer_approx));
+    const ApproxSequenceLike<std::vector<double>, double> dist_approx = approx<std::vector<double>, double>({0., 77.77777778, 155.55555556, 33.33333333, 111.11111111,
+                                                         1.58888889, 79.36666667,157.14444444, 234.92222222, 312.7});
+    assert(result.second == dist_approx);
+}
+
+void test_layer_starts() {
+    const std::valarray<double> layer_starts_result = layer_starts(std::valarray<double>{INFINITY, 200, 187.3, 1973.5, INFINITY});
+    const std::valarray<double> layer_starts_approx = {-INFINITY, 0., 200., 387.3, 2360.8};
+    assert(std::ranges::equal(layer_starts_result, layer_starts_approx));
+}
+
+// tests for absorp_analytic_fn
+
+// #if defined(__cpp_lib_variant) and __cpp_lib_variant >= 202306L
+// template<class... Ts>
+// struct overloads : Ts... { using Ts::operator()...; };
+// #endif
+
+void test_fill_in_s() {
+    const coh_tmm_vec_dict<double> coh_tmm_data = {
+            {"r", std::valarray<std::complex<double>>{0.14017645 - 0.2132843i, 0.22307786 - 0.10704008i}},
+            {"t", std::valarray<std::complex<double>>{1.78669633e-05 - 9.79824244e-06i, -8.86075993e-02 - 4.05953564e-01i}},
+            {"R", std::valarray<double>{0.06513963, 0.06122131}},
+            {"T", std::valarray<double>{1.15234466e-09, 4.13619185e-01}},
+            {"power_entering", std::valarray<double>{0.93486037, 0.93877869}},
+            {"vw_list", std::valarray<std::vector<std::array<std::complex<double>, 2>>>{
+                    {{0.00000000e+00 + 0.00000000e+00i,
+                      0.00000000e+00 + 0.00000000e+00i},
+                     {0.00000000e+00 + 0.00000000e+00i,
+                      0.00000000e+00 + 0.00000000e+00i}},
+                    {{1.18358724e+00 - 2.33272105e-01i,
+                      -4.34107939e-02 + 1.99878010e-02i},
+                     {1.03160316e+00 - 7.28921467e-02i,
+                      1.91474694e-01 - 3.41479380e-02i}},
+                    {{-8.59535500e-02 + 1.06568462e-01i,
+                      -1.36521327e-09 + 2.83859953e-10i},
+                     {6.08369346e-01 + 5.06683493e-01i,
+                      1.75320349e-01 - 9.58306162e-02i}},
+                    {{-1.23112929e-05 + 1.37276841e-05i,
+                      -1.94390395e-06 + 2.16097082e-06i},
+                     {-6.54156818e-02 + 3.57104644e-01i,
+                      3.38453387e-02 + 4.04808706e-02i}},
+                    {{1.78669633e-05 - 9.79824244e-06i,
+                      0.00000000e+00 + 0.00000000e+00i},
+                     {-8.86075993e-02 - 4.05953564e-01i,
+                      0.00000000e+00 + 0.00000000e+00i}}
+            }},
+            {"kz_list", std::valarray<std::complex<double>>{
+                    0.02250959+0.i        , 0.00440866+0.i        ,
+                    0.01435451+0.00687561i, 0.00404247+0.00074813i,
+                    0.03118008+0.04748033i, 0.00515452+0.00110011i,
+                    0.07823055+0.i        , 0.01413365+0.i        ,
+                    0.06246792+0.01579948i, 0.01056188+0.00035793i
+            }},
+            {"th_list", std::valarray<std::complex<double>>{
+                    0.3       +0.i        , 0.3       +0.i        ,
+                    0.38659626-0.16429512i, 0.3162772 -0.05459799i,
+                    0.06789345-0.10235287i, 0.24849917-0.0507924i ,
+                    0.08877261+0.i        , 0.09619234+0.i        ,
+                    0.10445527-0.02621521i, 0.12826687-0.00429919i
+            }},
+            {"pol", 's'},
+            {"n_list", std::valarray<std::complex<double>>{
+                    1.5+0.i , 1.3+0.i ,
+                    1. +0.4i, 1.2+0.2i,
+                    2. +3.i , 1.5+0.3i,
+                    5. +0.i , 4. +0.i ,
+                    4. +1.i , 3. +0.1i
+            }},
+            {"d_list", std::valarray<double>{INFINITY, 200, 187.3, 1973.5, INFINITY}},
+            {"th_0", 0.3},
+            {"lam_vac", std::valarray<double>{400, 1770}}
+    };
+    AbsorpAnalyticVecFn<double> a;
+    a.fill_in(coh_tmm_data, {1, 2});
+    std::vector<std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> re_result(5);
+    re_result.front() = a.a1;
+    re_result.at(1) = a.a3;
+    re_result.at(2) = a.A1;
+    re_result.at(3) = a.A2;
+    re_result.back() = a.A3;
+    std::vector<std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> re_approx(5);
+    re_approx.front() = std::valarray{0.01375122, 0.00149626, 0.09496066, 0.00220022};
+    re_approx.at(1) = std::valarray{0.02870902, 0.00808494, 0.06236016, 0.01030904};
+    re_approx.at(2) = std::valarray{2.00290348e-05, 5.19001441e-05, 2.55761667e-19, 1.02694503e-04};
+    re_approx.at(3) = std::valarray{0.01276183, 0.00146736, 0.00246567, 0.00161252};
+    re_approx.back() = std::valarray{-4.91455269e-04 - 1.18654706e-04i,  2.74416636e-04 + 2.91821819e-05i,
+        1.94145098e-11 - 1.59280064e-11i,  1.49469559e-04 + 3.78492113e-04i};
+    for (const std::pair<std::variant<std::valarray<double>, std::valarray<std::complex<double>>> &, std::variant<std::valarray<double>, std::valarray<std::complex<double>>> &> &elem : std::views::zip(re_result, re_approx)) {
+        const std::variant<std::valarray<double>, std::valarray<std::complex<double>>> r = elem.first;
+        const std::variant<std::valarray<double>, std::valarray<std::complex<double>>> e = elem.second;
+        const std::valarray<double> *prvt = std::get_if<std::valarray<double>>(&r);
+        const std::valarray<double> *pevt = std::get_if<std::valarray<double>>(&e);
+        const std::valarray<std::complex<double>> *prvct = std::get_if<std::valarray<std::complex<double>>>(&r);
+        const std::valarray<std::complex<double>> *pevct = std::get_if<std::valarray<std::complex<double>>>(&e);
+        if (prvt and pevt) {
+            assert(std::ranges::equal(*prvt, *pevt, [](const double rt, const double et) -> bool {
+                return rt == approx(et, 1e-5);
+            }));
+        } else if (prvct and pevct) {
+            assert(std::ranges::equal(*prvct, *pevct, [](const std::complex<double> rct, const std::complex<double> ect) -> bool {
+                return rct == approx(ect, 1e-5);
+            }));
+        } else {
+            throw std::runtime_error("r and e type mismatches.");
+        }
+    }
+}
+
+void test_fill_in_p() {
+    const coh_tmm_vec_dict<double> coh_tmm_data = {
+            {"r", std::valarray<std::complex<double>>{-0.12140058 + 0.15103645i, -0.21104259 + 0.07430242i}},
+            {"t", std::valarray<std::complex<double>>{1.82536479e-05 - 1.06422631e-05i, -9.02947159e-02 - 4.09448171e-01i}},
+            {"R", std::valarray<double>{0.03755011, 0.05005982}},
+            {"T", std::valarray<double>{1.24068740e-09, 4.21184461e-01}},
+            {"power_entering", std::valarray<double>{0.96244989, 0.94994018}},
+            {"vw_list", std::valarray<std::vector<std::array<std::complex<double>, 2>>>{
+                    {{0.00000000e+00 + 0.00000000e+00i,
+                      0.00000000e+00 + 0.00000000e+00i},
+                     {0.00000000e+00 + 0.00000000e+00i,
+                      0.00000000e+00 + 0.00000000e+00i}},
+                    {{1.17017431e+00 - 2.43748228e-01i,
+                      4.40679361e-02 - 1.53940000e-02i},
+                     {1.02922989e+00 - 7.82628087e-02i,
+                      -1.84573000e-01 + 1.79809491e-02i}},
+                    {{-8.59886075e-02 + 1.13689959e-01i,
+                      1.39851113e-09 - 3.01497601e-10i},
+                     {6.07730278e-01 + 5.07144030e-01i,
+                      -1.68609283e-01 + 8.64966880e-02i}},
+                    {{-1.23967610e-05 + 1.45623920e-05i,
+                      1.93199813e-06 - 2.24107827e-06i},
+                     {-6.52504472e-02 + 3.60299246e-01i,
+                      -3.33430797e-02 - 3.97852657e-02i}},
+                    {{1.82536479e-05 - 1.06422631e-05i,
+                      0.00000000e+00 + 0.00000000e+00i},
+                     {-9.02947159e-02 - 4.09448171e-01i,
+                      0.00000000e+00 + 0.00000000e+00i}}
+            }},
+            {"kz_list", std::valarray<std::complex<double>>{
+                    0.02250959+0.i        , 0.00440866+0.i        ,
+                    0.01435451+0.00687561i, 0.00404247+0.00074813i,
+                    0.03118008+0.04748033i, 0.00515452+0.00110011i,
+                    0.07823055+0.i        , 0.01413365+0.i        ,
+                    0.06246792+0.01579948i, 0.01056188+0.00035793i
+            }},
+            {"th_list", std::valarray<std::complex<double>>{
+                    0.3       +0.i        , 0.3       +0.i        ,
+                    0.38659626-0.16429512i, 0.3162772 -0.05459799i,
+                    0.06789345-0.10235287i, 0.24849917-0.0507924i ,
+                    0.08877261+0.i        , 0.09619234+0.i        ,
+                    0.10445527-0.02621521i, 0.12826687-0.00429919i
+            }},
+            {"pol", 'p'},
+            {"n_list", std::valarray<std::complex<double>>{
+                    1.5+0.i , 1.3+0.i ,
+                    1. +0.4i, 1.2+0.2i,
+                    2. +3.i , 1.5+0.3i,
+                    5. +0.i , 4. +0.i ,
+                    4. +1.i , 3. +0.1i
+            }},
+            {"d_list", std::valarray<double>{INFINITY, 200, 187.3, 1973.5, INFINITY}},
+            {"th_0", 0.3},
+            {"lam_vac", std::valarray<double>{400, 1770}}
+    };
+    AbsorpAnalyticVecFn<double> a;
+    a.fill_in(coh_tmm_data, {1, 2});
+    std::vector<std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> re_result(5);
+    re_result.front() = a.a1;
+    re_result.at(1) = a.a3;
+    re_result.at(2) = a.A1;
+    re_result.at(3) = a.A2;
+    re_result.back() = a.A3;
+    std::vector<std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> re_approx(5);
+    re_approx.front() = std::valarray{0.01375122, 0.00149626, 0.09496066, 0.00220022};
+    re_approx.at(1) = std::valarray{0.02870902, 0.00808494, 0.06236016, 0.01030904};
+    re_approx.at(2) = std::valarray{2.01486783e-05, 4.74646908e-05, 2.74885296e-19, 9.28559634e-05};
+    re_approx.at(3) = std::valarray{0.01321129, 0.00147049, 0.00272899, 0.00162005};
+    re_approx.back() = std::valarray{-3.47185512e-04 - 4.56403179e-05i,  2.11762306e-04 + 4.49397818e-06i,
+        2.01399935e-11 - 1.73429018e-11i,  1.32514817e-04 + 3.12222809e-04i};
+    for (const std::pair<std::variant<std::valarray<double>, std::valarray<std::complex<double>>> &, std::variant<std::valarray<double>, std::valarray<std::complex<double>>> &> &elem : std::views::zip(re_result, re_approx)) {
+        const std::variant<std::valarray<double>, std::valarray<std::complex<double>>> r = elem.first;
+        const std::variant<std::valarray<double>, std::valarray<std::complex<double>>> e = elem.second;
+        const std::valarray<double> *prvt = std::get_if<std::valarray<double>>(&r);
+        const std::valarray<double> *pevt = std::get_if<std::valarray<double>>(&e);
+        const std::valarray<std::complex<double>> *prvct = std::get_if<std::valarray<std::complex<double>>>(&r);
+        const std::valarray<std::complex<double>> *pevct = std::get_if<std::valarray<std::complex<double>>>(&e);
+        if (prvt and pevt) {
+            assert(std::ranges::equal(*prvt, *pevt, [](const double rt, const double et) -> bool {
+                return rt == approx(et, 1e-5);
+            }));
+        } else if (prvct and pevct) {
+            assert(std::ranges::equal(*prvct, *pevct, [](const std::complex<double> rct, const std::complex<double> ect) -> bool {
+                return rct == approx(ect, 1e-5);
+            }));
+        } else {
+            throw std::runtime_error("r and e type mismatches.");
+        }
+    }
+}
+
+void test_copy() {
+    AbsorpAnalyticVecFn<double> a;
+    a.a1 = {1};
+    a.a3 = {0.5};
+    a.A1 = {2};
+    a.A2 = {7};
+    a.A3 = {5.0 + 3i};
+    a.d = {7, 3};
+    AbsorpAnalyticVecFn<double> b(a);
+    std::vector<std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> azip(5);
+    azip.front() = a.a1;
+    azip.at(1) = a.a3;
+    azip.at(2) = a.A1;
+    azip.at(3) = a.A2;
+    azip.back() = a.A3;
+    std::vector<std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> bzip(5);
+    bzip.front() = b.a1;
+    bzip.at(1) = b.a3;
+    bzip.at(2) = b.A1;
+    bzip.at(3) = b.A2;
+    bzip.back() = b.A3;
+    for (const std::pair<std::variant<std::valarray<double>, std::valarray<std::complex<double>>> &, std::variant<std::valarray<double>, std::valarray<std::complex<double>>> &> &elem : std::views::zip(azip, bzip)) {
+        const std::variant<std::valarray<double>, std::valarray<std::complex<double>>> avar = elem.first;
+        const std::variant<std::valarray<double>, std::valarray<std::complex<double>>> bvar = elem.second;
+        const std::valarray<double> *prvt = std::get_if<std::valarray<double>>(&avar);
+        const std::valarray<double> *pevt = std::get_if<std::valarray<double>>(&bvar);
+        const std::valarray<std::complex<double>> *prvct = std::get_if<std::valarray<std::complex<double>>>(&avar);
+        const std::valarray<std::complex<double>> *pevct = std::get_if<std::valarray<std::complex<double>>>(&bvar);
+        if (prvt and pevt) {
+            assert(std::ranges::equal(*prvt, *pevt, [](const double rt, const double et) -> bool {
+                return rt == approx(et, 1e-5);
+            }));
+        } else if (prvct and pevct) {
+            assert(std::ranges::equal(*prvct, *pevct, [](const std::complex<double> rct, const std::complex<double> ect) -> bool {
+                return rct == approx(ect, 1e-5);
+            }));
+        } else {
+            throw std::runtime_error("a and b type mismatches.");
+        }
+    }
+}
+
+void test_run_array() {
+    AbsorpAnalyticVecFn<double> a;
+    a.a1 = {0.01375122, 0.00149626};
+    a.a3 = {0.02870902, 0.00808494};
+    a.A1 = {2.00290348e-05, 5.19001441e-05};
+    a.A2 = {0.01276183, 0.00146736};
+    a.A3 = {-4.91455269e-04 - 1.18654706e-04i,  2.74416636e-04 + 2.91821819e-05i};
+    a.d = {200.};
+    const ApproxSequenceLike<std::valarray<std::complex<double>>, double> run_approx = approx<std::valarray<std::complex<double>>, double>({
+        0.01179895 + 0.i, 0.00772895 + 0.i, 0.00570666 + 0.i, 0.0043161 + 0.i, 0.00277534 + 0.i, 0.00118025 + 0.i, 0.00016438 + 0.i,
+        0.00206809 + 0.i, 0.00196401 + 0.i, 0.00182646 + 0.i, 0.00166052 + 0.i, 0.00147356 + 0.i, 0.00127472 + 0.i, 0.00107422 + 0.i
+    }, 1e-4);
+    assert(a.run(linspace_va<double>(0, 200, 7)) == run_approx);
+}
+
+void test_run() {
+    AbsorpAnalyticVecFn<double> a;
+    a.a1 = {0.01375122, 0.00149626};
+    a.a3 = {0.02870902, 0.00808494};
+    a.A1 = {2.00290348e-05, 5.19001441e-05};
+    a.A2 = {0.01276183, 0.00146736};
+    a.A3 = {-4.91455269e-04 - 1.18654706e-04i,  2.74416636e-04 + 2.91821819e-05i};
+    a.d = {200.};
+    const ApproxSequenceLike<std::valarray<std::complex<double>>, double> run_approx = approx<std::valarray<std::complex<double>>, double>({
+        0.00016438 + 0.i, 0.00107422 + 0.i
+    }, 1e-4);
+    assert(a.run(200.0) == run_approx);
+}
+
+void test_scale() {
+    AbsorpAnalyticVecFn<double> a;
+    a.a1 = {0.01375122, 0.00149626};
+    a.a3 = {0.02870902, 0.00808494};
+    a.A1 = {2.00290348e-05, 5.19001441e-05};
+    a.A2 = {0.01276183, 0.00146736};
+    a.A3 = {-4.91455269e-04 - 1.18654706e-04i,  2.74416636e-04 + 2.91821819e-05i};
+    a.d = {200.};
+    a.scale(0.7);
+    const ApproxSequenceLike<std::valarray<double>, double> a1_approx = approx<std::valarray<double>, double>({0.01375122, 0.00149626}, 1e-5);
+    const ApproxSequenceLike<std::valarray<double>, double> a3_approx = approx<std::valarray<double>, double>({0.02870902, 0.00808494}, 1e-5);
+    const ApproxSequenceLike<std::valarray<double>, double> A1_approx = approx<std::valarray<double>, double>({0.7 * 2.00290348e-05, 0.7 * 5.19001441e-05}, 1e-5);
+    const ApproxSequenceLike<std::valarray<double>, double> A2_approx = approx<std::valarray<double>, double>({0.7 * 0.01276183, 0.7 * 0.00146736}, 1e-5);
+    const ApproxSequenceLike<std::valarray<std::complex<double>>, double> A3_approx = approx<std::valarray<std::complex<double>>, double>({0.7 * (-4.91455269e-04 - 1.18654706e-04i), 0.7 * (2.74416636e-04 + 2.91821819e-05i)}, 1e-5);
+    const ApproxSequenceLike<std::valarray<double>, double> d_approx = approx<std::valarray<double>, double>({200}, 1e-5);
+    assert(a.a1 == a1_approx);
+    assert(a.a3 == a3_approx);
+    assert(a.A1 == A1_approx);
+    assert(a.A2 == A2_approx);
+    assert(a.A3 == A3_approx);
+    assert(a.d == d_approx);
+}
+
+void test_add() {
+    AbsorpAnalyticVecFn<double> a;
+    a.a1 = {0.01375122, 0.00149626};
+    a.a3 = {0.02870902, 0.00808494};
+    a.A1 = {2.00290348e-05, 5.19001441e-05};
+    a.A2 = {0.01276183, 0.00146736};
+    a.A3 = {-4.91455269e-04 - 1.18654706e-04i,  2.74416636e-04 + 2.91821819e-05i};
+    a.d = {200.};
+    AbsorpAnalyticVecFn<double> b;
+    b.a1 = {0.01375122, 0.00149626};
+    b.a3 = {0.02870902, 0.00808494};
+    b.A1 = {2.e-05, 5e-05};
+    b.A2 = {0.05, 0.003};
+    b.A3 = {4.81455269e-04 - 1 - 04i,  3e-04 + 3 - 05i};
+    b.d = {200.};
+    a.add(b);
+    const ApproxSequenceLike<std::valarray<double>, double> a1_approx = approx<std::valarray<double>, double>({0.01375122, 0.00149626}, 1e-5);
+    const ApproxSequenceLike<std::valarray<double>, double> a3_approx = approx<std::valarray<double>, double>({0.02870902, 0.00808494}, 1e-5);
+    const ApproxSequenceLike<std::valarray<double>, double> A1_approx = approx<std::valarray<double>, double>({2.00290348e-05 + 2.e-05, 5.19001441e-05 + 5e-05}, 1e-5);
+    const ApproxSequenceLike<std::valarray<double>, double> A2_approx = approx<std::valarray<double>, double>({0.01276183 + 0.05, 0.00146736 + 0.003}, 1e-5);
+    const ApproxSequenceLike<std::valarray<std::complex<double>>, double> A3_approx = approx<std::valarray<std::complex<double>>, double>({-4.91455269e-04 - 1.18654706e-04i + 4.81455269e-04 - 1.0 - 04i,
+                                                                                                                                           2.74416636e-04 + 2.91821819e-05i + 3e-04 + 3.0 - 05i}, 1e-5);
+    const ApproxSequenceLike<std::valarray<double>, double> d_approx = approx<std::valarray<double>, double>({200}, 1e-5);
+    assert(a.a1 == a1_approx);
+    assert(a.a3 == a3_approx);
+    assert(a.A1 == A1_approx);
+    assert(a.A2 == A2_approx);
+    assert(a.A3 == A3_approx);
+    assert(a.d == d_approx);
+}
+
+void test_add_exception() {
+    AbsorpAnalyticVecFn<double> a;
+    a.a1 = {0.01375122, 0.00149626};
+    a.a3 = {0.02870902, 0.00808494};
+    a.A1 = {2.00290348e-05, 5.19001441e-05};
+    a.A2 = {0.01276183, 0.00146736};
+    a.A3 = {-4.91455269e-04 - 1.18654706e-04i,  2.74416636e-04 + 2.91821819e-05i};
+    a.d = {200.};
+    AbsorpAnalyticVecFn<double> b;
+    b.a1 = {7, 2};
+    b.a3 = {0.02870902, 0.00808494};
+    b.A1 = {2.e-05, 5e-05};
+    b.A2 = {0.05, 0.003};
+    b.A3 = {4.81455269e-04 - 1 - 04i,  3e-04 + 3 - 05i};
+    b.d = {200.};
+    a.add(b);
+}
+
+void test_absorp_in_each_layer() {
+    const coh_tmm_vec_dict<double> coh_tmm_data = {
+            {"r", std::valarray<std::complex<double>>{0.14017645 - 0.2132843i, 0.22307786 - 0.10704008i}},
+            {"t", std::valarray<std::complex<double>>{1.78669633e-05 - 9.79824244e-06i, -8.86075993e-02 - 4.05953564e-01i}},
+            {"R", std::valarray<double>{0.06513963, 0.06122131}},
+            {"T", std::valarray<double>{1.15234466e-09, 4.13619185e-01}},
+            {"power_entering", std::valarray<double>{0.93486037, 0.93877869}},
+            {"vw_list", std::valarray<std::vector<std::array<std::complex<double>, 2>>>{
+                    {{0.00000000e+00 + 0.00000000e+00i,
+                             0.00000000e+00 + 0.00000000e+00i},
+                            {0.00000000e+00 + 0.00000000e+00i,
+                                    0.00000000e+00 + 0.00000000e+00i}},
+                    {{1.18358724e+00 - 2.33272105e-01i,
+                             -4.34107939e-02 + 1.99878010e-02i},
+                            {1.03160316e+00 - 7.28921467e-02i,
+                                    1.91474694e-01 - 3.41479380e-02i}},
+                    {{-8.59535500e-02 + 1.06568462e-01i,
+                             -1.36521327e-09 + 2.83859953e-10i},
+                            {6.08369346e-01 + 5.06683493e-01i,
+                                    1.75320349e-01 - 9.58306162e-02i}},
+                    {{-1.23112929e-05 + 1.37276841e-05i,
+                             -1.94390395e-06 + 2.16097082e-06i},
+                            {-6.54156818e-02 + 3.57104644e-01i,
+                                    3.38453387e-02 + 4.04808706e-02i}},
+                    {{1.78669633e-05 - 9.79824244e-06i,
+                             0.00000000e+00 + 0.00000000e+00i},
+                            {-8.86075993e-02 - 4.05953564e-01i,
+                                    0.00000000e+00 + 0.00000000e+00i}}
+            }},
+            {"kz_list", std::valarray<std::complex<double>>{
+                    0.02250959+0.i        , 0.00440866+0.i        ,
+                    0.01435451+0.00687561i, 0.00404247+0.00074813i,
+                    0.03118008+0.04748033i, 0.00515452+0.00110011i,
+                    0.07823055+0.i        , 0.01413365+0.i        ,
+                    0.06246792+0.01579948i, 0.01056188+0.00035793i
+            }},
+            {"th_list", std::valarray<std::complex<double>>{
+                    0.3       +0.i        , 0.3       +0.i        ,
+                    0.38659626-0.16429512i, 0.3162772 -0.05459799i,
+                    0.06789345-0.10235287i, 0.24849917-0.0507924i ,
+                    0.08877261+0.i        , 0.09619234+0.i        ,
+                    0.10445527-0.02621521i, 0.12826687-0.00429919i
+            }},
+            {"pol", 's'},
+            {"n_list", std::valarray<std::complex<double>>{
+                    1.5+0.i , 1.3+0.i ,
+                    1. +0.4i, 1.2+0.2i,
+                    2. +3.i , 1.5+0.3i,
+                    5. +0.i , 4. +0.i ,
+                    4. +1.i , 3. +0.1i
+            }},
+            {"d_list", std::valarray<double>{INFINITY, 200, 187.3, 1973.5, INFINITY}},
+            {"th_0", 0.3},
+            {"lam_vac", std::valarray<double>{400, 1770}}
+    };
+    const std::vector<double> ab_result = vv_flatten<std::valarray<std::valarray<double>>, double>(absorp_in_each_layer(coh_tmm_data));
+    const ApproxSequenceLike<std::vector<double>, double> ab_approx = approx<std::vector<double>, double>({
+            6.51396300e-02, 6.12213100e-02,
+            9.08895166e-01, 3.25991032e-01,
+            2.59652025e-02, 1.99168474e-01,
+            0, 0,
+            1.15234466e-09, 4.13619185e-01
+        }, 1e-6, 1e-10);
+    assert(ab_approx == ab_result);
+}
+
+void test_inc_group_layers() {
+    std::vector<std::valarray<std::complex<double>>> n_list = {{1.5, 1.3},
+                                                               {1.0 + 0.4i, 1.2 + 0.2i},
+                                                               {2.0 + 3i, 1.5 + 0.3i},
+                                                               {5, 4},
+                                                               {4.0 + 1i, 3.0 + 0.1i}};
+    std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent};
+    inc_tmm_vec_dict<double> result = inc_group_layers(n_list, d_list, c_list);
+    const std::vector<std::vector<double>> stack_d_list = std::get<std::vector<std::vector<double>>>(result.at("stack_d_list"));
+    assert(stack_d_list.size() == 1 and std::ranges::equal(stack_d_list.front(), std::valarray<double>{INFINITY, 200, 187.3, INFINITY}));
+    const std::vector<std::vector<std::valarray<std::complex<double>>>> stack_n_list = std::get<std::vector<std::vector<std::valarray<std::complex<double>>>>>(result.at("stack_n_list"));
+    assert(stack_n_list.size() == 1 and stack_n_list.front().size() == 4);
+    ApproxSequenceLike<std::valarray<std::complex<double>>, double> snl_approx0 = approx<std::valarray<std::complex<double>>, double>({1.5, 1.3});
+    assert(stack_n_list.front().front() == snl_approx0);
+    ApproxSequenceLike<std::valarray<std::complex<double>>, double> snl_approx1 = approx<std::valarray<std::complex<double>>, double>({1.0 + 0.4i, 1.2 + 0.2i});
+    assert(stack_n_list.front().at(1) == snl_approx1);
+    ApproxSequenceLike<std::valarray<std::complex<double>>, double> snl_approx2 = approx<std::valarray<std::complex<double>>, double>({2.0 + 3i, 1.5 + 0.3i});
+    assert(stack_n_list.front().at(2) == snl_approx2);
+    ApproxSequenceLike<std::valarray<std::complex<double>>, double> snl_approx3 = approx<std::valarray<std::complex<double>>, double>({5, 4});
+    assert(stack_n_list.front().back() == snl_approx3);
+    assert(std::ranges::equal(std::get<std::vector<std::size_t>>(result.at("all_from_inc")), std::vector<std::size_t>{0, 3, 4}));
+    assert(std::ranges::equal(std::get<std::vector<std::ptrdiff_t>>(result.at("inc_from_all")), std::vector<std::ptrdiff_t>{0, -1, -1, 1, 2}));
+    const std::vector<std::vector<std::size_t>> all_from_stack = std::get<std::vector<std::vector<std::size_t>>>(result.at("all_from_stack"));
+    assert(all_from_stack.size() == 1 and std::ranges::equal(all_from_stack.front(), std::vector<std::size_t >{0, 1, 2, 3}));
+    assert(std::ranges::equal(std::get<std::vector<std::ptrdiff_t>>(result.at("inc_from_stack")), std::vector<std::ptrdiff_t>{0}));
+    assert(std::ranges::equal(std::get<std::vector<std::ptrdiff_t>>(result.at("stack_from_inc")), std::vector<std::ptrdiff_t>{-1, 0, -1}));
+    assert(std::get<std::size_t>(result.at("num_stacks")) == 1);
+    assert(std::get<std::size_t>(result.at("num_inc_layers")) == 3);
+    assert(std::get<std::size_t>(result.at("num_layers")) == 5);
+}
+
+// tests for inc_tmm
 
 void runall() {
     test_snell();
@@ -727,13 +1190,31 @@ void runall() {
     test_ellips_psi();
     test_ellips_Delta();
     test_unpolarized_RT_R();
+    test_find_in_structure();
+    test_layer_starts();
+    test_fill_in_s();
+    test_fill_in_p();
+    test_copy();
+    test_run_array();
+    test_run();
+    test_scale();
+    test_add();
+    test_absorp_in_each_layer();
+    test_inc_group_layers();
+}
+
+void run_all_except() {
+    test_coh_tmm_exceptions();
     test_unpolarized_RT_T();  // Relative error: [7.12e-4, 1.86e-5].
     test_position_resolved_s_poyn();  // Will fail layer/distance[0] and [6].
     test_position_resolved_s_absor();  // Same as above
     test_position_resolved_p_poyn();  // Same as above
     test_position_resolved_p_absor();  // Same as above
+    test_find_in_structure_exception();
+    test_find_in_structure_inf();  // solcore's impl differs from tmm's - the latter one add 1 to layer
+    test_add_exception();
 }
 
 auto main() -> int {
-    test_find_in_structure();
+    test_inc_group_layers();
 }

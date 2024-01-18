@@ -79,6 +79,43 @@ using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t
  */
 template<typename T>
 using coh_tmm_vec_dict = std::unordered_map<std::string, std::variant<char, std::complex<T>, std::valarray<T>, std::valarray<std::complex<T>>, std::valarray<std::vector<std::array<std::complex<T>, 2>>>>>;
+/*
+ * stack_d_list: std::vector<std::vector<T>>
+ * stack_n_list: std::vector<std::vector<std::valarray<std::complex<T>>>>
+ * all_from_inc: std::vector<std::size_t>
+ * inc_from_all: std::vector<std::ptrdiff_t>
+ * all_from_stack: std::vector<std::vector<std::size_t>>
+ * stack_from_all: std::vector<std::vector<std::size_t>>
+ * inc_from_stack: std::vector<std::ptrdiff_t>
+ * stack_from_inc: std::vector<std::ptrdiff_t>
+ * num_stacks: std::size_t
+ * num_inc_layers: std::size_t
+ * num_layers: std::size_t
+ * VW_list: std::valarray<std::array<T, 2>>
+ * coh_tmm_data_list: std::vector<stack_coh_tmm_dict<T>>
+ * coh_tmm_bdata_list: std::vector<coh_tmm_dict<T>>
+ * stackFB_list: std::valarray<std::array<T, 2>>
+ * power_entering_list: std::vector<T>
+ */
+template<typename T>
+using inc_tmm_vec_dict = std::unordered_map<std::string, std::variant<T, std::size_t, std::vector<std::size_t>, std::vector<std::ptrdiff_t>, std::vector<T>, std::vector<coh_tmm_dict<T>>, std::vector<stack_coh_tmm_dict<T>>, std::vector<std::vector<T>>, std::vector<std::vector<std::size_t>>, std::valarray<std::array<T, 2>>, std::vector<std::vector<std::valarray<std::complex<T>>>>>>;
+/*
+ * r: std::valarray<std::complex<T>>
+ * t: std::valarray<std::complex<T>>
+ * R: std::valarray<T>
+ * T: std::valarray<T>
+ * power_entering: std::valarray<T>
+ * vw_list: std::valarray<std::vector<std::array<std::complex<T>, 2>>>
+ * kz_list: std::vector<std::valarray<std::complex<T>>>
+ * th_list: std::vector<std::valarray<std::complex<T>>>
+ * pol: char
+ * n_list: std::vector<std::valarray<std::complex<T>>>
+ * d_list: std::valarray<T>
+ * th_0: std::complex<T>
+ * lam_vac: std::valarray<T>
+ */
+template<typename T>
+using coh_tmm_vecn_dict = std::unordered_map<std::string, std::variant<char, std::complex<T>, std::valarray<T>, std::valarray<std::complex<T>>, std::vector<std::valarray<std::complex<T>>>, std::valarray<std::vector<std::array<std::complex<T>, 2>>>>>;
 
 enum class LayerType { Coherent, Incoherent };
 
@@ -98,7 +135,6 @@ enum class LayerType { Coherent, Incoherent };
  */
 template<typename T>
 class AbsorpAnalyticFn {
-private:
     std::complex<T> A3;
     T a1, a3, A1, A2, d;
 public:
@@ -128,6 +164,67 @@ public:
      * adds another compatible absorption analytical function
      */
     auto add(const AbsorpAnalyticFn &b) -> AbsorpAnalyticFn;
+};
+
+/*
+ * This function (specifically, 'run') is vectorized.
+ * Absorption in a given layer is a pretty simple analytical function:
+ * The sum of four exponentials.
+
+ * a(z) = A1*exp(a1*z) + A2*exp(-a1*z)
+ *        + A3*exp(1j*a3*z) + conj(A3)*exp(-1j*a3*z)
+
+ * where a(z) is absorption at depth z, with z=0 being the start of the layer,
+ * and A1,A2,a1,a3 are real numbers, with a1>0, a3>0, and A3 is complex.
+ * The class stores these five parameters, as well as d, the layer thickness.
+
+ * This gives absorption as a fraction of intensity coming towards the first
+ * layer of the stack.
+ */
+template<typename T>
+class AbsorpAnalyticVecFn {
+    std::valarray<std::complex<T>> A3;
+    std::valarray<T> a1, a3, A1, A2, d;
+public:
+    AbsorpAnalyticVecFn() = default;
+
+    AbsorpAnalyticVecFn(const AbsorpAnalyticVecFn<T> &other);
+
+    /*
+     * fill in the absorption analytic function starting from coh_tmm_data
+     * (the output of coh_tmm), for absorption in the layer with index
+     * "layer".
+     */
+    void fill_in(const coh_tmm_vec_dict<T> &coh_tmm_data, const std::valarray<std::size_t> &layer);
+    /*
+     * Calculates absorption at a given depth z, where z=0 is the start of the
+     * layer.
+     */
+    template<typename ZT>
+    requires std::is_same_v<ZT, std::valarray<T>> || std::is_same_v<ZT, T>
+    auto run(const ZT &z) const -> std::valarray<std::complex<T>>;
+    /*
+     * Flip the function front-to-back, to describe a(d-z) instead of a(z),
+     * where d is layer thickness.
+     */
+    void flip();
+    /*
+     * multiplies the absorption at each point by "factor".
+     */
+    void scale(T factor);
+    /*
+     * adds another compatible absorption analytical function
+     */
+    void add(const AbsorpAnalyticVecFn &b);
+
+    friend void test_fill_in_s();
+    friend void test_fill_in_p();
+    friend void test_copy();
+    friend void test_run_array();
+    friend void test_run();
+    friend void test_scale();
+    friend void test_add();
+    friend void test_add_exception();
 };
 
 template<std::floating_point T>
@@ -201,7 +298,7 @@ auto unpolarized_RT(const std::valarray<std::complex<T>> &n_list, const std::val
                     const std::valarray<T> &lam_vac) -> std::unordered_map<std::string, std::valarray<T>>;
 
 template<typename T, typename COH_TMM_T>
-requires std::is_same_v<COH_TMM_T, coh_tmm_dict<T>> || std::is_same_v<COH_TMM_T, stack_coh_tmm_dict<T>>
+requires std::is_same_v<COH_TMM_T, coh_tmm_dict<T>> or std::is_same_v<COH_TMM_T, stack_coh_tmm_dict<T>>
 auto position_resolved(std::size_t layer, T distance,
                        const COH_TMM_T &coh_tmm_data) -> std::unordered_map<std::string, std::variant<T, std::complex<T>>>;
 
@@ -210,11 +307,29 @@ auto position_resolved(const std::valarray<std::size_t> &layer, const std::valar
                        const coh_tmm_vec_dict<T> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<std::valarray<T>, std::valarray<std::complex<T>>>>;
 
 template<typename T>
+auto position_resolved(std::size_t layer, const std::valarray<T> &distance,
+                       const coh_tmm_vec_dict<T> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<std::valarray<T>, std::valarray<std::complex<T>>>>;
+
+template<typename T>
 auto find_in_structure(const std::valarray<T> &d_list,
                        const std::vector<T> &dist) -> std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::vector<T>>;
 
 template<typename T>
+auto find_in_structure_inf(const std::valarray<T> &d_list,
+                           const std::vector<T> &dist) -> std::pair<std::valarray<std::size_t>, std::vector<T>>;
+
+template<std::floating_point T>
+auto layer_starts(const std::valarray<T> &d_list) -> std::valarray<T>;
+
+template<typename T>
 auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<T>;
+
+template<typename T>
+auto absorp_in_each_layer(const coh_tmm_vec_dict<T> &coh_tmm_data) -> std::valarray<std::valarray<T>>;
+
+template<typename T>
+auto inc_group_layers(const std::vector<std::valarray<std::complex<T>>> &n_list, const std::valarray<T> &d_list,
+                      const std::valarray<LayerType> &c_list) -> inc_tmm_vec_dict<T>;
 
 template<std::floating_point T>
 auto inc_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,

@@ -96,6 +96,9 @@ auto linspace(T start, T stop) -> std::array<T, N>;
 template<typename T>
 auto linspace(T start, T stop, std::size_t num) -> std::vector<T>;
 
+template<typename T>
+auto linspace_va(T start, T stop, std::size_t num) -> std::valarray<T>;
+
 // https://stackoverflow.com/questions/65096563/how-to-template-containers
 // https://stackoverflow.com/questions/72792411/how-to-template-on-a-container-type
 // https://stackoverflow.com/questions/7728478/c-template-class-function-with-arbitrary-container-type-how-to-define-it
@@ -129,5 +132,9 @@ auto va_2d_transpose(const std::valarray<T> &old_va, std::size_t num_rows) -> st
 template<std::ranges::sized_range U, typename T, std::size_t N>
 requires std::is_same_v<std::ranges::range_value_t<U>, std::vector<std::array<T, N>>>
 auto vva2_flatten(const U &vvan) -> std::vector<T>;
+
+template<std::ranges::sized_range U, typename T>
+requires std::is_same_v<std::ranges::range_value_t<U>, std::valarray<T>>
+auto vv_flatten(const U &vv) -> std::vector<T>;
 
 #endif //UTILS_H

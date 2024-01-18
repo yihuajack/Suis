@@ -595,7 +595,7 @@ auto unpolarized_RT(const std::valarray<std::complex<T>> &n_list, const std::val
  * https://arxiv.org/pdf/1603.02720.pdf for formulas.
  */
 template<typename T, typename COH_TMM_T>
-requires std::is_same_v<COH_TMM_T, coh_tmm_dict<T>> || std::is_same_v<COH_TMM_T, stack_coh_tmm_dict<T>>
+requires std::is_same_v<COH_TMM_T, coh_tmm_dict<T>> or std::is_same_v<COH_TMM_T, stack_coh_tmm_dict<T>>
 auto position_resolved(const std::size_t layer, const T distance,
                        const COH_TMM_T &coh_tmm_data) -> std::unordered_map<std::string, std::variant<T, std::complex<T>>> {
     // Notice that operator[] of std::unordered_map accepts both const Key& key and Key&& key,
@@ -750,7 +750,7 @@ auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<
     // last element.
     // For this solution, the last element is left 0 (initial).
     std::adjacent_difference(std::next(std::begin(power_entering_each_layer)), std::end(power_entering_each_layer),
-                             std::begin(final_answer), [](const double x, const double y) {
+                             std::begin(final_answer), [](const T x, const T y) {
         return y - x;
     });
     // manually calculate the first difference
@@ -773,7 +773,7 @@ auto absorp_in_each_layer(const stack_coh_tmm_dict<T> &coh_tmm_data) -> std::val
     }
     std::valarray<T> final_answer(num_layers);
     std::adjacent_difference(std::next(std::begin(power_entering_each_layer)), std::end(power_entering_each_layer),
-                             std::begin(final_answer), [](const double x, const double y) {
+                             std::begin(final_answer), [](T x, const T y) {
                 return y - x;
             });
     // manually calculate the first difference
@@ -983,10 +983,10 @@ auto inc_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // P_list[i] is a fraction not absorbed in a single pass through i'th incoherent
     // layer.
     std::valarray<T> P_list(num_inc_layers);
-    std::size_t i;
+    std::size_t all_inc_i = 0;
     for (std::size_t inc_index = 1; inc_index < num_inc_layers - 1; inc_index++) {  // skip 0'th and last (infinite)
-        i = all_from_inc[inc_index];
-        P_list[inc_index] = std::exp(-4 * std::numbers::pi_v<T> * d_list[i] * (n_list[i] * std::cos(th_list[i])).imag() / lam_vac);
+        all_inc_i = all_from_inc.at(inc_index);
+        P_list[inc_index] = std::exp(-4 * std::numbers::pi_v<T> * d_list[all_inc_i] * (n_list[all_inc_i] * std::cos(th_list[all_inc_i])).imag() / lam_vac);
         // For a very opaque layer, reset P to avoid divide-by-0 and similar
         // errors.
         if (P_list[inc_index] < 1e-30) {

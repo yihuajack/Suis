@@ -180,9 +180,9 @@ auto approx(const U expected, const T rel, const T abs, const bool nan_ok) -> Ap
     return ApproxScalar<U, T>(expected, rel, abs, nan_ok);
 }
 
-template auto approx(const std::vector<double> &expected, const double rel, const double abs, const bool nan_ok) -> ApproxSequenceLike<std::vector<double>, double>;
-template auto approx(const std::vector<std::complex<double>> &expected, const double rel, const double abs, const bool nan_ok) -> ApproxSequenceLike<std::vector<std::complex<double>>, double>;
-template auto approx(const std::valarray<double> &expected, const double rel, const double abs, const bool nan_ok) -> ApproxSequenceLike<std::valarray<double>, double>;
-template auto approx(const std::valarray<std::complex<double>> &expected, const double rel, const double abs, const bool nan_ok) -> ApproxSequenceLike<std::valarray<std::complex<double>>, double>;
-template auto approx(const double expected, const double rel, const double abs, const bool nan_ok) -> ApproxScalar<double, double>;
-template auto approx(const std::complex<double> expected, const double rel, const double abs, const bool nan_ok) -> ApproxScalar<std::complex<double>, double>;
+template auto approx(const std::vector<double> &expected, double rel, double abs, bool nan_ok) -> ApproxSequenceLike<std::vector<double>, double>;
+template auto approx(const std::vector<std::complex<double>> &expected, double rel, double abs, bool nan_ok) -> ApproxSequenceLike<std::vector<std::complex<double>>, double>;
+template auto approx(const std::valarray<double> &expected, double rel, double abs, bool nan_ok) -> ApproxSequenceLike<std::valarray<double>, double>;
+template auto approx(const std::valarray<std::complex<double>> &expected, double rel, double abs, bool nan_ok) -> ApproxSequenceLike<std::valarray<std::complex<double>>, double>;
+template auto approx(double expected, double rel, double abs, bool nan_ok) -> ApproxScalar<double, double>;
+template auto approx(std::complex<double> expected, double rel, double abs, bool nan_ok) -> ApproxScalar<std::complex<double>, double>;
