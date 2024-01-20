@@ -229,6 +229,29 @@ auto list_snell(const std::valarray<std::complex<T>> &n_list, const TH_T &th_0,
     return angles;
 }
 
+template<std::floating_point T>
+auto list_snell(const std::vector<std::valarray<std::complex<T>>> &n_list,
+                const std::valarray<std::complex<T>> &th_0) -> std::vector<std::valarray<std::complex<T>>> {
+    const std::size_t num_layers = n_list.size();
+    const std::size_t num_wl = th_0.size();
+    if (n_list.front().size() not_eq num_wl) {
+        throw std::runtime_error("n_list elements' size mismatches th_0's size.");
+    }
+    std::vector<std::valarray<std::complex<T>>> angles(num_layers, std::valarray<std::complex<T>>(num_wl));
+    for (std::size_t i : std::views::iota(0U, num_layers)) {
+        angles.at(i) = std::asin(n_list.front() * std::sin(th_0) / n_list.at(i));
+    }
+    for (std::size_t i : std::views::iota(0U, num_wl)) {
+        if (not is_forward_angle(n_list.front()[i], angles.front()[i])) {
+            angles.front()[i] = std::numbers::pi_v<T> - angles.front()[i];
+        }
+        if (not is_forward_angle(n_list.back()[i], angles.back()[i])) {
+            angles.back()[i] = std::numbers::pi_v<T> - angles.back()[i];
+        }
+    }
+    return angles;
+}
+
 template<typename T>
 auto interface_r(const char polarization, const std::valarray<std::complex<T>> &n_i,
                  const std::valarray<std::complex<T>> &n_f, const std::valarray<std::complex<T>> &th_i,
@@ -351,7 +374,7 @@ auto interface_T(const char polarization, const std::valarray<std::complex<T>> &
     // values of T because in T_from_t we divide by cos(th_i) which is ~ 0.
     std::transform(std::begin(t), std::end(t), std::begin(th_i), std::begin(t),
                    [](const std::complex<T> t_value, const std::complex<T> th_i_value) {
-                       return (th_i_value.real() > std::numbers::pi_v<T> / 2 - 1e-6) ? 0 : t_value;
+                       return th_i_value.real() > std::numbers::pi_v<T> / 2 - 1e-6 ? 0 : t_value;
                    });
 
     return T_from_t(polarization, t, n_i, n_f, th_i, th_f);
@@ -643,7 +666,7 @@ template auto coh_tmm(char pol, const std::valarray<std::complex<double>> &n_lis
 
 template<typename T, typename TH_T>
 requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<TH_T, std::complex<T>>
-auto coh_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &n_list, const std::valarray<T> &d_list,
+auto coh_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &n_list, const std::vector<T> &d_list,
              const TH_T &th_0, const std::valarray<T> &lam_vac) -> coh_tmm_vecn_dict<T> {
     const std::size_t num_wl = lam_vac.size();
     const std::size_t num_layers = n_list.size();
@@ -656,7 +679,7 @@ auto coh_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
     if (num_layers not_eq d_list.size()) {
         throw std::invalid_argument("n_list and d_list must have same length");
     }
-    if (not std::isinf(d_list[0]) or not std::isinf(d_list[d_list.size() - 1])) {
+    if (not std::isinf(d_list.front()) or not std::isinf(d_list.back())) {
         throw std::invalid_argument("d_list must start and end with inf!");
     }
 #ifdef _MSC_VER
@@ -669,15 +692,13 @@ auto coh_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
                             std::bind_front(std::less_equal<>(), TOL * EPSILON<T>))) {
         throw std::invalid_argument("Error in n0 or th0!");
     }
-    std::vector<std::valarray<std::complex<T>>> th_list(std::valarray<std::complex<T>>(num_wl), num_layers);
-    for (std::size_t i : std::views::iota(0U, num_layers)) {
-        th_list.at(i) = list_snell(n_list.at(i), th_0, num_wl);
-    }
+    std::vector<std::valarray<std::complex<T>>> th_list(num_layers, std::valarray<std::complex<T>>(num_wl));
+    th_list = list_snell(n_list, th_0);
     std::valarray<std::complex<T>> comp_lam_vac(num_wl);
     std::ranges::transform(lam_vac, std::begin(comp_lam_vac), [](const T real) -> std::complex<T> {
         return real;
     });
-    std::vector<std::valarray<std::complex<T>>> kz_list(std::valarray<std::complex<T>>(num_wl), num_layers);
+    std::vector<std::valarray<std::complex<T>>> kz_list(num_layers, std::valarray<std::complex<T>>(num_wl));
     for (std::size_t i : std::views::iota(0U, num_layers)) {
         kz_list.at(i) = 2 * std::numbers::pi_v<T> * n_list.at(i) * std::cos(th_list.at(i)) / comp_lam_vac;
     }
@@ -685,17 +706,17 @@ auto coh_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
     std::ranges::transform(d_list, std::begin(comp_d_list), [](const T real) -> std::complex<T> {
         return real;
     });
-    std::vector<std::valarray<std::complex<T>>> delta(std::valarray<std::complex<T>>(num_wl), num_layers);
+    std::vector<std::valarray<std::complex<T>>> delta(num_layers, std::valarray<std::complex<T>>(num_wl));
     for (std::size_t i = 0; i < num_layers; i++) {
-        delta.at(i) = kz_list.at(i) * comp_d_list;
+        delta.at(i) = kz_list.at(i) * comp_d_list[i];
     }
     for (std::size_t i : std::views::iota(1U, num_layers - 1)) {
-        if (std::any_of(delta.at(i), [](const std::complex<T> delta_i) -> bool {
+        if (std::ranges::any_of(delta.at(i), [](const std::complex<T> delta_i) -> bool {
             return delta_i.imag() > 35;
         })) {
-            std::ranges::transform(delta.at(i), std::begin(delta.at(i), [](const std::complex<T> delta_i) {
-                delta_i = delta_i.real() + 35i;
-            }));
+            std::ranges::transform(delta.at(i), std::begin(delta.at(i)), [](const std::complex<T> delta_i) {
+                return delta_i.real() + 35i;
+            });
             try {
                 throw std::runtime_error("Warning: Layers that are almost perfectly opaque "
                                          "are modified to be slightly transmissive, "
@@ -703,7 +724,7 @@ auto coh_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
                                          "for numerical stability. This warning will not "
                                          "be shown again.");
             } catch (const std::runtime_error &coh_value_warning) {
-                // Do nothing.
+                std::cerr << coh_value_warning.what() << '\n';
             }
         }
     }
@@ -718,10 +739,10 @@ auto coh_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
         std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> A(boost::numeric::ublas::matrix<std::complex<T>>(2, 2), num_wl);
         std::valarray<boost::numeric::ublas::matrix<std::complex<T>>> B(boost::numeric::ublas::matrix<std::complex<T>>(2, 2), num_wl);
         for (std::size_t j = 0; j < num_wl; j++) {
-            A[j](0, 0) = std::exp(-1i * delta[i * num_wl + j]);
+            A[j](0, 0) = std::exp(-1i * delta.at(i)[j]);
             A[j](0, 1) = 0;
             A[j](1, 0) = 0;
-            A[j](1, 1) = std::exp(1i * delta[i * num_wl + j]);
+            A[j](1, 1) = std::exp(1i * delta.at(i)[j]);
             B[j](0, 0) = 1;
             B[j](0, 1) = r_list.at(i).at(i + 1)[j];
             B[j](1, 0) = r_list.at(i).at(i + 1)[j];
@@ -825,14 +846,14 @@ template auto coh_tmm_reverse(const char pol, const std::valarray<std::complex<d
 
 template<std::floating_point T>
 auto coh_tmm_reverse(const char pol, const std::vector<std::valarray<std::complex<T>>> &n_list,
-                     const std::valarray<T> &d_list, const std::complex<T> th_0,
+                     const std::vector<T> &d_list, const std::valarray<std::complex<T>> &th_0,
                      const std::valarray<T> &lam_vac) -> coh_tmm_vecn_dict<T> {
     const std::size_t num_wl = lam_vac.size();
     const std::size_t num_layers = d_list.size();  // == n_list.size()
     const std::valarray<std::complex<T>> th_f = snell(n_list.front(), n_list.at(num_layers - 1), th_0, num_wl);
-    std::valarray<std::complex<T>> reversed_n_list(num_layers);
+    std::vector<std::valarray<std::complex<T>>> reversed_n_list(num_layers, std::valarray<std::complex<T>>(num_wl));
     std::ranges::reverse_copy(n_list, std::begin(reversed_n_list));
-    std::valarray<T> reversed_d_list(num_layers);
+    std::vector<T> reversed_d_list(num_layers);
     std::ranges::reverse_copy(d_list, std::begin(reversed_d_list));
     return coh_tmm(pol, reversed_n_list, reversed_d_list, th_f, lam_vac);
 }
@@ -1358,11 +1379,7 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
              const std::valarray<T> &lam_vac) -> inc_tmm_vec_dict<T> {
     const std::size_t num_layers = n_list.size();
     const std::size_t num_wl = lam_vac.size();
-    if (std::ranges::find(n_list, [&th_0](const std::valarray<std::complex<T>> &subva) -> bool {
-        return std::ranges::find(subva, [&th_0](const std::complex<T> n) -> bool {
-            return real_if_close(n * std::sin(th_0));
-        });
-    })) {
+    if (std::holds_alternative<std::valarray<std::complex<T>>>(real_if_close<std::complex<T>, T>(std::valarray<std::complex<T>>(n_list.front() * std::sin(th_0))))) {
         throw std::runtime_error("Error in n0 or th0!");
     }
     inc_tmm_vec_dict<T> group_layer_data = inc_group_layers(n_list, d_list, c_list);
@@ -1375,18 +1392,18 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
     const std::vector<std::ptrdiff_t> stack_from_inc = std::get<std::vector<std::ptrdiff_t>>(group_layer_data.at("stack_from_inc"));
     const std::vector<std::ptrdiff_t> inc_from_stack = std::get<std::vector<std::ptrdiff_t>>(group_layer_data.at("inc_from_stack"));
 
-    std::vector<std::valarray<std::complex<T>>> th_list(std::valarray<std::complex<T>>(num_wl), num_layers);
+    std::vector<std::valarray<std::complex<T>>> th_list(num_layers, std::valarray<std::complex<T>>(num_wl));
     for (std::size_t i : std::views::iota(0U, num_layers)) {
-        th_list.at(i) = list_snell(n_list.at(i), th_0, num_wl);
+        th_list.at(i) = list_snell(n_list.at(i), th_0);
     }
 
-    std::vector<stack_coh_tmm_dict<T>> coh_tmm_data_list;
-    std::vector<coh_tmm_dict<T>> coh_tmm_bdata_list;
+    std::vector<coh_tmm_vecn_dict<T>> coh_tmm_data_list;
+    std::vector<coh_tmm_vecn_dict<T>> coh_tmm_bdata_list;
     for (std::size_t i : std::views::iota(0U, num_stacks)) {
-        coh_tmm_data_list.push_back(coh_tmm(pol, stack_n_list.at(i), stack_d_list.at(i), th_list.at(all_from_stack.at(i).front()), lam_vac));
-        coh_tmm_bdata_list.push_back(coh_tmm_reverse(pol, stack_n_list.at(i), stack_d_list.at(i), th_list.at(all_from_stack.at(i).front()), lam_vac));
+        coh_tmm_data_list.emplace_back(coh_tmm(pol, stack_n_list.at(i), stack_d_list.at(i), th_list.at(all_from_stack.at(i).front()), lam_vac));
+        coh_tmm_bdata_list.emplace_back(coh_tmm_reverse(pol, stack_n_list.at(i), stack_d_list.at(i), th_list.at(all_from_stack.at(i).front()), lam_vac));
     }
-    std::vector<std::valarray<T>> P_list(num_inc_layers);
+    std::vector<std::valarray<T>> P_list(num_inc_layers, std::valarray<T>(num_wl));
     std::size_t all_inc_i = 0;
     for (std::size_t inc_index : std::views::iota(1U, num_inc_layers - 1)) {
         all_inc_i = all_from_inc.at(inc_index);
@@ -1397,8 +1414,8 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
             }
         }
     }
-    std::vector<std::vector<std::valarray<T>>> T_list(num_inc_layers, std::vector<T>(num_inc_layers, std::valarray<T>(num_wl)));
-    std::vector<std::vector<std::valarray<T>>> R_list(num_inc_layers, std::vector<T>(num_inc_layers, std::valarray<T>(num_wl)));
+    std::vector<std::vector<std::valarray<T>>> T_list(num_inc_layers, std::vector<std::valarray<T>>(num_inc_layers, std::valarray<T>(num_wl)));
+    std::vector<std::vector<std::valarray<T>>> R_list(num_inc_layers, std::vector<std::valarray<T>>(num_inc_layers, std::valarray<T>(num_wl)));
     std::size_t alllayer_index = 0;
     std::ptrdiff_t nextstack_index = 0;
     for (std::size_t inc_index : std::views::iota(0U, num_inc_layers - 1)) {
@@ -1422,20 +1439,20 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
                                                                  th_list.at(alllayer_index + 1),
                                                                  th_list.at(alllayer_index));
         } else {
-            R_list.at(inc_index).at(inc_index + 1) = std::get<T>(coh_tmm_data_list.at(nextstack_index).at("R"));
-            T_list.at(inc_index).at(inc_index + 1) = std::get<T>(coh_tmm_data_list.at(nextstack_index).at("T"));
-            R_list.at(inc_index + 1).at(inc_index) = std::get<T>(coh_tmm_bdata_list.at(nextstack_index).at("R"));
-            T_list.at(inc_index + 1).at(inc_index) = std::get<T>(coh_tmm_bdata_list.at(nextstack_index).at("T"));
+            R_list.at(inc_index).at(inc_index + 1) = std::get<std::valarray<T>>(coh_tmm_data_list.at(nextstack_index).at("R"));
+            T_list.at(inc_index).at(inc_index + 1) = std::get<std::valarray<T>>(coh_tmm_data_list.at(nextstack_index).at("T"));
+            R_list.at(inc_index + 1).at(inc_index) = std::get<std::valarray<T>>(coh_tmm_bdata_list.at(nextstack_index).at("R"));
+            T_list.at(inc_index + 1).at(inc_index) = std::get<std::valarray<T>>(coh_tmm_bdata_list.at(nextstack_index).at("T"));
         }
     }
     std::valarray<boost::numeric::ublas::matrix<T>> L0(boost::numeric::ublas::matrix<T>(2, 2, NAN), num_wl);
     std::vector<std::valarray<boost::numeric::ublas::matrix<T>>> L_list{std::move(L0)};
     std::valarray<boost::numeric::ublas::matrix<T>> Ltilde(boost::numeric::ublas::zero_matrix<T>(2, 2), num_wl);
     for (std::size_t i : std::views::iota(0U, num_wl)) {
-        Ltilde[i] <<= 1           , -R_list[1][0],
-                      R_list[0][1], T_list[1][0] * T_list[0][1] - R_list[1][0] * R_list[0][1];
+        Ltilde[i] <<= 1 / T_list[0][1][i]              , -R_list[1][0][i] / T_list[0][1][i],
+                      R_list[0][1][i] / T_list[0][1][i], (T_list[1][0][i] * T_list[0][1][i] - R_list[1][0][i] * R_list[0][1][i]) / T_list[0][1][i];
+        // We can write Ltilde[i] = Ltilde[i] / T_list[0][1][i] but not Ltilde = Ltilde / T_list[0][1]
     }
-    Ltilde /= T_list[0][1];
     boost::numeric::ublas::matrix<T> L(2, 2);
     boost::numeric::ublas::matrix<T> L1(2, 2);
     boost::numeric::ublas::matrix<T> L2(2, 2);
@@ -1477,15 +1494,15 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
         std::valarray<boost::numeric::ublas::matrix<T>> Li(boost::numeric::ublas::matrix<T>(2, 2), num_wl);
         for (std::size_t j : std::views::iota(0U, num_wl)) {
             L1 <<= 1 / P_list.at(i)[j], 0,
-                   0                  , P_list.at(i)[j];
-            L2 <<= 1, -R_list.at(i + 1).at(i)[j],
-                   R_list.at(i).at(i + 1)[j], T_list.at(i + 1).at(i)[j] * T_list.at(i)(i + 1)[j] - R_list.at(i + 1).at(i)[j] * R_list.at(i).at(i + 1)[j];
+                   0                     , P_list.at(i)[j];
+            L2 <<= 1                              , -R_list.at(i + 1).at(i)[j],
+                   R_list.at(i).at(i + 1)[j], T_list.at(i + 1).at(i)[j] * T_list.at(i).at(i + 1)[j] - R_list.at(i + 1).at(i)[j] * R_list.at(i).at(i + 1)[j];
             L = boost::numeric::ublas::prod(L1, L2);
-            L /= T_list.at(i)(i + 1)[j];
+            L /= T_list.at(i).at(i + 1)[j];
             Li[i] = L;
-            Ltilde = boost::numeric::ublas::prod(Ltilde, L);
+            Ltilde[i] = boost::numeric::ublas::prod(Ltilde[i], L);
         }
-        L_list.push_back(Li);
+        L_list.emplace_back(Li);
     }
     std::valarray<T> Tr(num_wl);
     std::valarray<T> R(num_wl);
@@ -1493,21 +1510,22 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
         Tr[i] = 1 / Ltilde[i](0, 0);
         R[i] = Ltilde[i](1, 0) / Ltilde[i](0, 0);
     }
-    std::valarray<std::vector<std::array<T, 2>>> VW_list(std::vector<std::array<T, 2>>(num_wl, std::array<T, 2>{NAN, NAN}), num_layers);
+    std::valarray<std::array<std::valarray<T>, 2>> VW_list(std::array<std::valarray<T>, 2>{std::valarray<T>(num_wl), std::valarray<T>(num_wl)}, num_layers);
+    VW_list[0] = std::array<std::valarray<T>, 2>{std::valarray<T>(NAN, num_wl), std::valarray<T>(NAN, num_wl)};
     std::valarray<boost::numeric::ublas::matrix<T>> VW(boost::numeric::ublas::zero_matrix<T>(2, 2), num_wl);
     for (std::size_t i = 0; i < num_wl; i++) {
         VW[i](0, 0) = Tr[i];
         VW[i](0, 1) = Tr[i];
     }
     for (std::size_t i = 0; i < num_wl; i++) {
-        VW_list[num_layers - 1].at(i).at(0) = VW[i](0, 0);
-        VW_list[num_layers - 1].at(i).at(1) = VW[i](0, 1);
+        VW_list[num_layers - 1].at(0)[i] = VW[i](0, 0);
+        VW_list[num_layers - 1].at(1)[i] = VW[i](0, 1);
     }
-    for (std::size_t i = num_layers - 2; i > 0; --i) {
+    for (std::size_t i = num_inc_layers - 2; i > 0; --i) {
         for (std::size_t j = 0; j < num_wl; j++) {
             VW[j] = boost::numeric::ublas::prod(L_list.at(i)[j], VW[j]);
-            VW_list[i].at(j).at(0) = VW[j](0, 1);
-            VW_list[i].at(j).at(1) = VW[j](1, 1);
+            VW_list[i].at(0)[j] = VW[j](0, 1);
+            VW_list[i].at(1)[j] = VW[j](1, 1);
         }
     }
     std::valarray<std::array<std::valarray<T>, 2>> stackFB_list(inc_from_stack.size());
@@ -1521,21 +1539,37 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
         stackFB_list[i] = {F, B};
     }
     std::vector<std::valarray<T>> power_entering_list{std::valarray<T>(1, num_wl)};
-    std::ptrdiff_t prev_stack_index = 0;
-    for (std::size_t i = 1; i < num_inc_layers; i++) {
-        prev_stack_index = stack_from_inc[i];
+    for (auto const [i, prev_stack_index] : stack_from_inc | std::views::drop(1) | std::views::enumerate) {
         if (prev_stack_index == -1) {
-            power_entering_list.push_back(i == 1 ? T_list[0][1] - VW_list[1][1] * T_list[1][0] :
-                                          VW_list[i - 1][0] * P_list[i - 1] * T_list[i - 1][i] - VW_list[i][1] * T_list[i][i - 1]);
-            power_entering_list.push_back(stackFB_list[prev_stack_index][0] * std::get<T>(coh_tmm_data_list.at(prev_stack_index).at("T")) - stackFB_list[prev_stack_index][1] * std::get<T>(coh_tmm_bdata_list.at(prev_stack_index).at("power_entering")));
+#ifdef _MSC_VER
+            power_entering_list.emplace_back(i == 0 ? T_list[0][1] - VW_list[1][1] * T_list[1][0] :
+                                             VW_list[i][0] * P_list[i] * T_list[i][i + 1] -
+                                             VW_list[i + 1][1] * T_list[i + 1][i]);
+#else
+            power_entering_list.emplace_back(i == 0 ? std::valarray<T>(T_list[0][1] - VW_list[1][1] * T_list[1][0]) :
+                                             std::valarray<T>(VW_list[i][0] * P_list[i] * T_list[i][i + 1] -
+                                             VW_list[i + 1][1] * T_list[i + 1][i]));
+#endif
+        } else {
+            power_entering_list.emplace_back(stackFB_list[prev_stack_index][0] * std::get<std::valarray<T>>(coh_tmm_data_list.at(prev_stack_index).at("T")) -
+                    stackFB_list[prev_stack_index][1] * std::get<std::valarray<T>>(coh_tmm_bdata_list.at(prev_stack_index).at("power_entering")));
         }
     }
-    group_layer_data.merge(inc_tmm_dict<T>{{"T", Tr},
-                                           {"R", R},
-                                           {"VW_list", VW_list},
-                                           {"coh_tmm_data_list", coh_tmm_data_list},
-                                           {"coh_tmm_bdata_list", coh_tmm_bdata_list},
-                                           {"stackFB_list", stackFB_list},
-                                           {"power_entering_list", power_entering_list}});
+    // despite checking in interface_T and interface_R, still sometimes end up with
+    // unphysical R or T values of incident from medium with n > 1
+    R[R > 1] = 1;
+    Tr[Tr < 0] = 0;
+    group_layer_data.merge(inc_tmm_vec_dict<T>{{"T", Tr},
+                                               {"R", R},
+                                               {"VW_list", VW_list},
+                                               {"coh_tmm_data_list", coh_tmm_data_list},
+                                               {"coh_tmm_bdata_list", coh_tmm_bdata_list},
+                                               {"stackFB_list", stackFB_list},
+                                               {"power_entering_list", power_entering_list}});
     return group_layer_data;
 }
+
+template auto inc_tmm(char pol, const std::vector<std::valarray<std::complex<double>>> &n_list,
+                      const std::valarray<double> &d_list, const std::valarray<LayerType> &c_list,
+                      std::complex<double> th_0,
+                      const std::valarray<double> &lam_vac) -> inc_tmm_vec_dict<double>;

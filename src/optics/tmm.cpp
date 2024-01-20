@@ -92,16 +92,20 @@ auto is_forward_angle(const std::complex<T> n, const std::complex<T> theta) -> b
     }
     const std::complex<T> ncostheta = n * std::cos(theta);
     const bool answer = std::abs(ncostheta.imag()) > TOL * EPSILON<T> ? ncostheta.imag() > 0 : ncostheta.real() > 0;
-    if ((answer and (ncostheta.imag() <= -TOL * EPSILON<T> or
-                     ncostheta.real() <= -TOL * EPSILON<T> or
-                     std::real(n * std::cos(std::conj(theta))) <= -TOL * EPSILON<T>)) or
-        (not answer and (ncostheta.imag() >= TOL * EPSILON<T> or
-                         ncostheta.real() >= TOL * EPSILON<T> or
-                         std::real(n * std::cos(std::conj(theta))) >= TOL * EPSILON<T>))) {
-        throw std::runtime_error("It's not clear which beam is incoming vs outgoing. Weird"
-                                 " index maybe?\n" +
-                                 complex_to_string_with_name(n, "n") + "\t" +
-                                 complex_to_string_with_name(theta, "angle"));
+    try {
+        if ((answer and (ncostheta.imag() <= -TOL * EPSILON<T> or
+                         ncostheta.real() <= -TOL * EPSILON<T> or
+                         std::real(n * std::cos(std::conj(theta))) <= -TOL * EPSILON<T>)) or
+            (not answer and (ncostheta.imag() >= TOL * EPSILON<T> or
+                             ncostheta.real() >= TOL * EPSILON<T> or
+                             std::real(n * std::cos(std::conj(theta))) >= TOL * EPSILON<T>))) {
+            throw std::runtime_error("It's not clear which beam is incoming vs outgoing. Weird"
+                                     " index maybe?\n" +
+                                     complex_to_string_with_name(n, "n") + "\t" +
+                                     complex_to_string_with_name(theta, "angle"));
+        }
+    } catch (const std::runtime_error &angle_value_warning) {
+        std::cerr << angle_value_warning.what() << '\n';
     }
     return answer;
 }
@@ -138,9 +142,6 @@ auto list_snell(const std::valarray<std::complex<T>> &n_list,
     }
     return angles;
 }
-
-template auto list_snell(const std::valarray<std::complex<double>> &n_list,
-                         const std::complex<double> th_0) -> std::valarray<std::complex<double>>;
 
 template<std::floating_point T>
 auto list_snell(const std::vector<std::complex<T>> &n_list,
@@ -381,7 +382,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
                                          "for numerical stability. This warning will not "
                                          "be shown again.");
             } catch (const std::runtime_error &coh_value_warning) {
-                // Do nothing.
+                std::cerr << coh_value_warning.what() << '\n';
             }
         }
     }
@@ -461,10 +462,10 @@ auto coh_tmm(const char pol, const std::vector<std::complex<T>> &n_list, const s
     if (n_list.size() not_eq d_list.size()) {
         throw std::invalid_argument("n_list and d_list must have same length");
     }
-    if (not std::isinf(d_list[0]) or not std::isinf(d_list[d_list.size() - 1])) {
+    if (not std::isinf(d_list.front()) or not std::isinf(d_list[d_list.size() - 1])) {
         throw std::invalid_argument("d_list must start and end with inf!");
     }
-    if (std::abs((n_list[0] * std::sin(th_0)).imag()) >= TOL * EPSILON<T> or not is_forward_angle(n_list[0], th_0)) {
+    if (std::abs((n_list.front() * std::sin(th_0)).imag()) >= TOL * EPSILON<T> or not is_forward_angle(n_list.front(), th_0)) {
         throw std::invalid_argument("Error in n0 or th0!");
     }
     const std::size_t num_layers = n_list.size();
@@ -655,7 +656,7 @@ template auto position_resolved(const std::size_t layer, const double distance,
  * For negative distance, return [-1, distance]
  */
 template<typename T>
-auto find_in_structure(const std::valarray<std::complex<T>> &d_list, T distance) -> std::pair<long long int, T> {
+auto find_in_structure(const std::valarray<std::complex<T>> &d_list, T distance) -> std::pair<std::ptrdiff_t, T> {
     if (std::isinf(d_list.sum())) {
         throw std::runtime_error("This function expects finite arguments");
     }
@@ -689,7 +690,7 @@ auto find_in_structure_inf(const std::valarray<std::complex<T>> &d_list, T dista
     if (distance < 0) {
         return std::pair(0, distance);
     }
-    const std::pair<long long int, T> found = find_in_structure(d_list[std::slice(1, d_list.size() - 2, 1)], distance);
+    const std::pair<std::ptrdiff_t, T> found = find_in_structure(d_list[std::slice(1, d_list.size() - 2, 1)], distance);
     return std::pair(found.first + 1, found.second);  // min(found.first) == -1 so min(found.first + 1) == 0
 }
 
@@ -844,12 +845,12 @@ auto inc_group_layers(const std::valarray<std::complex<T>> &n_list, const std::v
     std::vector<std::vector<T>> stack_d_list;
     std::vector<std::vector<std::complex<T>>> stack_n_list;
     std::vector<std::size_t> all_from_inc;
-    std::vector<long long int> inc_from_all;
+    std::vector<std::ptrdiff_t> inc_from_all;
     std::vector<std::vector<std::size_t>> all_from_stack;
     // Although we know the size of the inner vector is 2 if valid, but we want to make it empty if invalid
     std::vector<std::vector<std::size_t>> stack_from_all;
-    std::vector<long long int> inc_from_stack;
-    std::vector<long long int> stack_from_inc;
+    std::vector<std::ptrdiff_t> inc_from_stack;
+    std::vector<std::ptrdiff_t> stack_from_inc;
     bool stack_in_progress = false;
     std::vector<T> ongoing_stack_d_list;
     std::vector<std::complex<T>> ongoing_stack_n_list;
@@ -957,8 +958,8 @@ auto inc_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     const std::vector<std::vector<T>> stack_d_list = std::get<std::vector<std::vector<T>>>(group_layer_data.at("stack_d_list"));
     const std::vector<std::vector<std::size_t>> all_from_stack = std::get<std::vector<std::vector<std::size_t>>>(group_layer_data.at("all_from_stack"));
     const std::vector<std::size_t> all_from_inc = std::get<std::vector<std::size_t>>(group_layer_data.at("all_from_inc"));
-    const std::vector<long long int> stack_from_inc = std::get<std::vector<long long int>>(group_layer_data.at("stack_from_inc"));
-    const std::vector<long long int> inc_from_stack = std::get<std::vector<long long int>>(group_layer_data.at("inc_from_stack"));
+    const std::vector<std::ptrdiff_t> stack_from_inc = std::get<std::vector<std::ptrdiff_t>>(group_layer_data.at("stack_from_inc"));
+    const std::vector<std::ptrdiff_t> inc_from_stack = std::get<std::vector<std::ptrdiff_t>>(group_layer_data.at("inc_from_stack"));
 
     // th_list is a list with, for each layer, the angle that the light travels through the layer.
     // Computed with Snell's law.
@@ -1003,7 +1004,7 @@ auto inc_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     std::vector<std::vector<T>> T_list(num_inc_layers, std::vector<T>(num_inc_layers));
     std::vector<std::vector<T>> R_list(num_inc_layers, std::vector<T>(num_inc_layers));
     std::size_t alllayer_index = 0;
-    long long int nextstack_index = 0;
+    std::ptrdiff_t nextstack_index = 0;
     for (std::size_t inc_index = 0; inc_index < num_inc_layers - 1; inc_index++) {  // looking at interface i -> i+1
         alllayer_index = all_from_inc[inc_index];
         nextstack_index = stack_from_inc[inc_index + 1];
@@ -1068,7 +1069,7 @@ auto inc_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
 
     // stackFB_list can be simplified to a valarray.
     std::valarray<std::array<T, 2>> stackFB_list(inc_from_stack.size());
-    long long int prev_inc_index = 0;
+    std::ptrdiff_t prev_inc_index = 0;
     T F;
     T B;
     for (std::size_t i = 0; i < inc_from_stack.size(); i++) {
@@ -1081,7 +1082,7 @@ auto inc_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // interface into the i'th incoherent layer from the previous (coherent or incoherent) layer.
     // See the manual.
     std::vector<T> power_entering_list{1};  // "1" by convention for infinite 0th layer.
-    long long int prev_stack_index = 0;
+    std::ptrdiff_t prev_stack_index = 0;
     for (std::size_t i = 1; i < num_inc_layers; i++) {
         prev_stack_index = stack_from_inc[i];
         if (prev_stack_index == -1) {
@@ -1125,7 +1126,7 @@ auto inc_absorp_in_each_layer(const inc_tmm_dict<T> &inc_data) -> std::vector<T>
     // with incoherent index i comes immediately after the j'th stack (or j=nan
     // if it's not immediately following a stack).
 
-    const std::vector<long long int> stack_from_inc = std::get<std::vector<long long int>>(inc_data.at("stack_from_inc"));
+    const std::vector<std::ptrdiff_t> stack_from_inc = std::get<std::vector<std::ptrdiff_t>>(inc_data.at("stack_from_inc"));
     const std::vector<T> power_entering_list = std::get<std::vector<T>>(inc_data.at("power_entering_list"));
     // stackFB_list[n] = [F, B] means that F is light traveling forward towards n'th
     // stack and B is light traveling backwards towards n'th stack.

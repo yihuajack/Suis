@@ -29,7 +29,7 @@ template auto complex_to_string_with_name(const std::complex<double> c, const st
  *     If `a` has complex elements, the returned type is float.
  */
 template<typename T1, typename T2>
-auto real_if_close(const std::valarray<T1> &a, T2 tol = TOL) -> std::variant<std::valarray<T1>, std::valarray<T2>> {
+auto real_if_close(const std::valarray<T1> &a, T2 tol) -> std::variant<std::valarray<T1>, std::valarray<T2>> {
     // std::is_same_v<T1, float> or std::is_same_v<T1, double> or std::is_same_v<T1, long double>
     // or any extended floating-point types (std::float16_t, std::float32_t, std::float64_t, std::float128_t,
     // or std::bfloat16_t)(since C++23), including any cv-qualified variants.
@@ -47,17 +47,20 @@ auto real_if_close(const std::valarray<T1> &a, T2 tol = TOL) -> std::variant<std
     // First, you are not allowed to change the original valarray;
     // second, it is impossible to return a valarray that is not of type T
     // Besides, operands to '?:' cannot have different types.
-    if (std::all_of(std::begin(a), std::end(a), [&tol](const T1 &elem) {
+    if (std::ranges::all_of(a, [&tol](const T1 &elem) {
         return std::abs(elem.imag()) < tol;
     })) {
         std::valarray<T2> real_part_array(a.size());
-        std::transform(std::begin(a), std::end(a), std::begin(real_part_array), [](const std::complex<T2> c_num) {
+        std::ranges::transform(a, std::begin(real_part_array), [](const std::complex<T2> c_num) {
             return c_num.real();
         });
         return real_part_array;
     }
     return a;
 }
+
+template auto real_if_close(const std::valarray<std::complex<double>> &a,
+                            double tol = TOL) -> std::variant<std::valarray<std::complex<double>>, std::valarray<double>>;
 
 // real_if_close for singleton
 // The compiler takes responsibility to match only std::complex<T>template<typename T>

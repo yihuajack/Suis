@@ -1133,14 +1133,14 @@ void test_absorp_in_each_layer() {
 }
 
 void test_inc_group_layers() {
-    std::vector<std::valarray<std::complex<double>>> n_list = {{1.5, 1.3},
-                                                               {1.0 + 0.4i, 1.2 + 0.2i},
-                                                               {2.0 + 3i, 1.5 + 0.3i},
-                                                               {5, 4},
-                                                               {4.0 + 1i, 3.0 + 0.1i}};
-    std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
-    std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent};
-    inc_tmm_vec_dict<double> result = inc_group_layers(n_list, d_list, c_list);
+    const std::vector<std::valarray<std::complex<double>>> n_list = {{1.5, 1.3},
+                                                                     {1.0 + 0.4i, 1.2 + 0.2i},
+                                                                     {2.0 + 3i, 1.5 + 0.3i},
+                                                                     {5, 4},
+                                                                     {4.0 + 1i, 3.0 + 0.1i}};
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent};
+    const inc_tmm_vec_dict<double> result = inc_group_layers(n_list, d_list, c_list);
     const std::vector<std::vector<double>> stack_d_list = std::get<std::vector<std::vector<double>>>(result.at("stack_d_list"));
     assert(stack_d_list.size() == 1 and std::ranges::equal(stack_d_list.front(), std::valarray<double>{INFINITY, 200, 187.3, INFINITY}));
     const std::vector<std::vector<std::valarray<std::complex<double>>>> stack_n_list = std::get<std::vector<std::vector<std::valarray<std::complex<double>>>>>(result.at("stack_n_list"));
@@ -1165,6 +1165,25 @@ void test_inc_group_layers() {
 }
 
 // tests for inc_tmm
+
+void test_inc_tmm_exception() {
+    const inc_tmm_dict<double> exc = inc_tmm('s', {1.0 + 0.5i, 2, 3}, {INFINITY, 20, INFINITY}, {LayerType::Incoherent, LayerType::Incoherent, LayerType::Incoherent}, 0.5 + 0i, 500.0);
+}
+
+void test_inc_tmm_s_R() {
+    const std::vector<std::valarray<std::complex<double>>> n_list = {{1.5, 1.3},
+                                                               {1.0 + 0.4i, 1.2 + 0.2i},
+                                                               {2.0 + 3i, 1.5 + 0.3i},
+                                                               {5, 4},
+                                                               {4.0 + 1i, 3.0 + 0.1i}};
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent};
+    const std::valarray<double> lam_vac = {400, 1770};
+    const inc_tmm_vec_dict<double> result = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
+    const ApproxSequenceLike<std::valarray<double>, double> sR_approx = approx<std::valarray<double>, double>({0.06513963, 0.09735299});
+    assert(std::get<std::valarray<double>>(result.at("R")) == sR_approx);
+}
 
 void runall() {
     test_snell();
@@ -1201,6 +1220,7 @@ void runall() {
     test_add();
     test_absorp_in_each_layer();
     test_inc_group_layers();
+    test_inc_tmm_s_R();
 }
 
 void run_all_except() {
@@ -1213,8 +1233,9 @@ void run_all_except() {
     test_find_in_structure_exception();
     test_find_in_structure_inf();  // solcore's impl differs from tmm's - the latter one add 1 to layer
     test_add_exception();
+    test_inc_tmm_exception();
 }
 
 auto main() -> int {
-    test_inc_group_layers();
+    test_inc_tmm_s_R();
 }

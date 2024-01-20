@@ -24,7 +24,8 @@
  * lam_vac: T
  */
 template<typename T>
-using coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<T>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
+using coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::valarray<T>,
+        std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
 /*
  * r: std::complex<T>
  * t: std::complex<T>
@@ -41,19 +42,22 @@ using coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::
  * lam_vac: T
  */
 template<typename T>
-using stack_coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::vector<T>, std::vector<std::complex<T>>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
+using stack_coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T, std::complex<T>, std::vector<T>,
+        std::vector<std::complex<T>>, std::valarray<std::complex<T>>, std::vector<std::array<std::complex<T>, 2>>>>;
 /*
  * stack_d_list: std::vector<std::vector<T>>
  * stack_n_list: std::vector<std::vector<std::complex<T>>>
  * all_from_inc: std::vector<std::size_t>
- * inc_from_all: std::vector<long long int>
+ * inc_from_all: std::vector<std::ptrdiff_t>
  * all_from_stack: std::vector<std::vector<std::size_t>>
  * stack_from_all: std::vector<std::vector<std::size_t>>
- * inc_from_stack: std::vector<long long int>
- * stack_from_inc: std::vector<long long int>
+ * inc_from_stack: std::vector<std::ptrdiff_t>
+ * stack_from_inc: std::vector<std::ptrdiff_t>
  * num_stacks: std::size_t
  * num_inc_layers: std::size_t
  * num_layers: std::size_t
+ * T: T
+ * R: T
  * VW_list: std::valarray<std::array<T, 2>>
  * coh_tmm_data_list: std::vector<stack_coh_tmm_dict<T>>
  * coh_tmm_bdata_list: std::vector<coh_tmm_dict<T>>
@@ -61,7 +65,10 @@ using stack_coh_tmm_dict = std::unordered_map<std::string, std::variant<char, T,
  * power_entering_list: std::vector<T>
  */
 template<typename T>
-using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t, std::vector<std::size_t>, std::vector<long long int>, std::vector<T>, std::vector<coh_tmm_dict<T>>, std::vector<stack_coh_tmm_dict<T>>, std::vector<std::vector<T>>, std::vector<std::vector<std::complex<T>>>, std::vector<std::vector<std::size_t>>, std::valarray<std::array<T, 2>>>>;
+using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t, std::vector<std::size_t>,
+        std::vector<std::ptrdiff_t>, std::vector<T>, std::vector<coh_tmm_dict<T>>, std::vector<stack_coh_tmm_dict<T>>,
+        std::vector<std::vector<T>>, std::vector<std::vector<std::complex<T>>>, std::vector<std::vector<std::size_t>>,
+        std::valarray<std::array<T, 2>>>>;
 /*
  * r: std::valarray<std::complex<T>>
  * t: std::valarray<std::complex<T>>
@@ -78,7 +85,27 @@ using inc_tmm_dict = std::unordered_map<std::string, std::variant<T, std::size_t
  * lam_vac: std::valarray<T>
  */
 template<typename T>
-using coh_tmm_vec_dict = std::unordered_map<std::string, std::variant<char, std::complex<T>, std::valarray<T>, std::valarray<std::complex<T>>, std::valarray<std::vector<std::array<std::complex<T>, 2>>>>>;
+using coh_tmm_vec_dict = std::unordered_map<std::string, std::variant<char, std::complex<T>, std::valarray<T>,
+        std::valarray<std::complex<T>>, std::valarray<std::vector<std::array<std::complex<T>, 2>>>>>;
+/*
+ * r: std::valarray<std::complex<T>>
+ * t: std::valarray<std::complex<T>>
+ * R: std::valarray<T>
+ * T: std::valarray<T>
+ * power_entering: std::valarray<T>
+ * vw_list: std::valarray<std::vector<std::array<std::complex<T>, 2>>>
+ * kz_list: std::vector<std::valarray<std::complex<T>>>
+ * th_list: std::vector<std::valarray<std::complex<T>>>
+ * pol: char
+ * n_list: std::vector<std::valarray<std::complex<T>>>
+ * d_list: std::vector<T>
+ * th_0: std::complex<T>
+ * lam_vac: std::valarray<T>
+ */
+template<typename T>
+using coh_tmm_vecn_dict = std::unordered_map<std::string, std::variant<char, std::complex<T>, std::valarray<T>,
+        std::vector<T>, std::valarray<std::complex<T>>, std::vector<std::valarray<std::complex<T>>>,
+        std::valarray<std::vector<std::array<std::complex<T>, 2>>>>>;
 /*
  * stack_d_list: std::vector<std::vector<T>>
  * stack_n_list: std::vector<std::vector<std::valarray<std::complex<T>>>>
@@ -91,31 +118,19 @@ using coh_tmm_vec_dict = std::unordered_map<std::string, std::variant<char, std:
  * num_stacks: std::size_t
  * num_inc_layers: std::size_t
  * num_layers: std::size_t
- * VW_list: std::valarray<std::array<T, 2>>
- * coh_tmm_data_list: std::vector<stack_coh_tmm_dict<T>>
- * coh_tmm_bdata_list: std::vector<coh_tmm_dict<T>>
- * stackFB_list: std::valarray<std::array<T, 2>>
- * power_entering_list: std::vector<T>
- */
-template<typename T>
-using inc_tmm_vec_dict = std::unordered_map<std::string, std::variant<T, std::size_t, std::vector<std::size_t>, std::vector<std::ptrdiff_t>, std::vector<T>, std::vector<coh_tmm_dict<T>>, std::vector<stack_coh_tmm_dict<T>>, std::vector<std::vector<T>>, std::vector<std::vector<std::size_t>>, std::valarray<std::array<T, 2>>, std::vector<std::vector<std::valarray<std::complex<T>>>>>>;
-/*
- * r: std::valarray<std::complex<T>>
- * t: std::valarray<std::complex<T>>
+ * Tr: std::valarray<T>
  * R: std::valarray<T>
- * T: std::valarray<T>
- * power_entering: std::valarray<T>
- * vw_list: std::valarray<std::vector<std::array<std::complex<T>, 2>>>
- * kz_list: std::vector<std::valarray<std::complex<T>>>
- * th_list: std::vector<std::valarray<std::complex<T>>>
- * pol: char
- * n_list: std::vector<std::valarray<std::complex<T>>>
- * d_list: std::valarray<T>
- * th_0: std::complex<T>
- * lam_vac: std::valarray<T>
+ * VW_list: std::valarray<std::array<std::valarray<T>, 2>>
+ * coh_tmm_data_list: std::vector<coh_tmm_vecn_dict<T>>
+ * coh_tmm_bdata_list: std::vector<coh_tmm_vecn_dict<T>>
+ * stackFB_list: std::valarray<std::array<std::valarray<T>, 2>>
+ * power_entering_list: std::vector<std::valarray<T>>
  */
 template<typename T>
-using coh_tmm_vecn_dict = std::unordered_map<std::string, std::variant<char, std::complex<T>, std::valarray<T>, std::valarray<std::complex<T>>, std::vector<std::valarray<std::complex<T>>>, std::valarray<std::vector<std::array<std::complex<T>, 2>>>>>;
+using inc_tmm_vec_dict = std::unordered_map<std::string, std::variant<std::valarray<T>, std::size_t,
+        std::vector<std::size_t>, std::vector<std::ptrdiff_t>, std::vector<std::valarray<T>>,
+        std::vector<coh_tmm_vecn_dict<T>>, std::vector<std::vector<T>>, std::vector<std::vector<std::size_t>>,
+        std::vector<std::vector<std::valarray<std::complex<T>>>>, std::valarray<std::array<std::valarray<T>, 2>>>>;
 
 enum class LayerType { Coherent, Incoherent };
 
@@ -334,6 +349,11 @@ auto inc_group_layers(const std::vector<std::valarray<std::complex<T>>> &n_list,
 template<std::floating_point T>
 auto inc_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
              const std::valarray<LayerType> &c_list, std::complex<T> th_0, T lam_vac) -> inc_tmm_dict<T>;
+
+template<std::floating_point T>
+auto inc_tmm(char pol, const std::vector<std::valarray<std::complex<T>>> &n_list, const std::valarray<T> &d_list,
+             const std::valarray<LayerType> &c_list, const std::complex<T> th_0,
+             const std::valarray<T> &lam_vac) -> inc_tmm_vec_dict<T>;
 
 template<typename T>
 auto inc_absorp_in_each_layer(const inc_tmm_dict<T> &inc_data) -> std::vector<T>;

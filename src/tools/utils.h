@@ -87,6 +87,9 @@ inline auto complex_to_string_with_name(const std::complex<T> c, const std::stri
     return ss.str();
 }
 
+template<typename T1, typename T2>
+auto real_if_close(const std::valarray<T1> &a, T2 tol = TOL) -> std::variant<std::valarray<T1>, std::valarray<T2>>;
+
 template<typename T>
 auto real_if_close(const std::complex<T> &a, T tol = TOL) -> std::variant<T, std::complex<T>>;
 
