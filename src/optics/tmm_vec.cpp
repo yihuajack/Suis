@@ -193,7 +193,8 @@ template auto AbsorpAnalyticVecFn<double>::run(const double &z) const -> std::va
 template<typename T, typename TH_T>
 requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<TH_T, std::complex<T>>
 auto snell(const std::valarray<std::complex<T>> &n_1, const std::valarray<std::complex<T>> &n_2,
-           const TH_T &th_1, const std::size_t num_wl) -> std::valarray<std::complex<T>> {
+           const TH_T &th_1) -> std::valarray<std::complex<T>> {
+    const std::size_t num_wl = n_1.size();
     std::valarray<std::complex<T>> th_2_guess = std::asin(n_1 * std::sin(th_1) / n_2);
     for (std::size_t i = 0; i < num_wl; i++) {
         if (not is_forward_angle(n_2[i], th_2_guess[i])) {
@@ -229,13 +230,16 @@ auto list_snell(const std::valarray<std::complex<T>> &n_list, const TH_T &th_0,
     return angles;
 }
 
-template<std::floating_point T>
+template<std::floating_point T, typename TH_T>
+requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<TH_T, std::complex<T>>
 auto list_snell(const std::vector<std::valarray<std::complex<T>>> &n_list,
-                const std::valarray<std::complex<T>> &th_0) -> std::vector<std::valarray<std::complex<T>>> {
+                const TH_T &th_0) -> std::vector<std::valarray<std::complex<T>>> {
     const std::size_t num_layers = n_list.size();
-    const std::size_t num_wl = th_0.size();
-    if (n_list.front().size() not_eq num_wl) {
-        throw std::runtime_error("n_list elements' size mismatches th_0's size.");
+    const std::size_t num_wl = n_list.front().size();
+    if constexpr (std::is_same_v<TH_T, std::valarray<std::complex<T>>>) {
+        if (th_0.size() not_eq num_wl) {
+            throw std::runtime_error("n_list elements' size mismatches th_0's size.");
+        }
     }
     std::vector<std::valarray<std::complex<T>>> angles(num_layers, std::valarray<std::complex<T>>(num_wl));
     for (std::size_t i : std::views::iota(0U, num_layers)) {
@@ -692,8 +696,7 @@ auto coh_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
                             std::bind_front(std::less_equal<>(), TOL * EPSILON<T>))) {
         throw std::invalid_argument("Error in n0 or th0!");
     }
-    std::vector<std::valarray<std::complex<T>>> th_list(num_layers, std::valarray<std::complex<T>>(num_wl));
-    th_list = list_snell(n_list, th_0);
+    std::vector<std::valarray<std::complex<T>>> th_list = list_snell(n_list, th_0);
     std::valarray<std::complex<T>> comp_lam_vac(num_wl);
     std::ranges::transform(lam_vac, std::begin(comp_lam_vac), [](const T real) -> std::complex<T> {
         return real;
@@ -823,7 +826,7 @@ auto coh_tmm_reverse(const char pol, const std::valarray<std::complex<T>> &n_lis
 #else
     const std::valarray<std::complex<T>> th_f = snell(std::valarray<std::complex<T>>(n_list[std::slice(0, num_wl, 1)]),
                                                       std::valarray<std::complex<T>>(n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]),
-                                                      th_0, num_wl);
+                                                      th_0);
 #endif
     std::valarray<std::complex<T>> reversed_n_list(num_layers * num_wl);
     std::complex<T> *rev_nl_it = std::begin(reversed_n_list);
@@ -850,11 +853,11 @@ auto coh_tmm_reverse(const char pol, const std::vector<std::valarray<std::comple
                      const std::valarray<T> &lam_vac) -> coh_tmm_vecn_dict<T> {
     const std::size_t num_wl = lam_vac.size();
     const std::size_t num_layers = d_list.size();  // == n_list.size()
-    const std::valarray<std::complex<T>> th_f = snell(n_list.front(), n_list.at(num_layers - 1), th_0, num_wl);
+    const std::valarray<std::complex<T>> th_f = snell(n_list.front(), n_list.back(), th_0);
     std::vector<std::valarray<std::complex<T>>> reversed_n_list(num_layers, std::valarray<std::complex<T>>(num_wl));
-    std::ranges::reverse_copy(n_list, std::begin(reversed_n_list));
+    std::ranges::reverse_copy(n_list, reversed_n_list.begin());
     std::vector<T> reversed_d_list(num_layers);
-    std::ranges::reverse_copy(d_list, std::begin(reversed_d_list));
+    std::ranges::reverse_copy(d_list, reversed_d_list.begin());
     return coh_tmm(pol, reversed_n_list, reversed_d_list, th_f, lam_vac);
 }
 
@@ -1392,10 +1395,7 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
     const std::vector<std::ptrdiff_t> stack_from_inc = std::get<std::vector<std::ptrdiff_t>>(group_layer_data.at("stack_from_inc"));
     const std::vector<std::ptrdiff_t> inc_from_stack = std::get<std::vector<std::ptrdiff_t>>(group_layer_data.at("inc_from_stack"));
 
-    std::vector<std::valarray<std::complex<T>>> th_list(num_layers, std::valarray<std::complex<T>>(num_wl));
-    for (std::size_t i : std::views::iota(0U, num_layers)) {
-        th_list.at(i) = list_snell(n_list.at(i), th_0);
-    }
+    std::vector<std::valarray<std::complex<T>>> th_list = list_snell(n_list, th_0);
 
     std::vector<coh_tmm_vecn_dict<T>> coh_tmm_data_list;
     std::vector<coh_tmm_vecn_dict<T>> coh_tmm_bdata_list;
@@ -1409,10 +1409,10 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
         all_inc_i = all_from_inc.at(inc_index);
         for (std::size_t i : std::views::iota(0U, num_wl)) {
             P_list.at(inc_index)[i] = std::exp(-4 * std::numbers::pi_v<T> * d_list[all_inc_i] * (n_list.at(all_inc_i)[i] * std::cos(th_list.at(all_inc_i)[i])).imag() / lam_vac[i]);
-            if (P_list.at(inc_index)[i] < 1e-30) {
-                P_list.at(inc_index)[i] = 1e-30;
-            }
         }
+    }
+    for (std::valarray<T> &Pv : P_list) {
+        Pv[Pv < 1e-30] = 1e-30;
     }
     std::vector<std::vector<std::valarray<T>>> T_list(num_inc_layers, std::vector<std::valarray<T>>(num_inc_layers, std::valarray<T>(num_wl)));
     std::vector<std::vector<std::valarray<T>>> R_list(num_inc_layers, std::vector<std::valarray<T>>(num_inc_layers, std::valarray<T>(num_wl)));
@@ -1499,8 +1499,8 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
                    R_list.at(i).at(i + 1)[j], T_list.at(i + 1).at(i)[j] * T_list.at(i).at(i + 1)[j] - R_list.at(i + 1).at(i)[j] * R_list.at(i).at(i + 1)[j];
             L = boost::numeric::ublas::prod(L1, L2);
             L /= T_list.at(i).at(i + 1)[j];
-            Li[i] = L;
-            Ltilde[i] = boost::numeric::ublas::prod(Ltilde[i], L);
+            Li[j] = L;
+            Ltilde[j] = boost::numeric::ublas::prod(Ltilde[j], L);
         }
         L_list.emplace_back(Li);
     }

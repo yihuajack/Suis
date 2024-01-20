@@ -1172,10 +1172,10 @@ void test_inc_tmm_exception() {
 
 void test_inc_tmm_s_R() {
     const std::vector<std::valarray<std::complex<double>>> n_list = {{1.5, 1.3},
-                                                               {1.0 + 0.4i, 1.2 + 0.2i},
-                                                               {2.0 + 3i, 1.5 + 0.3i},
-                                                               {5, 4},
-                                                               {4.0 + 1i, 3.0 + 0.1i}};
+                                                                     {1.0 + 0.4i, 1.2 + 0.2i},
+                                                                     {2.0 + 3i, 1.5 + 0.3i},
+                                                                     {5, 4},
+                                                                     {4.0 + 1i, 3.0 + 0.1i}};
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent};
