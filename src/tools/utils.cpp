@@ -195,6 +195,21 @@ template auto va_2d_transpose(const std::valarray<double> &old_va,
 template auto va_2d_transpose(const std::valarray<std::size_t> &old_va,
                               std::size_t num_rows) -> std::valarray<std::size_t>;
 
+template<typename T>
+auto vec_2d_transpose(const std::vector<T> &old_vec, const std::size_t num_rows) -> std::vector<T> {
+    std::vector<T> new_vec(old_vec.size());
+    const std::size_t num_cols = old_vec.size() / num_rows;
+    for (std::size_t i = 0; i < num_rows; i++) {
+        for (std::size_t j = 0; j < num_cols; j++) {
+            new_vec.at(j * num_rows + i) = old_vec.at(i * num_cols + j);
+        }
+    }
+    return new_vec;
+}
+
+template auto vec_2d_transpose(const std::vector<double> &old_vec,
+                               std::size_t num_rows) -> std::vector<double>;
+
 template<std::ranges::sized_range U, typename T, std::size_t N>
 requires std::is_same_v<std::ranges::range_value_t<U>, std::vector<std::array<T, N>>>
 auto vva2_flatten(const U &vvan) -> std::vector<T> {
@@ -232,3 +247,15 @@ auto vv_flatten(const U &vv) -> std::vector<T> {
 }
 
 template auto vv_flatten(const std::valarray<std::valarray<double>> &vv) -> std::vector<double>;
+template auto vv_flatten(const std::vector<std::valarray<double>> &vv) -> std::vector<double>;
+
+template<std::ranges::sized_range U>
+inner_type<U>::type recursive_iterate(const U &nested_range) {
+    for (const typename U::value_type &elem : nested_range) {
+        if constexpr (std::ranges::sized_range<typename U::value_type>) {
+            recursive_iterate<typename U::value_type>(elem);
+        } else {
+            co_yield nested_range;
+        }
+    }
+}

@@ -11,6 +11,7 @@
 #include <concepts>
 #include <ranges>
 #include <type_traits>
+#include "utils.h"
 
 // https://stackoverflow.com/questions/30736951/templated-class-check-if-complex-at-compile-time
 template<typename T>
@@ -44,9 +45,21 @@ public:
     // requires std::ranges::sized_range<V>
     virtual auto operator==(const U &actual) const -> bool;
     // _yield_comparisons cannot be a pure virtual member function because ApproxScalar does not implement it.
-    virtual auto _yield_comparisons(const U &actual) const -> std::any;
+    // template functions cannot be virtual, because virtual is runtime while templates are compile-time.
+    // Explicit object member function cannot have 'const' qualifier
+    // #ifdef __cpp_explicit_this_parameter
+    // See Curiously Recurring Template Pattern (CRTP) https://en.cppreference.com/w/cpp/language/crtp
+    virtual auto _yield_comparisons(const U &actual) const -> std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type const>, std::ranges::ref_view<typename inner_type<U>::type const>>;
     template<FPScalar V>
     auto _approx_scalar(V x) const -> ApproxScalar<V, T>;
+};
+
+template<std::ranges::sized_range U, std::floating_point T>
+class ApproxNestedRange : public ApproxBase<U, T> {
+public:
+    using ApproxBase<U, T>::ApproxBase;
+    auto operator==(const U &actual) const -> bool override;
+    auto _yield_comparisons(const U &actual) const -> std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type const>, std::ranges::ref_view<typename inner_type<U>::type const>> override;
 };
 
 /*
@@ -57,7 +70,7 @@ class ApproxSequenceLike : public ApproxBase<U, T> {
 public:
     using ApproxBase<U, T>::ApproxBase;
     auto operator==(const U &actual) const -> bool override;
-    auto _yield_comparisons(const U &actual) const -> std::any override;
+    auto _yield_comparisons(const U &actual) const -> std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type const>, std::ranges::ref_view<typename inner_type<U>::type const>> override;
 };
 
 /*

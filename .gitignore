@@ -3,3 +3,4 @@ cmake-build-debug*
 *.exe
 vcpkg_installed
 build
+CMakeLists.txt.user

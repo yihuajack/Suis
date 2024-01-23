@@ -77,6 +77,21 @@ concept Complex2DContainer = requires(T container) {
 template<typename T>
 concept TwoDContainer = Scalar2DContainer<T> || Complex2DContainer<T>;
 
+// Auxiliary template structs to obtain the innermost range using std::void_t
+// https://stackoverflow.com/questions/59503567/how-can-i-deduce-the-inner-type-of-a-nested-stdvector-at-compile-time
+// It seems that metaprogramming libraries may achieve this more intuitively like boost::mp11, but I have no time
+// to play with them.
+// Note that std::complex also has member type value_type = T!
+template<class T, typename = void>
+struct inner_type {
+    using type = T;
+};
+
+template<class T>
+requires (not std::is_same_v<typename T::value_type, std::complex<typename T::value_type::value_type>>)
+struct inner_type<T, std::void_t<typename T::value_type::value_type>>
+        : inner_type<typename T::value_type> {};
+
 // Inline methods are supposed to be implemented in the header file
 // https://stackoverflow.com/questions/1421666/qt-creator-inline-function-used-but-never-defined-why
 template<typename T>
@@ -132,6 +147,9 @@ auto demangle(const char* mangled_name) -> std::string;
 template<typename T>
 auto va_2d_transpose(const std::valarray<T> &old_va, std::size_t num_rows) -> std::valarray<T>;
 
+template<typename T>
+auto vec_2d_transpose(const std::vector<T> &old_vec, std::size_t num_rows) -> std::vector<T>;
+
 template<std::ranges::sized_range U, typename T, std::size_t N>
 requires std::is_same_v<std::ranges::range_value_t<U>, std::vector<std::array<T, N>>>
 auto vva2_flatten(const U &vvan) -> std::vector<T>;
@@ -139,5 +157,8 @@ auto vva2_flatten(const U &vvan) -> std::vector<T>;
 template<std::ranges::sized_range U, typename T>
 requires std::is_same_v<std::ranges::range_value_t<U>, std::valarray<T>>
 auto vv_flatten(const U &vv) -> std::vector<T>;
+
+template<std::ranges::sized_range U>
+inner_type<U>::type recursive_iterate(const U &nested_range);
 
 #endif //UTILS_H

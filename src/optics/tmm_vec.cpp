@@ -1533,8 +1533,8 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
     std::valarray<T> B(num_wl);
     for (auto const [i, prev_inc_index] : std::views::enumerate(inc_from_stack)) {
         for (std::size_t j : std::views::iota(0U, num_wl)) {
-            F[j] = (prev_inc_index == 0) ? 1 : VW_list[prev_inc_index].at(j)[0] * P_list.at(prev_inc_index)[j];
-            B[j] = VW_list[prev_inc_index + 1].at(j)[1];
+            F[j] = (prev_inc_index == 0) ? 1 : VW_list[prev_inc_index].at(0)[j] * P_list.at(prev_inc_index)[j];
+            B[j] = VW_list[prev_inc_index + 1].at(1)[j];
         }
         stackFB_list[i] = {F, B};
     }

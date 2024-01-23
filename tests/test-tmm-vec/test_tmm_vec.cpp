@@ -1185,6 +1185,82 @@ void test_inc_tmm_s_R() {
     assert(std::get<std::valarray<double>>(result.at("R")) == sR_approx);
 }
 
+void test_inc_tmm_s_R_incfirst() {
+    // testing the case where the coherent stack DOES NOT start right after the semi-infinite layer
+    const std::vector<std::valarray<std::complex<double>>> n_list = {{1.5, 1.3},
+                                                                     {1.0 + 0.4i, 1.2 + 0.2i},
+                                                                     {2.0 + 3i, 1.5 + 0.3i},
+                                                                     {5, 4},
+                                                                     {4.0 + 1i, 3.0 + 0.1i}};
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Incoherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent};
+    const std::valarray<double> lam_vac = {400, 1770};
+    const inc_tmm_vec_dict<double> result = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
+    const ApproxSequenceLike<std::valarray<double>, double> sR_approx = approx<std::valarray<double>, double>({0.08254069, 0.07335674});
+    assert(std::get<std::valarray<double>>(result.at("R")) == sR_approx);
+}
+
+void test_inc_tmm_s_T() {
+    const std::vector<std::valarray<std::complex<double>>> n_list = {{1.5, 1.3},
+                                                                     {1.0 + 0.4i, 1.2 + 0.2i},
+                                                                     {2.0 + 1i, 1.5 + 0.3i},
+                                                                     {5, 4},
+                                                                     {4.0 + 1i, 3.0 + 0.1i}};
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 100.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent, LayerType::Incoherent};
+    const std::valarray<double> lam_vac = {400, 1770};
+    const inc_tmm_vec_dict<double> result = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
+    const ApproxSequenceLike<std::valarray<double>, double> sT_approx = approx<std::valarray<double>, double>({1.22080402e-04, 3.88581656e-01});
+    assert(std::get<std::valarray<double>>(result.at("T")) == sT_approx);
+}
+
+void test_inc_tmm_s_power_entering_list() {
+    const std::vector<std::valarray<std::complex<double>>> n_list = {{1.5, 1.3},
+                                                                     {1.0 + 0.4i, 1.2 + 0.2i},
+                                                                     {2.0 + 3i, 1.5 + 0.3i},
+                                                                     {5, 4},
+                                                                     {4.0 + 1i, 3.0 + 0.1i}};
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent};
+    const std::valarray<double> lam_vac = {400, 1770};
+    const inc_tmm_vec_dict<double> result = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
+    const ApproxSequenceLike<std::vector<double>, double> sp_approx = approx<std::vector<double>, double>(
+            vec_2d_transpose(
+                    std::vector<double>{1.00000000e+00, 1.09570873e-09, 1.09570873e-09,
+                                        1.00000000e+00, 3.87024124e-01, 3.87024124e-01}
+                    , 2));
+    const std::vector<double> sp_result = vv_flatten<std::vector<std::valarray<double>>, double>(std::get<std::vector<std::valarray<double>>>(result.at("power_entering_list")));
+    assert(sp_result == sp_approx);
+}
+
+void test_inc_tmm_s_VW_list() {
+    const std::vector<std::valarray<std::complex<double>>> n_list = {{1.5, 1.3},
+                                                                     {1.0 + 0.4i, 1.2 + 0.2i},
+                                                                     {2.0 + 1i, 1.5 + 0.3i},
+                                                                     {5, 4},
+                                                                     {4.0 + 1i, 3.0 + 0.1i}};
+    const std::valarray<double> d_list = {INFINITY, 200, 187.3, 100.5, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent, LayerType::Incoherent};
+    const std::valarray<double> lam_vac = {400, 1770};
+    const inc_tmm_vec_dict<double> result = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
+    const ApproxSequenceLike<std::vector<double>, double> VWl_approx = approx<std::vector<double>, double>(
+            {NAN, NAN,
+             4.99455825e-02, 6.91491754e-08,
+             1.25191080e-04, 3.11067761e-06,
+             1.22080402e-04, 0.00000000e+00,
+             NAN, NAN,
+             7.30898359e-01, 7.46196606e-02,
+             3.96967199e-01, 8.38554284e-03,
+             3.88581656e-01, 0.00000000e+00,
+            });
+    const std::valarray<std::array<std::valarray<double>, 2>> VWl_result = std::get<std::valarray<std::array<std::valarray<double>, 2>>>(result.at("VW_list"));
+    // assert(VWl_result == VWl_approx);
+}
+
 void runall() {
     test_snell();
     test_list_snell();
@@ -1221,6 +1297,9 @@ void runall() {
     test_absorp_in_each_layer();
     test_inc_group_layers();
     test_inc_tmm_s_R();
+    test_inc_tmm_s_R_incfirst();
+    test_inc_tmm_s_T();
+    test_inc_tmm_s_power_entering_list();
 }
 
 void run_all_except() {
@@ -1237,5 +1316,5 @@ void run_all_except() {
 }
 
 auto main() -> int {
-    test_inc_tmm_s_R();
+    test_inc_tmm_s_power_entering_list();
 }
