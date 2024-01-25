@@ -1510,7 +1510,7 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
         Tr[i] = 1 / Ltilde[i](0, 0);
         R[i] = Ltilde[i](1, 0) / Ltilde[i](0, 0);
     }
-    std::valarray<std::array<std::valarray<T>, 2>> VW_list(std::array<std::valarray<T>, 2>{std::valarray<T>(num_wl), std::valarray<T>(num_wl)}, num_layers);
+    std::valarray<std::array<std::valarray<T>, 2>> VW_list(std::array<std::valarray<T>, 2>{std::valarray<T>(num_wl), std::valarray<T>(num_wl)}, num_inc_layers);
     VW_list[0] = std::array<std::valarray<T>, 2>{std::valarray<T>(NAN, num_wl), std::valarray<T>(NAN, num_wl)};
     std::valarray<boost::numeric::ublas::matrix<T>> VW(boost::numeric::ublas::zero_matrix<T>(2, 2), num_wl);
     for (std::size_t i = 0; i < num_wl; i++) {
@@ -1518,8 +1518,8 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
         VW[i](0, 1) = Tr[i];
     }
     for (std::size_t i = 0; i < num_wl; i++) {
-        VW_list[num_layers - 1].at(0)[i] = VW[i](0, 0);
-        VW_list[num_layers - 1].at(1)[i] = VW[i](0, 1);
+        VW_list[num_inc_layers - 1].at(0)[i] = VW[i](0, 0);
+        VW_list[num_inc_layers - 1].at(1)[i] = VW[i](0, 1);
     }
     for (std::size_t i = num_inc_layers - 2; i > 0; --i) {
         for (std::size_t j = 0; j < num_wl; j++) {

@@ -4,6 +4,7 @@
 
 // GCC/Clang has already forwarded <algorithm> from <valarray>, but it is not the case for MSVC.
 #include <algorithm>
+#include <iostream>
 #include <vector>
 #include "utils.h"
 
@@ -128,6 +129,23 @@ auto linspace_va(const T start, const T stop, const std::size_t num) -> std::val
 
 template auto linspace_va(double start, double stop, std::size_t num) -> std::valarray<double>;
 
+void print_container(const std::ranges::common_range auto &container) {
+    for (const auto &item: container) {
+        std::cout << item << ' ';
+    }
+    std::cout << '\n';
+}
+
+template<TwoDContainer Container>
+void print_spec2d_container(const Container &container) {
+    for (const auto &row: container) {
+        for (const auto &item : row) {
+            std::cout << item << ' ';
+        }
+        std::cout << '\n';
+    }
+}
+
 // __GNUG__ is equivalent to (__GNUC__ && __cplusplus),
 // see https://gcc.gnu.org/onlinedocs/cpp/Common-Predefined-Macros.html
 // See https://gcc.gnu.org/onlinedocs/libstdc++/manual/ext_demangling.html
@@ -249,13 +267,15 @@ auto vv_flatten(const U &vv) -> std::vector<T> {
 template auto vv_flatten(const std::valarray<std::valarray<double>> &vv) -> std::vector<double>;
 template auto vv_flatten(const std::vector<std::valarray<double>> &vv) -> std::vector<double>;
 
+#ifdef __cpp_lib_generator
 template<std::ranges::sized_range U>
-inner_type<U>::type recursive_iterate(const U &nested_range) {
+std::generator<const typename inner_type<U>::type&> recursive_iterate(const U &nested_range) {
     for (const typename U::value_type &elem : nested_range) {
         if constexpr (std::ranges::sized_range<typename U::value_type>) {
-            recursive_iterate<typename U::value_type>(elem);
+            recursive_iterate(elem);
         } else {
             co_yield nested_range;
         }
     }
 }
+#endif

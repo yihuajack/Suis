@@ -1247,18 +1247,18 @@ void test_inc_tmm_s_VW_list() {
     const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent, LayerType::Incoherent};
     const std::valarray<double> lam_vac = {400, 1770};
     const inc_tmm_vec_dict<double> result = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
-    const ApproxSequenceLike<std::vector<double>, double> VWl_approx = approx<std::vector<double>, double>(
-            {NAN, NAN,
-             4.99455825e-02, 6.91491754e-08,
-             1.25191080e-04, 3.11067761e-06,
-             1.22080402e-04, 0.00000000e+00,
-             NAN, NAN,
-             7.30898359e-01, 7.46196606e-02,
-             3.96967199e-01, 8.38554284e-03,
-             3.88581656e-01, 0.00000000e+00,
-            });
+    std::valarray<std::array<std::valarray<double>, 2>> VW_list(std::array<std::valarray<double>, 2>{std::valarray<double>(2), std::valarray<double>(2)}, 4);
+    VW_list[0].front() = {NAN, NAN};
+    VW_list[0].back() = {4.99455825e-02, 6.91491754e-08};
+    VW_list[1].front() = {1.25191080e-04, 3.11067761e-06};
+    VW_list[1].back() = {1.22080402e-04, 0.00000000e+00};
+    VW_list[2].front() = {NAN, NAN};
+    VW_list[2].back() = {7.30898359e-01, 7.46196606e-02};
+    VW_list[3].front() = {3.96967199e-01, 8.38554284e-03};
+    VW_list[3].back() = {3.88581656e-01, 0.00000000e+00};
+    const ApproxNestedRange<std::valarray<std::array<std::valarray<double>, 2>>, double> VWl_approx = approx<std::valarray<std::array<std::valarray<double>, 2>>, double>(VW_list, NAN, NAN, true);
     const std::valarray<std::array<std::valarray<double>, 2>> VWl_result = std::get<std::valarray<std::array<std::valarray<double>, 2>>>(result.at("VW_list"));
-    // assert(VWl_result == VWl_approx);
+    assert(VWl_result == VWl_approx);
 }
 
 void runall() {
@@ -1300,6 +1300,7 @@ void runall() {
     test_inc_tmm_s_R_incfirst();
     test_inc_tmm_s_T();
     test_inc_tmm_s_power_entering_list();
+    test_inc_tmm_s_VW_list();
 }
 
 void run_all_except() {
@@ -1316,5 +1317,5 @@ void run_all_except() {
 }
 
 auto main() -> int {
-    test_inc_tmm_s_power_entering_list();
+    test_inc_tmm_s_VW_list();
 }

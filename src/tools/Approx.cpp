@@ -4,9 +4,23 @@
 
 #include <algorithm>
 #include <tuple>
-#include <valarray>
 #include <vector>
 #include "Approx.h"
+
+template<nested_range R>
+auto flatten_t::operator()(R &&r) const {
+    return std::forward<R>(r) | std::views::transform(*this) | std::views::join;
+}
+
+template<typename T>
+auto flatten_t::operator()(T &&t) const {
+    return std::forward<T>(t);
+}
+
+template<typename T>
+auto operator|(T &&t, flatten_t f) {
+    return f(std::forward<T>(t));
+}
 
 template<typename U, std::floating_point T>
 ApproxBase<U, T>::ApproxBase(U expected, const T abs, const T rel, const bool nan_ok) : expected(expected), abs(abs), rel(rel), nan_ok(nan_ok) {}
@@ -27,7 +41,7 @@ auto ApproxBase<U, T>::operator=(const ApproxBase &other) -> ApproxBase<U, T>& {
 }
 
 template<typename U, std::floating_point T>
-auto ApproxBase<U, T>::operator=(ApproxBase &&other) noexcept -> ApproxBase<U, T> & {
+auto ApproxBase<U, T>::operator=(ApproxBase &&other) noexcept -> ApproxBase<U, T>& {
     expected = std::move(other.expected);
     abs = other.abs;
     rel = other.rel;
@@ -63,14 +77,11 @@ auto ApproxBase<U, T>::operator==(const U &actual) const -> bool {
 #if defined(__clang__major__) and __clang_major__ < 18 and defined(__GLIBCXX__)
         throw std::logic_error("Clang version less than 18 and is using libstdc++.");
 #else
-        if constexpr (std::ranges::sized_range<typename U::value_type>) {  // ApproxNestedRange
-            for (const auto &elem : std::any_cast<std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type> const, std::ranges::ref_view<typename inner_type<U>::type const>>>(_yield_comparisons(actual))) {
-
-            }
-        } else if constexpr (FPScalar<typename U::value_type>) {  // ApproxSequenceLike
+        // Check SequenceLike first to avoid std::vector<std::complex<T>> matched by NestedRanges
+        if constexpr (FPScalar<typename U::value_type>) {  // ApproxSequenceLike
             return std::ranges::all_of(
-                    // std::any_cast<decltype(std::views::zip(expected, actual))>(_yield_comparisons(actual)),
-                    _yield_comparisons(actual),
+                    // std::any_cast<decltype(std::views::zip(actual, expected))>(_yield_comparisons(actual)),
+                    std::any_cast<std::ranges::zip_view<std::ranges::ref_view<U>, std::ranges::ref_view<U>>>(_yield_comparisons(actual)),
                     // this is implicitly required by _approx_scalar
                     // zipping 3 or more is a tuple, zipping just 2 is a pair (can also be a tuple of 2).
                     [this](const std::pair<typename U::value_type const&, typename U::value_type const&> &elem) -> bool {
@@ -80,6 +91,23 @@ auto ApproxBase<U, T>::operator==(const U &actual) const -> bool {
                         // _approx_scalar() cannot return ApproxScalar<U, T> for arbitrary type U, especially sequence-like U.
                         return a == _approx_scalar<typename U::value_type>(x);
                     });
+        } else if constexpr (std::ranges::sized_range<typename U::value_type>) {  // ApproxNestedRange
+            constexpr flatten_t flatten;
+            if constexpr (IsComplex<typename inner_type<U>::type> and std::is_same_v<typename inner_type<U>::type::value_type, T>) {
+                // std::vector<std::vector<std::complex<T>>> -> std::complex<T>
+                const std::pair<typename inner_type<U>::type const&, typename inner_type<U>::type const&> elem = std::any_cast<std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type const>, std::ranges::ref_view<typename inner_type<U>::type const>>>(_yield_comparisons(actual));
+                return elem.first == _approx_scalar(elem.second);
+            } else if constexpr (std::is_same_v<std::ranges::range_value_t<typename inner_type<U>::type>, T>) {
+                // std::vector<std::vector<T> -> std::vector<T>
+                return std::ranges::all_of(
+                        std::any_cast<std::ranges::zip_view<std::ranges::join_view<std::ranges::transform_view<std::ranges::ref_view<U const>, flatten_t>>,
+                        std::ranges::join_view<std::ranges::transform_view<std::ranges::ref_view<U const>, flatten_t>>>>(_yield_comparisons(actual)),
+                        [this](const std::pair<T&, T&> &elem) -> bool {
+                            return elem.first == _approx_scalar(elem.second);
+                        });
+            } else {
+                throw std::logic_error("Value type of nested ranges U is neither a sized range of T nor a complex of T.");
+            }
         } else {
             throw std::logic_error("Value type of U is neither a sized range nor an FPScalar.");
         }
@@ -94,7 +122,7 @@ auto ApproxBase<U, T>::operator==(const U &actual) const -> bool {
  * This is used to implement the `operator==` method.
  */
 template<typename U, std::floating_point T>
-auto ApproxBase<U, T>::_yield_comparisons(const U &actual) const -> std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type const>, std::ranges::ref_view<typename inner_type<U>::type const>> {
+auto ApproxBase<U, T>::_yield_comparisons(const U &actual) const -> std::any {
     throw std::logic_error("Not Implemented.");
 }
 
@@ -111,11 +139,16 @@ auto ApproxNestedRange<U, T>::operator==(const U &actual) const -> bool {
     }
     return ApproxBase<U, T>::operator==(actual);
 }
+
 template<std::ranges::sized_range U, std::floating_point T>
-auto ApproxNestedRange<U, T>::_yield_comparisons(const U &actual) const -> std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type const>, std::ranges::ref_view<typename inner_type<U>::type const>> {
-    const typename inner_type<U>::type innermost_expected = recursive_iterate(this->expected);
-    const typename inner_type<U>::type innermost_actual = recursive_iterate(actual);
-    return std::views::zip(innermost_actual, innermost_expected);
+auto ApproxNestedRange<U, T>::_yield_comparisons(const U &actual) const -> std::any {
+    // std::generator<const typename inner_type<U>::type &, void, void>
+    // co_yield std::views::zip(recursive_iterate(this->expected), recursive_iterate(actual));
+    // If co_yield in the member function, then this class has to be a generator which has a member named 'promise_type'.
+    // If using C++20 (no <generator> and std::generate), please refer to
+    // https://en.cppreference.com/w/cpp/coroutine/coroutine_handle
+    constexpr flatten_t flatten;
+    return std::views::zip(this->expected | flatten, actual | flatten);
 }
 
 template<std::ranges::sized_range U, std::floating_point T>
@@ -124,7 +157,7 @@ auto ApproxSequenceLike<U, T>::operator==(const U &actual) const -> bool {
 }
 
 template<std::ranges::sized_range U, std::floating_point T>
-auto ApproxSequenceLike<U, T>::_yield_comparisons(const U &actual) const -> std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type const>, std::ranges::ref_view<typename inner_type<U>::type const>> {
+auto ApproxSequenceLike<U, T>::_yield_comparisons(const U &actual) const -> std::any {
     return std::views::zip(actual, this->expected);
 }
 
@@ -196,6 +229,7 @@ auto ApproxScalar<U, T>::tolerance() const -> T {
 }
 
 template<std::ranges::sized_range U, std::floating_point T>
+requires FPScalar<std::ranges::range_value_t<U>>
 auto approx(const U &expected, const T rel, const T abs, const bool nan_ok) -> ApproxSequenceLike<U, T> {
     return ApproxSequenceLike<U, T>(expected, rel, abs, nan_ok);
 }
@@ -206,6 +240,7 @@ auto approx(const U expected, const T rel, const T abs, const bool nan_ok) -> Ap
 }
 
 template<std::ranges::sized_range U, std::floating_point T>
+requires std::ranges::sized_range<std::ranges::range_value_t<U>>
 auto approx(const U &expected, const T rel, const T abs, const bool nan_ok) -> ApproxNestedRange<U, T> {
     return ApproxNestedRange<U, T>(expected, rel, abs, nan_ok);
 }

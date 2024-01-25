@@ -7,7 +7,6 @@
 
 #include <complex>
 #include <concepts>
-#include <iostream>
 #include <limits>
 #include <ranges>
 #include <type_traits>
@@ -77,21 +76,6 @@ concept Complex2DContainer = requires(T container) {
 template<typename T>
 concept TwoDContainer = Scalar2DContainer<T> || Complex2DContainer<T>;
 
-// Auxiliary template structs to obtain the innermost range using std::void_t
-// https://stackoverflow.com/questions/59503567/how-can-i-deduce-the-inner-type-of-a-nested-stdvector-at-compile-time
-// It seems that metaprogramming libraries may achieve this more intuitively like boost::mp11, but I have no time
-// to play with them.
-// Note that std::complex also has member type value_type = T!
-template<class T, typename = void>
-struct inner_type {
-    using type = T;
-};
-
-template<class T>
-requires (not std::is_same_v<typename T::value_type, std::complex<typename T::value_type::value_type>>)
-struct inner_type<T, std::void_t<typename T::value_type::value_type>>
-        : inner_type<typename T::value_type> {};
-
 // Inline methods are supposed to be implemented in the header file
 // https://stackoverflow.com/questions/1421666/qt-creator-inline-function-used-but-never-defined-why
 template<typename T>
@@ -121,26 +105,14 @@ auto linspace_va(T start, T stop, std::size_t num) -> std::valarray<T>;
 // https://stackoverflow.com/questions/72792411/how-to-template-on-a-container-type
 // https://stackoverflow.com/questions/7728478/c-template-class-function-with-arbitrary-container-type-how-to-define-it
 // https://devblogs.microsoft.com/oldnewthing/20190619-00/?p=102599
-void print_container(const std::ranges::common_range auto &container) {
-    for (const auto &item: container) {
-        std::cout << item << ' ';
-    }
-    std::cout << '\n';
-}
+void print_container(const std::ranges::common_range auto &container);
 
 // Cannot do by
 // template<template<class...> class C, typename T>
 // auto print_spec_container(const C<T> &container) -> std::enable_if_t<std::is_same_v<C<T>, std::vector<std::array<std::complex<T>, 2>>>>;
 // but can be a generalized template<typename Container, typename T>
 template<TwoDContainer Container>
-void print_spec2d_container(const Container &container) {
-    for (const auto &row: container) {
-        for (const auto &item : row) {
-            std::cout << item << ' ';
-        }
-        std::cout << '\n';
-    }
-};
+void print_spec2d_container(const Container &container);;
 
 auto demangle(const char* mangled_name) -> std::string;
 
@@ -158,7 +130,25 @@ template<std::ranges::sized_range U, typename T>
 requires std::is_same_v<std::ranges::range_value_t<U>, std::valarray<T>>
 auto vv_flatten(const U &vv) -> std::vector<T>;
 
+// Auxiliary template structs to obtain the innermost range using std::void_t
+// https://stackoverflow.com/questions/59503567/how-can-i-deduce-the-inner-type-of-a-nested-stdvector-at-compile-time
+// It seems that metaprogramming libraries may achieve this more intuitively like boost::mp11 or newer boost::hana,
+// but I have no time to play with them.
+// Note that std::complex also has member type value_type = T!
+template<class T, typename = void>
+struct inner_type {
+    using type = T;
+};
+
+template<class T>
+struct inner_type<T, std::void_t<typename T::value_type::value_type>>
+        : inner_type<typename T::value_type> {};
+
+#ifdef __cpp_lib_generator
+#include <generator>
+
 template<std::ranges::sized_range U>
-inner_type<U>::type recursive_iterate(const U &nested_range);
+std::generator<const typename inner_type<U>::type&> recursive_iterate(const U &nested_range);
+#endif
 
 #endif //UTILS_H

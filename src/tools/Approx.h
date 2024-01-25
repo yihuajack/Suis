@@ -7,15 +7,26 @@
 
 #include <any>
 #include <cmath>
-#include <complex>
-#include <concepts>
-#include <ranges>
-#include <type_traits>
 #include "utils.h"
 
 // https://stackoverflow.com/questions/30736951/templated-class-check-if-complex-at-compile-time
 template<typename T>
 concept FPScalar = std::floating_point<T> or std::is_same_v<T, std::complex<typename T::value_type>> and std::is_floating_point_v<typename T:: value_type>;
+
+// https://stackoverflow.com/questions/71677049/flatten-a-multidimensional-vector-in-c
+template<typename R>
+concept nested_range = std::ranges::input_range<R> && std::ranges::range<std::ranges::range_reference_t<R>>;
+
+struct flatten_t {
+    template<nested_range R>
+    auto operator()(R && r) const;
+
+    template<typename T>
+    auto operator()(T && t) const;
+};
+
+template<typename T>
+auto operator|(T && t, flatten_t f);
 
 // Forward declaration for _approx_scalar()
 template<FPScalar U, std::floating_point T>
@@ -49,7 +60,10 @@ public:
     // Explicit object member function cannot have 'const' qualifier
     // #ifdef __cpp_explicit_this_parameter
     // See Curiously Recurring Template Pattern (CRTP) https://en.cppreference.com/w/cpp/language/crtp
-    virtual auto _yield_comparisons(const U &actual) const -> std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type const>, std::ranges::ref_view<typename inner_type<U>::type const>>;
+    // Explicit object parameter (deducing this) [P0847R7](https://wg21.link/P0847R7)
+    // https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p0847r7.html
+    // Supported since gcc 14, clang 18, and MSVC 19.32 (partial) at the time of writing (Jan 24, 2024)
+    virtual auto _yield_comparisons(const U &actual) const -> std::any;
     template<FPScalar V>
     auto _approx_scalar(V x) const -> ApproxScalar<V, T>;
 };
@@ -59,7 +73,7 @@ class ApproxNestedRange : public ApproxBase<U, T> {
 public:
     using ApproxBase<U, T>::ApproxBase;
     auto operator==(const U &actual) const -> bool override;
-    auto _yield_comparisons(const U &actual) const -> std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type const>, std::ranges::ref_view<typename inner_type<U>::type const>> override;
+    auto _yield_comparisons(const U &actual) const -> std::any override;
 };
 
 /*
@@ -70,7 +84,7 @@ class ApproxSequenceLike : public ApproxBase<U, T> {
 public:
     using ApproxBase<U, T>::ApproxBase;
     auto operator==(const U &actual) const -> bool override;
-    auto _yield_comparisons(const U &actual) const -> std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type const>, std::ranges::ref_view<typename inner_type<U>::type const>> override;
+    auto _yield_comparisons(const U &actual) const -> std::any override;
 };
 
 /*
@@ -90,9 +104,14 @@ public:
 };
 
 template<std::ranges::sized_range U, std::floating_point T>
+requires FPScalar<std::ranges::range_value_t<U>>
 auto approx(const U &expected, T rel = NAN, T abs = NAN, bool nan_ok = false) -> ApproxSequenceLike<U, T>;
 
 template<FPScalar U, std::floating_point T>
 auto approx(U expected, T rel = NAN, T abs = NAN, bool nan_ok = false) -> ApproxScalar<U, T>;
+
+template<std::ranges::sized_range U, std::floating_point T>
+requires std::ranges::sized_range<std::ranges::range_value_t<U>>
+auto approx(const U &expected, T rel = NAN, T abs = NAN, bool nan_ok = false) -> ApproxNestedRange<U, T>;
 
 #endif //APPROX_H
