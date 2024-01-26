@@ -99,7 +99,7 @@ using coh_tmm_vec_dict = std::unordered_map<std::string, std::variant<char, std:
  * pol: char
  * n_list: std::vector<std::valarray<std::complex<T>>>
  * d_list: std::vector<T>
- * th_0: std::complex<T>
+ * th_0: std::complex<T>/std::valarray<std::complex<T>>
  * lam_vac: std::valarray<T>
  */
 template<typename T>

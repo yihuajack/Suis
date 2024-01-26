@@ -1249,16 +1249,60 @@ void test_inc_tmm_s_VW_list() {
     const inc_tmm_vec_dict<double> result = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
     std::valarray<std::array<std::valarray<double>, 2>> VW_list(std::array<std::valarray<double>, 2>{std::valarray<double>(2), std::valarray<double>(2)}, 4);
     VW_list[0].front() = {NAN, NAN};
-    VW_list[0].back() = {4.99455825e-02, 6.91491754e-08};
-    VW_list[1].front() = {1.25191080e-04, 3.11067761e-06};
-    VW_list[1].back() = {1.22080402e-04, 0.00000000e+00};
-    VW_list[2].front() = {NAN, NAN};
-    VW_list[2].back() = {7.30898359e-01, 7.46196606e-02};
-    VW_list[3].front() = {3.96967199e-01, 8.38554284e-03};
-    VW_list[3].back() = {3.88581656e-01, 0.00000000e+00};
+    VW_list[0].back() = {NAN, NAN};
+    VW_list[1].front() = {4.99455825e-02, 7.30898359e-01};
+    VW_list[1].back() = {6.91491754e-08, 7.46196606e-02};
+    VW_list[2].front() = {1.25191080e-04, 3.96967199e-01};
+    VW_list[2].back() = {3.11067761e-06, 8.38554284e-03};
+    VW_list[3].front() = {1.22080402e-04, 3.88581656e-01};
+    VW_list[3].back() = {0.00000000e+00, 0.00000000e+00};
     const ApproxNestedRange<std::valarray<std::array<std::valarray<double>, 2>>, double> VWl_approx = approx<std::valarray<std::array<std::valarray<double>, 2>>, double>(VW_list, NAN, NAN, true);
     const std::valarray<std::array<std::valarray<double>, 2>> VWl_result = std::get<std::valarray<std::array<std::valarray<double>, 2>>>(result.at("VW_list"));
     assert(VWl_result == VWl_approx);
+}
+
+void test_inc_absorp_in_each_layer() {
+    std::valarray<std::array<std::valarray<double>, 2>> VW_list(std::array<std::valarray<double>, 2>{std::valarray<double>(2), std::valarray<double>(2)}, 4);
+    VW_list[0].front() = {NAN, NAN};
+    VW_list[0].back() = {NAN, NAN};
+    VW_list[1].front() = {4.99455825e-02, 7.30898359e-01};
+    VW_list[1].back() = {6.91491754e-08, 7.46196606e-02};
+    VW_list[2].front() = {1.25191080e-04, 3.96967199e-01};
+    VW_list[2].back() = {3.11067761e-06, 8.38554284e-03};
+    VW_list[3].front() = {1.22080402e-04, 3.88581656e-01};
+    VW_list[3].back() = {0.00000000e+00, 0.00000000e+00};
+    std::valarray<std::vector<std::array<std::complex<double>, 2>>> vw_list(std::vector<std::array<std::complex<double>, 2>>(2, std::array<std::complex<double>, 2>()), 3);
+    vw_list[0] = {{0, 0}, {0, 0}};
+    vw_list[1] = {{1.18009942 - 0.22823678i, -0.02194584 + 0.01826407i}, {1.0438036 - 0.08762503i,  0.00681749 - 0.09631804i}};
+    vw_list[2] = {{-0.16908171 + 0.0889725i, 0}, {0.59979328 + 0.5149352i, 0}};
+    std::vector<coh_tmm_vecn_dict<double>> coh_tmm_data_list(1);
+    coh_tmm_data_list.emplace_back(coh_tmm_vecn_dict<double>{
+            {"r", std::valarray{0.15815358 - 0.2099727i, 0.05062109 - 0.18394307i}},
+            {"t", std::valarray{-0.16908171 + 0.0889725i, 0.59979328 + 0.5149352i}},
+            {"R", std::valarray{0.06910109, 0.03639755}},
+            {"T", std::valarray{0.04994557, 0.73063361}},
+            {"power_entering", std::valarray{0.93089891, 0.96360245}},
+            {"vw_list", std::move(vw_list)},
+            {"kz_list", std::vector<std::valarray<std::complex<double>>>{{0.02250959, 0.00440866},
+                                                                         {0.01435451 + 0.00687561i, 0.00404247 + 0.00074813i},
+                                                                         {0.03079749 + 0.01602339i, 0.00515452 + 0.00110011i}}},
+            {"th_list", std::vector<std::valarray<std::complex<double>>>{{0.3, 0.3},
+                                                                         {0.38659626 - 0.16429512i, 0.3162772 - 0.05459799i},
+                                                                         {0.17752825 - 0.08995035i, 0.24849917 - 0.0507924i}}},
+            {"pol", 's'},
+            {"n_list", std::vector<std::valarray<std::complex<double>>>{{1.5, 1.3},
+                                                                        {1. + 0.4i, 1.2 + 0.2i},
+                                                                        {2. + 1.i, 1.5 + 0.3i}}},
+            {"d_list", std::vector<double>{INFINITY, 200, INFINITY}},
+            {"th_0", std::valarray<std::complex<double>>{0.3, 0.3}},
+            {"lam_vac", std::valarray<double>{400, 1770}}
+    });
+    const inc_tmm_vec_dict<double> inc_data = {
+            {"T", std::valarray{1.22080402e-04, 3.88581656e-01}},
+            {"R", std::valarray{0.0691011, 0.0934006}},
+            {"VW_list", VW_list},
+            {"coh_tmm_data_list", coh_tmm_data_list}
+    };
 }
 
 void runall() {

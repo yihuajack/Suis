@@ -81,7 +81,7 @@ auto ApproxBase<U, T>::operator==(const U &actual) const -> bool {
         if constexpr (FPScalar<typename U::value_type>) {  // ApproxSequenceLike
             return std::ranges::all_of(
                     // std::any_cast<decltype(std::views::zip(actual, expected))>(_yield_comparisons(actual)),
-                    std::any_cast<std::ranges::zip_view<std::ranges::ref_view<U>, std::ranges::ref_view<U>>>(_yield_comparisons(actual)),
+                    std::any_cast<std::ranges::zip_view<std::ranges::ref_view<const U>, std::ranges::ref_view<const U>>>(_yield_comparisons(actual)),
                     // this is implicitly required by _approx_scalar
                     // zipping 3 or more is a tuple, zipping just 2 is a pair (can also be a tuple of 2).
                     [this](const std::pair<typename U::value_type const&, typename U::value_type const&> &elem) -> bool {
@@ -155,7 +155,6 @@ template<std::ranges::sized_range U, std::floating_point T>
 auto ApproxSequenceLike<U, T>::operator==(const U &actual) const -> bool {
     return std::ranges::size(actual) == std::ranges::size(this->expected) and ApproxBase<U, T>::operator==(actual);
 }
-
 template<std::ranges::sized_range U, std::floating_point T>
 auto ApproxSequenceLike<U, T>::_yield_comparisons(const U &actual) const -> std::any {
     return std::views::zip(actual, this->expected);
