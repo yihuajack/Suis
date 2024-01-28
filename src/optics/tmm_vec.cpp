@@ -25,10 +25,15 @@ AbsorpAnalyticVecFn<T>::AbsorpAnalyticVecFn(const AbsorpAnalyticVecFn<T> &other)
                                                                                    A3(other.A3), d(other.d) {}
 
 template<typename T>
-void AbsorpAnalyticVecFn<T>::fill_in(const coh_tmm_vec_dict<T> &coh_tmm_data, const std::valarray<std::size_t> &layer) {
+void AbsorpAnalyticVecFn<T>::fill_in(const coh_tmm_vec_dict<T> &coh_tmm_data, const std::valarray<std::ptrdiff_t> &f_layer) {
     const char pol = std::get<char>(coh_tmm_data.at("pol"));
-    const std::size_t num_layers = layer.size();
+    const std::size_t num_layers = f_layer.size();
     const std::valarray<std::vector<std::array<std::complex<T>, 2>>> vw_list = std::get<std::valarray<std::vector<std::array<std::complex<T>, 2>>>>(coh_tmm_data.at("vw_list"));
+    std::valarray<std::size_t> layer(num_layers);
+    // layer = f_layer % num_layers
+    std::ranges::transform(f_layer, std::begin(layer), [num_layers](const std::ptrdiff_t li) -> std::size_t {
+        return (num_layers + li % num_layers) % num_layers;
+    });
     const std::size_t num_wl = vw_list[0].size();
     const std::size_t num_elems = num_layers * num_wl;
     std::valarray<std::size_t> l_indices(num_elems);
@@ -48,7 +53,7 @@ void AbsorpAnalyticVecFn<T>::fill_in(const coh_tmm_vec_dict<T> &coh_tmm_data, co
         [](const std::pair<std::size_t const &, std::size_t const &> &pair) -> std::size_t {
             return pair.first + pair.second;
         }), std::begin(l_indices));
-    l_indices = va_2d_transpose(l_indices, num_layers);
+    l_indices = rng2d_transpose(l_indices, num_layers);
     const std::valarray<std::vector<std::array<std::complex<T>, 2>>> vw_list_l = vw_list[layer];
     std::valarray<std::complex<T>> v(num_layers * num_wl);
     std::valarray<std::complex<T>> w(num_layers * num_wl);
@@ -84,7 +89,7 @@ void AbsorpAnalyticVecFn<T>::fill_in(const coh_tmm_vec_dict<T> &coh_tmm_data, co
         std::valarray<T> temp(num_elems);
         for (std::size_t i = 0; i < num_layers; i++) {
             for (std::size_t j = 0; j < num_wl; j++) {
-                temp[i * num_layers + j] = (n[i * num_layers + j] * std::cos(th[i * num_layers + j]) * kz[i * num_layers + j]).imag() / (n_0[j] * std::cos(th_0)).real();
+                temp[i * num_wl + j] = (n[i * num_wl + j] * std::cos(th[i * num_wl + j]) * kz[i * num_wl + j]).imag() / (n_0[j] * std::cos(th_0)).real();
             }
         }
         // Remember that we cannot pass std::views::transform(std::bind_front(std::multiplies<>(), temp)) to the pipeline
@@ -103,7 +108,7 @@ void AbsorpAnalyticVecFn<T>::fill_in(const coh_tmm_vec_dict<T> &coh_tmm_data, co
         std::valarray<T> temp(num_elems);
         for (std::size_t i = 0; i < num_layers; i++) {
             for (std::size_t j = 0; j < num_wl; j++) {
-                temp[i * num_layers + j] = 2 * kz[i * num_layers + j].imag() * (n[i * num_layers + j] * std::cos(std::conj(th[i * num_layers + j]))).real() / (n_0[j] * std::conj(std::cos(th_0))).real();
+                temp[i * num_wl + j] = 2 * kz[i * num_wl + j].imag() * (n[i * num_wl + j] * std::cos(std::conj(th[i * num_wl + j]))).real() / (n_0[j] * std::conj(std::cos(th_0))).real();
             }
         }
         std::ranges::move(w | std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::norm)), std::begin(A1));
@@ -112,8 +117,79 @@ void AbsorpAnalyticVecFn<T>::fill_in(const coh_tmm_vec_dict<T> &coh_tmm_data, co
         A2 *= temp;
         for (std::size_t i = 0; i < num_layers; i++) {
             for (std::size_t j = 0; j < num_wl; j++) {
-                A3[i * num_layers + j] = v[i * num_layers + j] * std::conj(w[i * num_layers + j]) * -2.0 * kz[i * num_layers + j].real() * (n[i * num_layers + j] * std::cos(std::conj(th[i * num_layers + j]))).imag() / (n_0[j] * std::conj(std::cos(th_0))).real();
+                A3[i * num_wl + j] = v[i * num_wl + j] * std::conj(w[i * num_wl + j]) * -2.0 * kz[i * num_wl + j].real() * (n[i * num_wl + j] * std::cos(std::conj(th[i * num_wl + j]))).imag() / (n_0[j] * std::conj(std::cos(th_0))).real();
             }
+        }
+    }
+}
+
+template<typename T>
+void AbsorpAnalyticVecFn<T>::fill_in(const coh_tmm_vecn_dict<T> &coh_tmm_data, const std::ptrdiff_t f_layer) {
+    const char pol = std::get<char>(coh_tmm_data.at("pol"));
+    const std::valarray<std::vector<std::array<std::complex<T>, 2>>> vw_list = std::get<std::valarray<std::vector<std::array<std::complex<T>, 2>>>>(coh_tmm_data.at("vw_list"));
+    const std::size_t num_wl = vw_list[0].front().size();
+    // Warning: Do not directly use operator% like f_layer % vw_list.size()!
+    // See https://stackoverflow.com/questions/7594508/why-does-the-modulo-operator-result-in-negative-values
+    // std::div(f_layer, vw_list.size()).rem also gives negative results
+    // f_layer is signed while num_layers is unsigned!
+    const std::ptrdiff_t num_layers = vw_list.size();
+    const std::size_t layer = (num_layers + f_layer % num_layers) % num_layers;
+    const std::vector<std::array<std::complex<T>, 2>> vw_list_l = vw_list[layer];
+    std::valarray<std::complex<T>> v(num_wl);
+    std::valarray<std::complex<T>> w(num_wl);
+    if (layer > 0) {
+        for (std::size_t i = 0; i < num_wl; i++) {
+            v[i] = vw_list_l.at(i).front();
+            w[i] = vw_list_l.at(i).back();
+        }
+    }
+    const std::valarray<std::complex<T>> kz = std::get<std::vector<std::valarray<std::complex<T>>>>(coh_tmm_data.at("kz_list")).at(layer);
+    const std::valarray<std::complex<T>> n = std::get<std::vector<std::valarray<std::complex<T>>>>(coh_tmm_data.at("n_list")).at(layer);
+    const std::valarray<std::complex<T>> th = std::get<std::vector<std::valarray<std::complex<T>>>>(coh_tmm_data.at("th_list")).at(layer);
+    d = std::get<std::vector<T>>(coh_tmm_data.at("d_list")).at(layer);
+    const std::valarray<std::complex<T>> n_0 = std::get<std::vector<std::valarray<std::complex<T>>>>(coh_tmm_data.at("n_list")).front();
+    const std::valarray<std::complex<T>> th_0 = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("th_0"));
+    a1.resize(num_wl);
+    a3.resize(num_wl);
+#ifdef _MSC_VER
+    std::ranges::move(2 * kz | std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::imag)), std::begin(a1));
+    std::ranges::move(2 * kz | std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::real)), std::begin(a3));
+#else
+    std::ranges::move(std::valarray<std::complex<T>>(2 * kz) | std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::imag)), std::begin(a1));
+    std::ranges::move(std::valarray<std::complex<T>>(2 * kz) | std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::real)), std::begin(a3));
+#endif
+    a1[a1 < 1e-30] = 0;
+    a3[a3 < 1e-30] = 0;
+    A1.resize(num_wl);
+    A2.resize(num_wl);
+    A3.resize(num_wl);
+    if (pol == 's') {
+        std::valarray<T> temp(num_wl);
+        for (std::size_t i = 0; i < num_wl; i++) {
+            temp[i] = (n[i] * std::cos(th[i]) * kz[i]).imag() / (n_0[i] * std::cos(th_0[i])).real();
+        }
+        std::ranges::move(w | std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::norm)), std::begin(A1));
+        A1 *= temp;
+        std::ranges::move(v | std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::norm)), std::begin(A2));
+        A2 *= temp;
+        std::ranges::move(w | std::views::transform(std::bind_front<std::complex<T> (*)(const std::complex<T> &)>(std::conj)), std::begin(A3));
+        std::valarray<std::complex<T>> c_temp(num_wl);
+        std::ranges::move(temp | std::views::transform([](const T real) -> std::complex<T> {
+            return real;
+        }), std::begin(c_temp));
+        A3 *= c_temp;
+        A3 *= v;
+    } else {
+        std::valarray<T> temp(num_wl);
+            for (std::size_t i = 0; i < num_wl; i++) {
+                temp[i] = 2 * kz[i].imag() * (n[i] * std::cos(std::conj(th[i]))).real() / (n_0[i] * std::conj(std::cos(th_0[i]))).real();
+            }
+        std::ranges::move(w | std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::norm)), std::begin(A1));
+        A1 *= temp;
+        std::ranges::move(v | std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::norm)), std::begin(A2));
+        A2 *= temp;
+        for (std::size_t i = 0; i < num_wl; i++) {
+            A3[i] = v[i] * std::conj(w[i]) * -2.0 * kz[i].real() * (n[i] * std::cos(std::conj(th[i]))).imag() / (n_0[i] * std::conj(std::cos(th_0[i]))).real();
         }
     }
 }
@@ -143,10 +219,23 @@ requires std::is_same_v<ZT, std::valarray<T>> || std::is_same_v<ZT, T>
 }
 
 template<typename T>
-void AbsorpAnalyticVecFn<T>::scale(const T factor) {
+template<typename FAC_T>
+// Note that std::is_same_v takes into account const/volatile qualifications and
+// std::remove_cv_ref_t<T> is equivalent to std::remove_cv_t<std::remove_reference_t<T>>
+requires std::is_same_v<FAC_T, T> or std::is_same_v<std::remove_cvref_t<FAC_T>, std::valarray<T>>
+void AbsorpAnalyticVecFn<T>::scale(FAC_T &&factor) {
     A1 *= factor;
     A2 *= factor;
-    A3 *= factor;
+    if constexpr (std::is_same_v<FAC_T, T>) {
+        A3 *= factor;
+    } else {
+        if (A3.size() not_eq factor.size()) {
+            throw std::runtime_error("A3 and factor have different sizes.");
+        }
+        std::ranges::transform(A3, factor, std::begin(A3), [](const std::complex<T> A3v, const T fac_v) {
+            return A3v * fac_v;
+        });
+    }
     const std::size_t Asz = A1.size();
     std::valarray<bool> infA(Asz);
     std::ranges::transform(A1, std::begin(infA), std::bind_front<bool (*)(const T)>(std::isinf));
@@ -158,6 +247,8 @@ void AbsorpAnalyticVecFn<T>::scale(const T factor) {
     std::ranges::transform(absA3, std::begin(infA), std::bind_front<bool (*)(const T)>(std::isinf));
     A3[infA] = 0;
 }
+
+template void AbsorpAnalyticVecFn<double>::scale(double &&factor);
 
 template<typename T>
 void AbsorpAnalyticVecFn<T>::add(const AbsorpAnalyticVecFn &b) {
@@ -176,14 +267,28 @@ void AbsorpAnalyticVecFn<T>::add(const AbsorpAnalyticVecFn &b) {
 
 template<typename T>
 void AbsorpAnalyticVecFn<T>::flip() {
-    std::valarray<T> newA1 = A2 * std::exp(-a1 * d);
-    newA1[A2 == 0] = 0;
-    std::valarray<T> newA2 = A1 * std::exp(a1 * d);
-    newA2[A1 == 0] = 0;
-    A1 = newA1;
-    A2 = newA2;
-    for (std::size_t i = 0; i < d.size(); i++) {
-        A3[i] = std::conj(A3[i] * std::exp(1i * a3[i] * d[i]));
+    if (const T *p_dval = std::get_if<T>(&d)) {
+        std::valarray<T> newA1 = A2 * std::exp(-a1 * *p_dval);
+        newA1[A2 == 0] = 0;
+        std::valarray<T> newA2 = A1 * std::exp(a1 * *p_dval);
+        newA2[A1 == 0] = 0;
+        A1 = std::move(newA1);
+        A2 = std::move(newA2);
+        for (std::size_t i = 0; i < A3.size(); i++) {
+            A3[i] = std::conj(A3[i] * std::exp(1i * a3[i] * *p_dval));
+        }
+    } else if (const std::valarray<T> *p_dva = std::get_if<std::valarray<T>>(&d)) {
+        std::valarray<T> newA1 = A2 * std::exp(-a1 * *p_dva);
+        newA1[A2 == 0] = 0;
+        std::valarray<T> newA2 = A1 * std::exp(a1 * *p_dva);
+        newA2[A1 == 0] = 0;
+        A1 = std::move(newA1);
+        A2 = std::move(newA2);
+        for (std::size_t i = 0; i < (*p_dva).size(); i++) {
+            A3[i] = std::conj(A3[i] * std::exp(1i * a3[i] * (*p_dva)[i]));
+        }
+    } else {
+        throw std::runtime_error("d of AbsorpAnalyticVecFn is neither T nor std::valarray<T>.");
     }
 }
 
@@ -511,7 +616,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // RtlRegisterSecureMemoryCacheCallback -> RtlAllocateHeap -> .misaligned_access -> RtlIsZeroMemory
     // Return code -1073740940 (0xC0000374) (STATUS_HEAP_CORRUPTION)
     // Transpose num_wl * num_layers to num_layers * num_wl
-    std::valarray<std::complex<T>> delta = kz_list * va_2d_transpose(compvec_d_list, num_wl);
+    std::valarray<std::complex<T>> delta = kz_list * rng2d_transpose(compvec_d_list, num_wl);
     // std::slice_array does not have std::begin() or std::end().
     std::ranges::transform(std::begin(delta) + num_wl, std::begin(delta) + (num_layers - 1) * num_wl, std::begin(delta) + num_wl, [](const std::complex<T> delta_i) {
         return delta_i.imag() > 100 ? delta_i.real() + 100i : delta_i;
@@ -979,7 +1084,7 @@ auto position_resolved(const std::valarray<std::size_t> &layer, const std::valar
     std::ranges::move(std::views::repeat(distance | std::views::transform([](const T real) -> std::complex<T> {
         return real;
     }), num_wl) | std::views::join, std::begin(comp_dist));
-    comp_dist = va_2d_transpose(comp_dist, num_wl);
+    comp_dist = rng2d_transpose(comp_dist, num_wl);
     const std::valarray<std::complex<T>> Ef = v * std::exp(1i * kz * comp_dist);
     const std::valarray<std::complex<T>> Eb = w * std::exp(-1i * kz * comp_dist);
     std::valarray<T> poyn(num_layers * num_wl);
@@ -1078,6 +1183,62 @@ auto position_resolved(const std::size_t layer, const T distance,
         for (std::size_t i = 0; i < num_wl; i++) {
             absor[i] = (n[i] * std::conj(std::cos(th[i])) * (kz[i] * std::norm(Ef[i] - Eb[i]) - std::conj(kz[i]) * std::norm(Ef[i] + Eb[i]))).imag() /
                             (n_0[i] * std::conj(std::cos(th_0))).real();
+        }
+    }
+    const std::valarray<std::complex<T>> Ex = pol == 's' ? std::valarray<std::complex<T>>{0} : (Ef - Eb) * std::cos(th);
+    const std::valarray<std::complex<T>> Ey = pol == 's' ? Ef + Eb : std::valarray<std::complex<T>>{0};
+    const std::valarray<std::complex<T>> Ez = pol == 's' ? std::valarray<std::complex<T>>{0} : -(Ef + Eb) * std::sin(th);
+    return {{"poyn", poyn}, {"absor", absor}, {"Ex", Ex}, {"Ey", Ey}, {"Ez", Ez}};
+}
+
+template<typename T>
+auto position_resolved(const std::size_t layer, const T distance,
+                       const coh_tmm_vecn_dict<T> &coh_tmm_data) -> std::unordered_map<std::string, std::variant<std::valarray<T>, std::valarray<std::complex<T>>>> {
+    const std::vector<std::array<std::complex<T>, 2>> vw_list_l = std::get<std::valarray<std::vector<std::array<std::complex<T>, 2>>>>(coh_tmm_data.at("vw_list"))[layer];
+    const std::size_t num_wl = vw_list_l.size();
+    std::valarray<std::complex<T>> v(1, num_wl);
+    std::valarray<std::complex<T>> w(num_wl);
+    if (layer > 0) {
+        for (std::size_t i = 0; i < num_wl; i++) {
+            v[i] = vw_list_l.at(i).at(0);
+            w[i] = vw_list_l.at(i).at(1);
+        }
+    } else {
+        w = std::get<std::valarray<std::complex<T>>>(coh_tmm_data.at("r"));
+    }
+    const std::valarray<std::complex<T>> kz = std::get<std::vector<std::valarray<std::complex<T>>>>(coh_tmm_data.at("kz_list")).at(layer);
+    const std::valarray<std::complex<T>> th = std::get<std::vector<std::valarray<std::complex<T>>>>(coh_tmm_data.at("th_list")).at(layer);
+    const std::valarray<std::complex<T>> n = std::get<std::vector<std::valarray<std::complex<T>>>>(coh_tmm_data.at("n_list")).at(layer);
+    const std::valarray<std::complex<T>> n_0 = std::get<std::vector<std::valarray<std::complex<T>>>>(coh_tmm_data.at("n_list")).front();
+    const std::complex<T> th_0 = std::get<std::complex<T>>(coh_tmm_data.at("th_0"));
+    const char pol = std::get<char>(coh_tmm_data.at("pol"));
+    if ((layer < 1 or 0 > distance or distance > std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer]) and (layer not_eq 0 or distance > 0)) {
+        throw std::runtime_error("Position cannot be resolved at layer " + std::to_string(layer));
+    }
+    const std::valarray<std::complex<T>> Ef = v * std::exp(1i * kz * distance);
+    const std::valarray<std::complex<T>> Eb = w * std::exp(-1i * kz * distance);
+    std::valarray<T> poyn(num_wl);
+    if (pol == 's') {
+        for (std::size_t i = 0; i < num_wl; i++) {
+            poyn[i] = (n[i] * std::cos(th[i]) * std::conj(Ef[i] + Eb[i]) * (Ef[i] - Eb[i])).real() /
+                      (n_0[i] * std::cos(th_0)).real();
+        }
+    } else if (pol == 'p') {
+        for (std::size_t i = 0; i < num_wl; i++) {
+            poyn[i] = (n[i] * std::conj(std::cos(th[i])) * (Ef[i] + Eb[i]) * std::conj(Ef[i] - Eb[i])).real() /
+                      (n_0[i] * std::conj(std::cos(th_0))).real();
+        }
+    }
+    std::valarray<T> absor(num_wl);
+    if (pol == 's') {
+        for (std::size_t i = 0; i < num_wl; i++) {
+            absor[i] = (n[i] * std::cos(th[i]) * kz[i] * std::norm(Ef[i] + Eb[i])).imag() /
+                       (n_0[i] * std::cos(th_0)).real();
+        }
+    } else if (pol == 'p') {
+        for (std::size_t i = 0; i < num_wl; i++) {
+            absor[i] = (n[i] * std::conj(std::cos(th[i])) * (kz[i] * std::norm(Ef[i] - Eb[i]) - std::conj(kz[i]) * std::norm(Ef[i] + Eb[i]))).imag() /
+                       (n_0[i] * std::conj(std::cos(th_0))).real();
         }
     }
     const std::valarray<std::complex<T>> Ex = pol == 's' ? std::valarray<std::complex<T>>{0} : (Ef - Eb) * std::cos(th);
@@ -1233,17 +1394,17 @@ auto layer_starts(const std::valarray<T> &d_list) -> std::valarray<T> {
 template auto layer_starts(const std::valarray<double> &d_list) -> std::valarray<double>;
 
 template<typename T>
-auto absorp_in_each_layer(const coh_tmm_vec_dict<T> &coh_tmm_data) -> std::valarray<std::valarray<T>> {
+auto absorp_in_each_layer(const coh_tmm_vec_dict<T> &coh_tmm_data) -> std::valarray<std::valarray<T>> {  // public
     const std::size_t num_layers = std::get<std::valarray<T>>(coh_tmm_data.at("d_list")).size();
-    const std::size_t num_lam_vec = std::get<std::valarray<T>>(coh_tmm_data.at("lam_vac")).size();
-    std::valarray<std::valarray<T>> power_entering_each_layer(std::valarray<T>(num_lam_vec), num_layers);
+    const std::size_t num_lam_vac = std::get<std::valarray<T>>(coh_tmm_data.at("lam_vac")).size();
+    std::valarray<std::valarray<T>> power_entering_each_layer(std::valarray<T>(num_lam_vac), num_layers);
     power_entering_each_layer[0] = 1;
     power_entering_each_layer[1] = std::get<std::valarray<T>>(coh_tmm_data.at("power_entering"));
     power_entering_each_layer[num_layers - 1] = std::get<std::valarray<T>>(coh_tmm_data.at("T"));
     for (std::size_t i = 2; i < num_layers - 1; i++) {
         power_entering_each_layer[i] = std::get<std::valarray<T>>(position_resolved(i, 0.0, coh_tmm_data).at("poyn"));
     }
-    std::valarray<std::valarray<T>> final_answer(std::valarray<T>(num_lam_vec), num_layers);
+    std::valarray<std::valarray<T>> final_answer(std::valarray<T>(num_lam_vac), num_layers);
     std::adjacent_difference(std::next(std::begin(power_entering_each_layer)), std::end(power_entering_each_layer),
                              std::begin(final_answer), [](const std::valarray<T> &x, const std::valarray<T> &y) {
                 return y - x;
@@ -1251,12 +1412,36 @@ auto absorp_in_each_layer(const coh_tmm_vec_dict<T> &coh_tmm_data) -> std::valar
     final_answer[0] = power_entering_each_layer[0] - power_entering_each_layer[1];
     final_answer[num_layers - 1] = power_entering_each_layer[num_layers - 1];
     for (std::size_t i = 0; i < num_layers; i++) {
-        final_answer[i][final_answer[i] < std::valarray<T>(0.0, num_lam_vec)] = 0;
+        final_answer[i][final_answer[i] < std::valarray<T>(0.0, num_lam_vac)] = 0;
     }
     return final_answer;
 }
 
 template auto absorp_in_each_layer(const coh_tmm_vec_dict<double> &coh_tmm_data) -> std::valarray<std::valarray<double>>;
+
+template<typename T>
+auto absorp_in_each_layer(const coh_tmm_vecn_dict<T> &coh_tmm_data) -> std::valarray<std::valarray<T>> {  // private
+    const std::size_t num_layers = std::get<std::vector<T>>(coh_tmm_data.at("d_list")).size();
+    const std::size_t num_lam_vac = std::get<std::valarray<T>>(coh_tmm_data.at("lam_vac")).size();
+    std::valarray<std::valarray<T>> power_entering_each_layer(std::valarray<T>(num_lam_vac), num_layers);
+    power_entering_each_layer[0] = 1;
+    power_entering_each_layer[1] = std::get<std::valarray<T>>(coh_tmm_data.at("power_entering"));
+    power_entering_each_layer[num_layers - 1] = std::get<std::valarray<T>>(coh_tmm_data.at("T"));
+    for (std::size_t i = 2; i < num_layers - 1; i++) {
+        power_entering_each_layer[i] = std::get<std::valarray<T>>(position_resolved(i, 0.0, coh_tmm_data).at("poyn"));
+    }
+    std::valarray<std::valarray<T>> final_answer(std::valarray<T>(num_lam_vac), num_layers);
+    std::adjacent_difference(std::next(std::begin(power_entering_each_layer)), std::end(power_entering_each_layer),
+                             std::begin(final_answer), [](const std::valarray<T> &x, const std::valarray<T> &y) {
+                return y - x;
+            });
+    final_answer[0] = power_entering_each_layer[0] - power_entering_each_layer[1];
+    final_answer[num_layers - 1] = power_entering_each_layer[num_layers - 1];
+    for (std::size_t i = 0; i < num_layers; i++) {
+        final_answer[i][final_answer[i] < std::valarray<T>(0.0, num_lam_vac)] = 0;
+    }
+    return final_answer;
+}
 
 template<typename T>
 auto inc_group_layers(const std::vector<std::valarray<std::complex<T>>> &n_list, const std::valarray<T> &d_list,
@@ -1573,3 +1758,60 @@ template auto inc_tmm(char pol, const std::vector<std::valarray<std::complex<dou
                       const std::valarray<double> &d_list, const std::valarray<LayerType> &c_list,
                       std::complex<double> th_0,
                       const std::valarray<double> &lam_vac) -> inc_tmm_vec_dict<double>;
+
+template<typename T>
+auto inc_absorp_in_each_layer(const inc_tmm_vec_dict<T> &inc_data) -> std::vector<std::valarray<T>> {
+    const std::vector<std::ptrdiff_t> stack_from_inc = std::get<std::vector<std::ptrdiff_t>>(inc_data.at("stack_from_inc"));
+    const std::vector<std::valarray<T>> power_entering_list = std::get<std::vector<std::valarray<T>>>(inc_data.at("power_entering_list"));
+    const std::valarray<std::array<std::valarray<T>, 2>> stackFB_list = std::get<std::valarray<std::array<std::valarray<T>, 2>>>(inc_data.at("stackFB_list"));
+    std::vector<std::valarray<T>> absorp_list;
+    const std::size_t num_wl = power_entering_list.front().size();
+    for (std::size_t i = 0; i < power_entering_list.size() - 1; i++) {
+        if (stack_from_inc.at(i + 1) == -1) {
+            absorp_list.emplace_back(power_entering_list.at(i) - power_entering_list.at(i + 1));
+        } else {
+            const std::size_t j = stack_from_inc.at(i + 1);
+            const coh_tmm_vecn_dict<T> coh_tmm_data = std::get<std::vector<coh_tmm_vecn_dict<T>>>(inc_data.at("coh_tmm_data_list")).at(j);
+            const coh_tmm_vecn_dict<T> coh_tmm_bdata = std::get<std::vector<coh_tmm_vecn_dict<T>>>(inc_data.at("coh_tmm_bdata_list")).at(j);
+            const std::valarray<T> power_exiting = stackFB_list[j].front() * std::get<std::valarray<T>>(coh_tmm_data.at("power_entering")) - stackFB_list[j].back() * std::get<std::valarray<T>>(coh_tmm_bdata.at("T"));
+            absorp_list.emplace_back(power_entering_list.at(i) - power_exiting);
+            const std::valarray<std::valarray<T>> fcoh_absorp = stackFB_list[j].front() * absorp_in_each_layer(coh_tmm_data);
+            const std::valarray<std::valarray<T>> bcoh_absorp = stackFB_list[j].back() * absorp_in_each_layer(coh_tmm_bdata);
+            const std::size_t num_layers = fcoh_absorp.size();  // == d_list.size()
+            const std::valarray<std::valarray<T>> stack_absorp = fcoh_absorp[std::slice(1, num_layers - 2, 1)] + bcoh_absorp[std::slice(num_layers - 2, num_layers - 2, -1)];
+#ifdef __cpp_lib_containers_ranges
+            absorp_list.append_range(stack_absorp);
+#else
+            absorp_list.insert(absorp_list.end(), std::cbegin(stack_absorp), std::cend(stack_absorp));
+#endif
+        }
+    }
+    absorp_list.push_back(std::get<std::valarray<T>>(inc_data.at("T")));
+    for (std::valarray<T> &absorp : absorp_list) {
+        absorp[absorp < 0] = 0;
+    }
+    return absorp_list;
+}
+
+template auto inc_absorp_in_each_layer(const inc_tmm_vec_dict<double> &inc_data) -> std::vector<std::valarray<double>>;
+
+template<typename T>
+auto inc_find_absorp_analytic_fn(const std::size_t layer, const inc_tmm_vec_dict<T> &inc_data) -> AbsorpAnalyticVecFn<T> {
+    std::vector<std::size_t> j = std::get<std::vector<std::vector<std::size_t>>>(inc_data.at("stack_from_all")).at(layer);
+    if (j.empty()) {
+        throw std::runtime_error("Layer must be coherent for this function!");
+    }
+    std::size_t stackindex = j.front();
+    std::size_t withinstackindex = j.back();
+    AbsorpAnalyticVecFn<T> forwardfunc;
+    forwardfunc.fill_in(std::get<std::vector<coh_tmm_vecn_dict<T>>>(inc_data.at("coh_tmm_data_list")).at(stackindex), withinstackindex);
+    forwardfunc.scale(std::get<std::valarray<std::array<std::valarray<T>, 2>>>(inc_data.at("stackFB_list"))[stackindex].front());
+    AbsorpAnalyticVecFn<T> backfunc;
+    backfunc.fill_in(std::get<std::vector<coh_tmm_vecn_dict<T>>>(inc_data.at("coh_tmm_bdata_list")).at(stackindex), -1 - withinstackindex);
+    backfunc.scale(std::get<std::valarray<std::array<std::valarray<T>, 2>>>(inc_data.at("stackFB_list"))[stackindex].back());
+    backfunc.flip();
+    forwardfunc.add(backfunc);
+    return forwardfunc;
+}
+
+template auto inc_find_absorp_analytic_fn(std::size_t layer, const inc_tmm_vec_dict<double> &inc_data) -> AbsorpAnalyticVecFn<double>;

@@ -1180,7 +1180,7 @@ template auto inc_absorp_in_each_layer(const inc_tmm_dict<double> &inc_data) -> 
  * inc_data is output of incoherent_main()
  */
 template<typename T>
-auto inc_find_absorp_analytic_fn(std::size_t layer, const inc_tmm_dict<T> &inc_data) -> AbsorpAnalyticFn<T> {
+auto inc_find_absorp_analytic_fn(const std::size_t layer, const inc_tmm_dict<T> &inc_data) -> AbsorpAnalyticFn<T> {
     std::vector<std::size_t> j = std::get<std::vector<std::vector<std::size_t>>>(inc_data.at("stack_from_all"))[layer];
     if (j.empty()) {
         throw std::runtime_error("Layer must be coherent for this function!");

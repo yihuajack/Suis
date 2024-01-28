@@ -199,7 +199,10 @@ public:
 template<typename T>
 class AbsorpAnalyticVecFn {
     std::valarray<std::complex<T>> A3;
-    std::valarray<T> a1, a3, A1, A2, d;
+    std::valarray<T> a1, a3, A1, A2;
+    // Warning: the size of d may be 1 filled by coh_tmm_vecn_dict, different from the other 4.
+    // The behavior of operator_arith3 is undefined when the two arguments are valarrays with different sizes.
+    std::variant<T, std::valarray<T>> d;
 public:
     AbsorpAnalyticVecFn() = default;
 
@@ -210,7 +213,8 @@ public:
      * (the output of coh_tmm), for absorption in the layer with index
      * "layer".
      */
-    void fill_in(const coh_tmm_vec_dict<T> &coh_tmm_data, const std::valarray<std::size_t> &layer);
+    void fill_in(const coh_tmm_vec_dict<T> &coh_tmm_data, const std::valarray<std::ptrdiff_t> &layer);
+    void fill_in(const coh_tmm_vecn_dict<T> &coh_tmm_data, std::ptrdiff_t layer);
     /*
      * Calculates absorption at a given depth z, where z=0 is the start of the
      * layer.
@@ -226,7 +230,9 @@ public:
     /*
      * multiplies the absorption at each point by "factor".
      */
-    void scale(T factor);
+    template<typename FAC_T>
+    requires std::is_same_v<FAC_T, T> or std::is_same_v<std::remove_cvref_t<FAC_T>, std::valarray<T>>
+    void scale(FAC_T &&factor);
     /*
      * adds another compatible absorption analytical function
      */
@@ -240,6 +246,7 @@ public:
     friend void test_scale();
     friend void test_add();
     friend void test_add_exception();
+    friend void test_inc_find_absorp_analytic_fn();
 };
 
 template<std::floating_point T>
@@ -352,10 +359,16 @@ auto inc_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::
 
 template<std::floating_point T>
 auto inc_tmm(char pol, const std::vector<std::valarray<std::complex<T>>> &n_list, const std::valarray<T> &d_list,
-             const std::valarray<LayerType> &c_list, const std::complex<T> th_0,
+             const std::valarray<LayerType> &c_list, std::complex<T> th_0,
              const std::valarray<T> &lam_vac) -> inc_tmm_vec_dict<T>;
 
 template<typename T>
 auto inc_absorp_in_each_layer(const inc_tmm_dict<T> &inc_data) -> std::vector<T>;
+
+template<typename T>
+auto inc_absorp_in_each_layer(const inc_tmm_vec_dict<T> &inc_data) -> std::vector<std::valarray<T>>;
+
+template<typename T>
+auto inc_find_absorp_analytic_fn(std::size_t layer, const inc_tmm_vec_dict<T> &inc_data) -> AbsorpAnalyticVecFn<T>;
 
 #endif // TMM_H

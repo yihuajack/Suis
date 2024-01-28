@@ -112,15 +112,15 @@ void print_container(const std::ranges::common_range auto &container);
 // auto print_spec_container(const C<T> &container) -> std::enable_if_t<std::is_same_v<C<T>, std::vector<std::array<std::complex<T>, 2>>>>;
 // but can be a generalized template<typename Container, typename T>
 template<TwoDContainer Container>
-void print_spec2d_container(const Container &container);;
+void print_spec2d_container(const Container &container);
 
 auto demangle(const char* mangled_name) -> std::string;
 
-template<typename T>
-auto va_2d_transpose(const std::valarray<T> &old_va, std::size_t num_rows) -> std::valarray<T>;
+template<std::ranges::sized_range U>
+auto rng2d_transpose(const U &old_va, std::size_t num_rows) -> U;
 
-template<typename T>
-auto vec_2d_transpose(const std::vector<T> &old_vec, std::size_t num_rows) -> std::vector<T>;
+template<std::ranges::sized_range U>
+auto rng2l_transpose(const U &old_rng) -> U;
 
 template<std::ranges::sized_range U, typename T, std::size_t N>
 requires std::is_same_v<std::ranges::range_value_t<U>, std::vector<std::array<T, N>>>

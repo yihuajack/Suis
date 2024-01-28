@@ -109,7 +109,7 @@ void test_interface_T() {
 void test_coh_tmm_exceptions() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -124,7 +124,7 @@ void test_coh_tmm_s_r() {
     // EWG 13 N3639, N3497, N3467, N3412 Runtime-sized arrays with automatic storage duration
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -136,7 +136,7 @@ void test_coh_tmm_s_r() {
 void test_coh_tmm_s_t() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -148,7 +148,7 @@ void test_coh_tmm_s_t() {
 void test_coh_tmm_s_R() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -160,7 +160,7 @@ void test_coh_tmm_s_R() {
 void test_coh_tmm_s_T() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -172,7 +172,7 @@ void test_coh_tmm_s_T() {
 void test_coh_tmm_s_power_entering() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -184,7 +184,7 @@ void test_coh_tmm_s_power_entering() {
 void test_coh_tmm_s_vw_list() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -218,7 +218,7 @@ void test_coh_tmm_s_vw_list() {
 void test_coh_tmm_p_power_entering() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -230,7 +230,7 @@ void test_coh_tmm_p_power_entering() {
 void test_coh_tmm_p_vw_list() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -264,7 +264,7 @@ void test_coh_tmm_p_vw_list() {
 void test_coh_tmm_kz_list() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -282,7 +282,7 @@ void test_coh_tmm_kz_list() {
 void test_coh_tmm_th_list() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -300,7 +300,7 @@ void test_coh_tmm_th_list() {
 void test_coh_tmm_inputs() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -322,7 +322,7 @@ void test_coh_tmm_inputs() {
 void test_coh_tmm_reverse() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -382,7 +382,7 @@ void test_coh_tmm_reverse() {
 void test_ellips_psi() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -394,7 +394,7 @@ void test_ellips_psi() {
 void test_ellips_Delta() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -406,7 +406,7 @@ void test_ellips_Delta() {
 void test_unpolarized_RT_R() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -418,7 +418,7 @@ void test_unpolarized_RT_R() {
 void test_unpolarized_RT_T() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = va_2d_transpose(n_list, 2);
+    n_list = rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -486,7 +486,7 @@ void test_position_resolved_s_poyn() {
     const std::unordered_map<std::string, std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> pr_result = position_resolved({0, 1, 1, 2, 2, 3, 3, 4, 4},
                                                                                                                                                   {20, 10, 200, 20, 50.8, 10, 2000, 0, 200},
                                                                                                                                                   coh_tmm_data);
-    const ApproxSequenceLike<std::valarray<double>, double> poyn_approx = approx<std::valarray<double>, double>(va_2d_transpose(std::valarray<double>{
+    const ApproxSequenceLike<std::valarray<double>, double> poyn_approx = approx<std::valarray<double>, double>(rng2d_transpose(std::valarray<double>{
             0.00000000e+00, 8.24769450e-01, 2.59652919e-02, 3.88663596e-03,
             2.08618804e-04, 1.15234465e-09, 1.15234465e-09, 1.15234466e-09,
             2.07458676e-12,
@@ -555,7 +555,7 @@ void test_position_resolved_s_absor() {
     const std::unordered_map<std::string, std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> pr_result = position_resolved({0, 1, 1, 2, 2, 3, 3, 4, 4},
                                                                                                                                                   {20, 10, 200, 20, 50.8, 10, 2000, 0, 200},
                                                                                                                                                   coh_tmm_data);
-    const ApproxSequenceLike<std::valarray<double>, double> absorption_approx = approx<std::valarray<double>, double>(va_2d_transpose(std::valarray<double>{
+    const ApproxSequenceLike<std::valarray<double>, double> absorption_approx = approx<std::valarray<double>, double>(rng2d_transpose(std::valarray<double>{
             0.00000000e+00, 1.02697381e-02, 1.64378595e-04, 3.69077590e-04,
             1.98105861e-05, 0.00000000e+00, 0.00000000e+00, 3.64128877e-11,
             6.55547748e-14,
@@ -624,7 +624,7 @@ void test_position_resolved_p_poyn() {
     const std::unordered_map<std::string, std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> pr_result = position_resolved({0, 1, 1, 2, 2, 3, 3, 4, 4},
                                                                                                                                                   {20, 10, 200, 20, 50.8, 10, 2000, 0, 200},
                                                                                                                                                   coh_tmm_data);
-    const ApproxSequenceLike<std::valarray<double>, double> poyn_approx = approx<std::valarray<double>, double>(va_2d_transpose(std::valarray<double>{
+    const ApproxSequenceLike<std::valarray<double>, double> poyn_approx = approx<std::valarray<double>, double>(rng2d_transpose(std::valarray<double>{
             0.00000000e+00, 8.45520745e-01, 2.87382013e-02, 4.30170256e-03,
             2.30897897e-04, 1.24068740e-09, 1.24068740e-09, 1.24068740e-09,
             2.23363177e-12,
@@ -693,7 +693,7 @@ void test_position_resolved_p_absor() {
     const std::unordered_map<std::string, std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> pr_result = position_resolved({0, 1, 1, 2, 2, 3, 3, 4, 4},
                                                                                                                                                   {20, 10, 200, 20, 50.8, 10, 2000, 0, 200},
                                                                                                                                                   coh_tmm_data);
-    const ApproxSequenceLike<std::valarray<double>, double> absor_approx = approx<std::valarray<double>, double>(va_2d_transpose(std::valarray<double>{
+    const ApproxSequenceLike<std::valarray<double>, double> absor_approx = approx<std::valarray<double>, double>(rng2d_transpose(std::valarray<double>{
             0.00000000e+00, 1.08969642e-02, 5.17505408e-04, 4.08492602e-04,
             2.19262267e-05, 0.00000000e+00, 0.00000000e+00, 3.92044315e-11,
             7.05804410e-14,
@@ -930,7 +930,7 @@ void test_copy() {
     a.A1 = {2};
     a.A2 = {7};
     a.A3 = {5.0 + 3i};
-    a.d = {7, 3};
+    a.d = std::valarray<double>{7, 3};
     AbsorpAnalyticVecFn<double> b(a);
     std::vector<std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> azip(5);
     azip.front() = a.a1;
@@ -1014,7 +1014,7 @@ void test_scale() {
     assert(a.A1 == A1_approx);
     assert(a.A2 == A2_approx);
     assert(a.A3 == A3_approx);
-    assert(a.d == d_approx);
+    assert(std::get<std::valarray<double>>(a.d) == d_approx);
 }
 
 void test_add() {
@@ -1045,7 +1045,7 @@ void test_add() {
     assert(a.A1 == A1_approx);
     assert(a.A2 == A2_approx);
     assert(a.A3 == A3_approx);
-    assert(a.d == d_approx);
+    assert(std::get<std::valarray<double>>(a.d) == d_approx);
 }
 
 void test_add_exception() {
@@ -1228,7 +1228,7 @@ void test_inc_tmm_s_power_entering_list() {
     const std::valarray<double> lam_vac = {400, 1770};
     const inc_tmm_vec_dict<double> result = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
     const ApproxSequenceLike<std::vector<double>, double> sp_approx = approx<std::vector<double>, double>(
-            vec_2d_transpose(
+            rng2d_transpose(
                     std::vector<double>{1.00000000e+00, 1.09570873e-09, 1.09570873e-09,
                                         1.00000000e+00, 3.87024124e-01, 3.87024124e-01}
                     , 2));
@@ -1275,14 +1275,14 @@ void test_inc_absorp_in_each_layer() {
     vw_list[0] = {{0, 0}, {0, 0}};
     vw_list[1] = {{1.18009942 - 0.22823678i, -0.02194584 + 0.01826407i}, {1.0438036 - 0.08762503i,  0.00681749 - 0.09631804i}};
     vw_list[2] = {{-0.16908171 + 0.0889725i, 0}, {0.59979328 + 0.5149352i, 0}};
-    std::vector<coh_tmm_vecn_dict<double>> coh_tmm_data_list(1);
+    std::vector<coh_tmm_vecn_dict<double>> coh_tmm_data_list;
     coh_tmm_data_list.emplace_back(coh_tmm_vecn_dict<double>{
             {"r", std::valarray{0.15815358 - 0.2099727i, 0.05062109 - 0.18394307i}},
             {"t", std::valarray{-0.16908171 + 0.0889725i, 0.59979328 + 0.5149352i}},
             {"R", std::valarray{0.06910109, 0.03639755}},
             {"T", std::valarray{0.04994557, 0.73063361}},
             {"power_entering", std::valarray{0.93089891, 0.96360245}},
-            {"vw_list", std::move(vw_list)},
+            {"vw_list", vw_list},  // if std::move(vw_list) here, vw_list below will be dead.
             {"kz_list", std::vector<std::valarray<std::complex<double>>>{{0.02250959, 0.00440866},
                                                                          {0.01435451 + 0.00687561i, 0.00404247 + 0.00074813i},
                                                                          {0.03079749 + 0.01602339i, 0.00515452 + 0.00110011i}}},
@@ -1297,12 +1297,108 @@ void test_inc_absorp_in_each_layer() {
             {"th_0", std::valarray<std::complex<double>>{0.3, 0.3}},
             {"lam_vac", std::valarray<double>{400, 1770}}
     });
+    std::vector<coh_tmm_vecn_dict<double>> coh_tmm_bdata_list;
+    vw_list[1] = {{1.37311562 + 0.0051288i, -0.00368788 + 0.02468907i}, {1.13241606 + 0.01868049i, -0.07494402 - 0.03433257i}};
+    vw_list[2] = {{-0.29467151 + 0.00137131i, 0}, {0.57277308 + 0.75172209i, 0}};
+    coh_tmm_bdata_list.emplace_back(coh_tmm_vecn_dict<double>{
+            {"r", std::valarray{0.36942774 + 0.02981787i, 0.05747204 - 0.01565208i}},
+            {"t", std::valarray{-0.29467151 + 0.00137131i,  0.57277308 + 0.75172209i}},
+            {"R", std::valarray{0.13736596, 0.00354802}},
+            {"T", std::valarray{0.06346552, 0.76391471}},
+            {"power_entering", std::valarray{0.89366146, 0.98977083}},
+            {"vw_list", std::move(vw_list)},
+            {"kz_list", std::vector<std::valarray<std::complex<double>>>{{0.03079749 + 1.60233896e-02i, 0.00515452 + 1.10011324e-03i},
+                                                                         {0.01435451 + 6.87561247e-03i, 0.00404247 + 7.48130214e-04i},
+                                                                         {0.02250959 + 1.34865520e-19i, 0.00440866 - 1.52390418e-20i}}},
+            {"th_list", std::vector<std::valarray<std::complex<double>>>{{0.17752825 - 8.99503525e-02i, 0.24849917 - 5.07924048e-02i},
+                                                                         {0.38659626 - 1.64295119e-01i, 0.3162772 - 5.45979936e-02i},
+                                                                         {0.3 - 1.93687955e-17i, 0.3 + 1.11743051e-17i}}},
+            {"pol", 's'},
+            {"n_list", std::vector<std::valarray<std::complex<double>>>{{2. + 1.i, 1.5 + 0.3i},
+                                                                        {1. + 0.4i, 1.2 + 0.2i},
+                                                                        {1.5, 1.3}}},
+            {"d_list", std::vector<double>{INFINITY, 200, INFINITY}},
+            {"th_0", std::valarray<std::complex<double>>{0.17752825 - 0.08995035i, 0.24849917 - 0.0507924i}},
+            {"lam_vac", std::valarray<double>{400, 1770}}
+    });
+    std::valarray<std::array<std::valarray<double>, 2>> stackFB_list(std::array<std::valarray<double>, 2>{std::valarray<double>(2), std::valarray<double>(2)}, 1);
+    stackFB_list[0] = std::array<std::valarray<double>, 2>{std::valarray<double>{1, 1}, std::valarray<double>{6.91491754e-08, 7.46196606e-02}};  // diff
     const inc_tmm_vec_dict<double> inc_data = {
             {"T", std::valarray{1.22080402e-04, 3.88581656e-01}},
             {"R", std::valarray{0.0691011, 0.0934006}},
             {"VW_list", VW_list},
-            {"coh_tmm_data_list", coh_tmm_data_list}
+            {"coh_tmm_data_list", std::move(coh_tmm_data_list)},
+            {"coh_tmm_bdata_list", std::move(coh_tmm_bdata_list)},
+            {"stackFB_list", std::move(stackFB_list)},
+            {"power_entering_list", rng2l_transpose(std::vector<std::valarray<double>>{
+                    {1, 4.99455112e-02, 1.22080402e-04, 1.22080402e-04},
+                    {1, 6.56777243e-01, 3.88581656e-01, 3.88581656e-01}})},
+            {"stack_d_list", std::vector<std::vector<double>>{{INFINITY, 200, INFINITY}}},
+            {"stack_n_list", std::vector<std::vector<std::valarray<std::complex<double>>>>{{{1.5, 1.3},
+                                                                                            {1.0 + 0.4i, 1.2 + 0.2i},
+                                                                                            {2.0 + 1i, 1.5 + 0.3i}}}},
+            {"all_from_inc", std::vector<std::size_t>{0, 2, 3, 4}},
+            {"inc_from_all", std::vector<std::ptrdiff_t>{0, -1, 1, 2, 3}},
+            {"all_from_stack", std::vector<std::vector<std::size_t>>{{0, 1, 2}}},
+            {"stack_from_all", std::vector<std::vector<std::size_t>>{{}, {0, 1}, {}, {}, {}}},
+            {"inc_from_stack", std::vector<std::ptrdiff_t>{0}},
+            {"stack_from_inc", std::vector<std::ptrdiff_t>{-1, 0, -1, -1}},
+            {"num_stacks", 1U},
+            {"num_inc_layers", 4U},
+            {"num_layers", 5U}
     };
+    const ApproxNestedRange<std::vector<std::valarray<double>>, double> absorp_approx = approx<std::vector<std::valarray<double>>, double>(std::vector<std::valarray<double>>{{6.91010944e-02, 9.34006064e-02},
+                                                                                                                                                                              {8.80953397e-01, 2.49822147e-01},
+                                                                                                                                                                              {4.98234308e-02, 2.68195587e-01},
+                                                                                                                                                                              {0, 0},
+                                                                                                                                                                              {1.22080402e-04, 3.88581656e-01}});
+    assert(inc_absorp_in_each_layer(inc_data) == absorp_approx);
+}
+
+void test_inc_find_absorp_analytic_fn_exception() {
+    const inc_tmm_vec_dict<double> inc_data = {{"stack_from_all", std::vector<std::vector<std::size_t>>{{}, {0, 1}, {}, {}, {}}}};
+    inc_find_absorp_analytic_fn(2, inc_data);
+}
+
+void test_inc_find_absorp_analytic_fn() {
+    const std::vector<std::valarray<std::complex<double>>> n_list = {{1, 1}, {2, 3}, {2, 3}, {1, 1}};
+    const std::valarray<double> d_list = {INFINITY, 100, 1000, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {100, 500};
+    const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent};
+    const inc_tmm_vec_dict<double> inc_tmm_data = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
+    AbsorpAnalyticVecFn<double> a = inc_find_absorp_analytic_fn(1, inc_tmm_data);
+    std::vector<std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> re_result(5);
+    re_result.front() = a.a1;
+    re_result.at(1) = a.a3;
+    re_result.at(2) = a.A1;
+    re_result.at(3) = a.A2;
+    re_result.back() = a.A3;
+    std::vector<std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> re_approx(5);
+    re_approx.front() = std::valarray{0.0, 0.0};
+    re_approx.at(1) = std::valarray{0.24856865, 0.07503152};
+    re_approx.at(2) = std::valarray{0.0, 0.0};
+    re_approx.at(3) = std::valarray{0.0, 0.0};
+    re_approx.back() = std::valarray{0.0, 0.0};
+    for (const std::pair<std::variant<std::valarray<double>, std::valarray<std::complex<double>>> &, std::variant<std::valarray<double>, std::valarray<std::complex<double>>> &> &elem : std::views::zip(re_result, re_approx)) {
+        const std::variant<std::valarray<double>, std::valarray<std::complex<double>>> r = elem.first;
+        const std::variant<std::valarray<double>, std::valarray<std::complex<double>>> e = elem.second;
+        const std::valarray<double> *prvt = std::get_if<std::valarray<double>>(&r);
+        const std::valarray<double> *pevt = std::get_if<std::valarray<double>>(&e);
+        const std::valarray<std::complex<double>> *prvct = std::get_if<std::valarray<std::complex<double>>>(&r);
+        const std::valarray<std::complex<double>> *pevct = std::get_if<std::valarray<std::complex<double>>>(&e);
+        if (prvt and pevt) {
+            assert(std::ranges::equal(*prvt, *pevt, [](const double rt, const double et) -> bool {
+                return rt == approx(et, 1e-5);
+            }));
+        } else if (prvct and pevct) {
+            assert(std::ranges::equal(*prvct, *pevct, [](const std::complex<double> rct, const std::complex<double> ect) -> bool {
+                return rct == approx(ect, 1e-5);
+            }));
+        } else {
+            throw std::runtime_error("r and e type mismatches.");
+        }
+    }
 }
 
 void runall() {
@@ -1345,6 +1441,8 @@ void runall() {
     test_inc_tmm_s_T();
     test_inc_tmm_s_power_entering_list();
     test_inc_tmm_s_VW_list();
+    test_inc_absorp_in_each_layer();
+    test_inc_find_absorp_analytic_fn();
 }
 
 void run_all_except() {
@@ -1358,8 +1456,9 @@ void run_all_except() {
     test_find_in_structure_inf();  // solcore's impl differs from tmm's - the latter one add 1 to layer
     test_add_exception();
     test_inc_tmm_exception();
+    test_inc_find_absorp_analytic_fn_exception();
 }
 
 auto main() -> int {
-    test_inc_tmm_s_VW_list();
+    test_inc_find_absorp_analytic_fn();
 }
