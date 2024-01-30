@@ -233,6 +233,7 @@ auto rng2l_transpose(const U &old_rng) -> U {
 }
 
 template auto rng2l_transpose(const std::vector<std::valarray<double>> &old_vec) -> std::vector<std::valarray<double>>;
+template auto rng2l_transpose(const std::valarray<std::valarray<double>> &old_vec) -> std::valarray<std::valarray<double>>;
 
 template<std::ranges::sized_range U, typename T, std::size_t N>
 requires std::is_same_v<std::ranges::range_value_t<U>, std::vector<std::array<T, N>>>
@@ -272,6 +273,7 @@ auto vv_flatten(const U &vv) -> std::vector<T> {
 
 template auto vv_flatten(const std::valarray<std::valarray<double>> &vv) -> std::vector<double>;
 template auto vv_flatten(const std::vector<std::valarray<double>> &vv) -> std::vector<double>;
+template auto vv_flatten(const std::valarray<std::valarray<std::complex<double>>> &vv) -> std::vector<std::complex<double>>;
 
 #ifdef __cpp_lib_generator
 template<std::ranges::sized_range U>

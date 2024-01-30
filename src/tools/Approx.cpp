@@ -252,3 +252,4 @@ template auto approx(double expected, double rel, double abs, bool nan_ok) -> Ap
 template auto approx(std::complex<double> expected, double rel, double abs, bool nan_ok) -> ApproxScalar<std::complex<double>, double>;
 template auto approx(const std::valarray<std::array<std::valarray<double>, 2>> &expected, double rel, double abs, bool nan_ok) -> ApproxNestedRange<std::valarray<std::array<std::valarray<double>, 2>>, double>;
 template auto approx(const std::vector<std::valarray<double>> &expected, double rel, double abs, bool nan_ok) -> ApproxNestedRange<std::vector<std::valarray<double>>, double>;
+template auto approx(const std::valarray<std::valarray<double>> &expected, double rel, double abs, bool nan_ok) -> ApproxNestedRange<std::valarray<std::valarray<double>>, double>;

@@ -705,25 +705,25 @@ void test_position_resolved_p_absor() {
 }
 
 void test_find_in_structure_exception() {
-    const std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::vector<double>> result = find_in_structure<double>(
+    const std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::valarray<double>> result = find_in_structure<double>(
             {INFINITY, 100, 200, INFINITY}, {0, 100, 200});
 }
 
 void test_find_in_structure() {
     // Approx only applies to std::floating_point
-    const std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::vector<double>> result = find_in_structure({200, 187.3, 1973.5}, linspace<double>(0, 700, 10));
+    const std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::valarray<double>> result = find_in_structure({200, 187.3, 1973.5}, linspace_va<double>(0, 700, 10));
     const std::valarray<std::iterator_traits<double *>::difference_type> layer_approx{1, 1, 1, 2, 2, 3, 3, 3, 3, 3};
     assert(std::ranges::equal(result.first, layer_approx));
-    const ApproxSequenceLike<std::vector<double>, double> dist_approx = approx<std::vector<double>, double>({0., 77.77777778, 155.55555556, 33.33333333, 111.11111111,
+    const ApproxSequenceLike<std::valarray<double>, double> dist_approx = approx<std::valarray<double>, double>({0., 77.77777778, 155.55555556, 33.33333333, 111.11111111,
                                                          1.58888889, 79.36666667,157.14444444, 234.92222222, 312.7});
     assert(result.second == dist_approx);
 }
 
 void test_find_in_structure_inf() {
-    const std::pair<std::valarray<std::size_t>, std::vector<double>> result = find_in_structure_inf({INFINITY, 200, 187.3, 1973.5, INFINITY}, linspace<double>(0, 700, 10));
+    const std::pair<std::valarray<std::size_t>, std::valarray<double>> result = find_in_structure_inf({INFINITY, 200, 187.3, 1973.5, INFINITY}, linspace_va<double>(0, 700, 10));
     const std::valarray<std::iterator_traits<double *>::difference_type> layer_approx{1, 1, 1, 2, 2, 3, 3, 3, 3, 3};
     assert(std::ranges::equal(result.first, layer_approx));
-    const ApproxSequenceLike<std::vector<double>, double> dist_approx = approx<std::vector<double>, double>({0., 77.77777778, 155.55555556, 33.33333333, 111.11111111,
+    const ApproxSequenceLike<std::valarray<double>, double> dist_approx = approx<std::valarray<double>, double>({0., 77.77777778, 155.55555556, 33.33333333, 111.11111111,
                                                          1.58888889, 79.36666667,157.14444444, 234.92222222, 312.7});
     assert(result.second == dist_approx);
 }
@@ -735,11 +735,6 @@ void test_layer_starts() {
 }
 
 // tests for absorp_analytic_fn
-
-// #if defined(__cpp_lib_variant) and __cpp_lib_variant >= 202306L
-// template<class... Ts>
-// struct overloads : Ts... { using Ts::operator()...; };
-// #endif
 
 void test_fill_in_s() {
     const coh_tmm_vec_dict<double> coh_tmm_data = {
@@ -973,11 +968,12 @@ void test_run_array() {
     a.A2 = {0.01276183, 0.00146736};
     a.A3 = {-4.91455269e-04 - 1.18654706e-04i,  2.74416636e-04 + 2.91821819e-05i};
     a.d = {200.};
-    const ApproxSequenceLike<std::valarray<std::complex<double>>, double> run_approx = approx<std::valarray<std::complex<double>>, double>({
+    const ApproxSequenceLike<std::vector<std::complex<double>>, double> run_approx = approx<std::vector<std::complex<double>>, double>({
         0.01179895 + 0.i, 0.00772895 + 0.i, 0.00570666 + 0.i, 0.0043161 + 0.i, 0.00277534 + 0.i, 0.00118025 + 0.i, 0.00016438 + 0.i,
         0.00206809 + 0.i, 0.00196401 + 0.i, 0.00182646 + 0.i, 0.00166052 + 0.i, 0.00147356 + 0.i, 0.00127472 + 0.i, 0.00107422 + 0.i
     }, 1e-4);
-    assert(a.run(linspace_va<double>(0, 200, 7)) == run_approx);
+    const std::vector<std::complex<double>> run_result = vv_flatten<std::valarray<std::valarray<std::complex<double>>>, std::complex<double>>(a.run(linspace_va<double>(0, 200, 7)));
+    assert(run_result == run_approx);
 }
 
 void test_run() {
@@ -1375,11 +1371,12 @@ void test_inc_find_absorp_analytic_fn() {
     re_result.at(3) = a.A2;
     re_result.back() = a.A3;
     std::vector<std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> re_approx(5);
+    // Must explicitly tell valarray value type otherwise all the 5 are double because re_approx value type is variant.
     re_approx.front() = std::valarray{0.0, 0.0};
     re_approx.at(1) = std::valarray{0.24856865, 0.07503152};
     re_approx.at(2) = std::valarray{0.0, 0.0};
     re_approx.at(3) = std::valarray{0.0, 0.0};
-    re_approx.back() = std::valarray{0.0, 0.0};
+    re_approx.back() = std::valarray<std::complex<double>>{0.0, 0.0};
     for (const std::pair<std::variant<std::valarray<double>, std::valarray<std::complex<double>>> &, std::variant<std::valarray<double>, std::valarray<std::complex<double>>> &> &elem : std::views::zip(re_result, re_approx)) {
         const std::variant<std::valarray<double>, std::valarray<std::complex<double>>> r = elem.first;
         const std::variant<std::valarray<double>, std::valarray<std::complex<double>>> e = elem.second;
@@ -1399,6 +1396,46 @@ void test_inc_find_absorp_analytic_fn() {
             throw std::runtime_error("r and e type mismatches.");
         }
     }
+}
+
+void test_inc_position_resolved() {
+    const std::vector<std::valarray<std::complex<double>>> n_list = {{1, 1}, {2.0 + 0.5i, 3}, {2, 3.0 + 1i}, {1, 1}};
+    const std::valarray<double> d_list = {INFINITY, 100, 1000, INFINITY};
+    constexpr std::complex<double> th_0 = 0.3;
+    const std::valarray<double> lam_vac = {100, 500};
+    const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent};
+    const inc_tmm_vec_dict<double> inc_tmm_data = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
+    const std::valarray<double> dist = linspace_va(0.0, 1100.0, 12.0);
+    // layer is going to be uniqued later
+    auto [layer, d_in_layer] = find_in_structure_inf(d_list, dist);
+    std::valarray<std::valarray<double>> alphas(std::valarray<double>(2), 4);
+    for (std::size_t i : std::views::iota(0U, 4U)) {
+        for (std::size_t j : std::views::iota(0U, 2U)) {
+            alphas[i][j] = 4 * std::numbers::pi * n_list[i][j].imag() / lam_vac[j];
+        }
+    }
+    const ApproxNestedRange<std::valarray<std::valarray<double>>, double> incpr_approx = approx<std::valarray<std::valarray<double>>, double>(
+            rng2l_transpose(std::valarray<std::valarray<double>>{
+        {0, 5.41619013e-02, 1.11248375e-04, 7.66705892e-03,
+         4.38516795e+00, 2.50714861e+03, 1.43341858e+06, 8.19532120e+08,
+         4.68553223e+11, 2.67887148e+14, 1.53159813e+17, 0},
+        {0, 0, 0, 0,
+         0, 0, 0, 0,
+         0, 0, 0, 1.74764534e-13}}));
+    assert(inc_position_resolved(std::forward<std::valarray<std::size_t>>(layer), d_in_layer, inc_tmm_data, c_list, alphas) == incpr_approx);
+}
+
+void test_beer_lambert() {
+    const std::valarray<double> alphas = linspace_va(0.0, 1.0, 5.0);
+    const std::valarray<double> fraction = linspace_va(0.2, 1.0, 5.0);
+    const std::valarray<double> A_total = {0, 9.99999989e-09, 2.99999992e-08, 5.99999978e-08, 9.99999950e-08};
+    const std::valarray<double> dist = linspace_va(0.0, 100e-9, 4.0);
+    const ApproxNestedRange<std::valarray<std::valarray<double>>, double> bl_approx = approx<std::valarray<std::valarray<double>>, double>(std::valarray<std::valarray<double>>{{0, 0, 0, 0},
+                                                                                                                                                                                {0.1, 0.1, 0.1, 0.1},
+                                                                                                                                                                                {0.3, 0.3, 0.29999999, 0.29999999},
+                                                                                                                                                                                {0.6, 0.59999999, 0.59999997, 0.59999996},
+                                                                                                                                                                                {1, 0.99999997, 0.99999993, 0.9999999}});
+    assert(beer_lambert(alphas, fraction, dist, A_total) == bl_approx);
 }
 
 void runall() {
@@ -1426,6 +1463,7 @@ void runall() {
     test_ellips_Delta();
     test_unpolarized_RT_R();
     test_find_in_structure();
+    test_find_in_structure_inf();
     test_layer_starts();
     test_fill_in_s();
     test_fill_in_p();
@@ -1443,6 +1481,8 @@ void runall() {
     test_inc_tmm_s_VW_list();
     test_inc_absorp_in_each_layer();
     test_inc_find_absorp_analytic_fn();
+    test_inc_position_resolved();
+    test_beer_lambert();
 }
 
 void run_all_except() {
@@ -1453,12 +1493,11 @@ void run_all_except() {
     test_position_resolved_p_poyn();  // Same as above
     test_position_resolved_p_absor();  // Same as above
     test_find_in_structure_exception();
-    test_find_in_structure_inf();  // solcore's impl differs from tmm's - the latter one add 1 to layer
     test_add_exception();
     test_inc_tmm_exception();
     test_inc_find_absorp_analytic_fn_exception();
 }
 
 auto main() -> int {
-    test_inc_find_absorp_analytic_fn();
+    test_inc_position_resolved();
 }

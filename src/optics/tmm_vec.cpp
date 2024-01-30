@@ -134,7 +134,7 @@ void AbsorpAnalyticVecFn<T>::fill_in(const coh_tmm_vecn_dict<T> &coh_tmm_data, c
     // f_layer is signed while num_layers is unsigned!
     const std::ptrdiff_t num_layers = vw_list.size();
     const std::size_t layer = (num_layers + f_layer % num_layers) % num_layers;
-    const std::vector<std::array<std::complex<T>, 2>> vw_list_l = vw_list[layer];
+    const std::vector<std::array<std::complex<T>, 2>> &vw_list_l = vw_list[layer];
     std::valarray<std::complex<T>> v(num_wl);
     std::valarray<std::complex<T>> w(num_wl);
     if (layer > 0) {
@@ -195,27 +195,27 @@ void AbsorpAnalyticVecFn<T>::fill_in(const coh_tmm_vecn_dict<T> &coh_tmm_data, c
 }
 
 template<typename T>
-template<typename ZT>
-requires std::is_same_v<ZT, std::valarray<T>> || std::is_same_v<ZT, T>
-[[nodiscard]] auto AbsorpAnalyticVecFn<T>::run(const ZT &z) const -> std::valarray<std::complex<T>> {
-    if constexpr (std::is_same_v<ZT, std::valarray<T>>) {
-        const std::size_t num_layers = z.size();
-        const std::size_t num_wl = a1.size();
-        std::valarray<std::complex<T>> result(num_layers * num_wl);
-        for (std::size_t i = 0; i < num_layers; i++) {
-            for (std::size_t j = 0; j < num_wl; j++) {
-                result[j * num_layers + i] = A1[j] * std::exp(a1[j] * z[i]) + A2[j] * std::exp(-a1[j] * z[i]) + A3[j] * std::exp(1i * a3[j] * z[i]) + std::conj(A3[j]) * std::exp(-1i * a3[j] * z[i]);
-            }
-        }
-        return result;
-    } else {
-        const std::size_t num_wl = a1.size();
-        std::valarray<std::complex<T>> result(num_wl);
-        for (std::size_t i = 0; i < num_wl; i++) {
-            result[i] = A1[i] * std::exp(a1[i] * z) + A2[i] * std::exp(-a1[i] * z) + A3[i] * std::exp(1i * a3[i] * z) + std::conj(A3[i]) * std::exp(-1i * a3[i] * z);
-        }
-        return result;
+[[nodiscard]] auto AbsorpAnalyticVecFn<T>::run(const T z) const -> std::valarray<std::complex<T>> {
+    const std::size_t num_wl = a1.size();
+    std::valarray<std::complex<T>> result(num_wl);
+    for (std::size_t i = 0; i < num_wl; i++) {
+        result[i] = A1[i] * std::exp(a1[i] * z) + A2[i] * std::exp(-a1[i] * z) + A3[i] * std::exp(1i * a3[i] * z) + std::conj(A3[i]) * std::exp(-1i * a3[i] * z);
     }
+    return result;
+}
+
+template<typename T>
+[[nodiscard]] auto AbsorpAnalyticVecFn<T>::run(const std::valarray<T> &z) const -> std::valarray<std::valarray<std::complex<T>>> {
+    const std::size_t num_layers = z.size();
+    const std::size_t num_wl = a1.size();
+    std::valarray<std::valarray<std::complex<T>>> result(std::valarray<std::complex<T>>(num_wl), num_layers);
+    for (std::size_t i = 0; i < num_layers; i++) {
+        for (std::size_t j = 0; j < num_wl; j++) {  // result[i][j] not [j][i]!
+            result[i][j] = ((A1[j] < 1e-100) ? 0 : A1[j] * std::exp(a1[j] * z[i])) + A2[j] * std::exp(-a1[j] * z[i])
+                    + A3[j] * std::exp(1i * a3[j] * z[i]) + std::conj(A3[j]) * std::exp(-1i * a3[j] * z[i]);
+        }
+    }
+    return result;
 }
 
 template<typename T>
@@ -247,8 +247,6 @@ void AbsorpAnalyticVecFn<T>::scale(FAC_T &&factor) {
     std::ranges::transform(absA3, std::begin(infA), std::bind_front<bool (*)(const T)>(std::isinf));
     A3[infA] = 0;
 }
-
-template void AbsorpAnalyticVecFn<double>::scale(double &&factor);
 
 template<typename T>
 void AbsorpAnalyticVecFn<T>::add(const AbsorpAnalyticVecFn &b) {
@@ -293,8 +291,7 @@ void AbsorpAnalyticVecFn<T>::flip() {
 }
 
 template class AbsorpAnalyticVecFn<double>;
-template auto AbsorpAnalyticVecFn<double>::run(const std::valarray<double> &z) const -> std::valarray<std::complex<double>>;
-template auto AbsorpAnalyticVecFn<double>::run(const double &z) const -> std::valarray<std::complex<double>>;
+template void AbsorpAnalyticVecFn<double>::scale(double &&factor);
 
 template<typename T, typename TH_T>
 requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<TH_T, std::complex<T>>
@@ -1265,7 +1262,7 @@ auto position_resolved(const std::size_t layer, const T distance,
  */
 template<typename T>
 auto find_in_structure(const std::valarray<T> &d_list,
-                       const std::vector<T> &dist) -> std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::vector<T>> {
+                       const std::valarray<T> &dist) -> std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::valarray<T>> {
     if (std::isinf(std::abs(d_list.sum()))) {
         throw std::runtime_error("This function expects finite arguments");
     }
@@ -1338,47 +1335,51 @@ auto find_in_structure(const std::valarray<T> &d_list,
     // [A free function linear algebra interface based on the BLAS](https://isocpp.org/files/papers/P1673R13.html)
     // Reference implementation on GitHub: https://github.com/kokkos/stdBLAS
     // Hope we can use the feature test macro __cpp_lib_linalg = 202311L in the near future.
-    std::vector<T> d_array(dlist_size + 1, 0);
-    std::ranges::move(d_list, d_array.begin() + 1);
-    std::valarray<T> cum_sum(dlist_size + 1);
-    std::partial_sum(d_array.cbegin(), d_array.cend(), std::begin(cum_sum));
-    std::valarray<typename std::iterator_traits<T *>::difference_type> layer(dist_size);
-    std::vector<T> distance = dist;
+    // std::vector<T> d_array(dlist_size + 1, 0);
+    // std::ranges::move(d_list, d_array.begin() + 1);
+    std::valarray<T> cum_sum(dlist_size);
+    std::partial_sum(std::cbegin(d_list), std::cend(d_list), std::begin(cum_sum));
+    std::valarray<typename std::iterator_traits<T *>::difference_type> layer(-1, dist_size);
+    std::valarray<T> distance = dist;
     // dist -= cum_sum[layer - 1];
     for (std::size_t i = 0; i < dist_size; i++) {
         // lower_bound for searchsorted left
         // upper_bound for searchsorted right
-        const T *it = std::ranges::upper_bound(cum_sum, dist.at(i));
-        if (dist.at(i) < 0) {
-            layer[i] = -1;
-        } else {
+        const T *it = std::ranges::upper_bound(cum_sum, dist[i]);
+        // layer[dist < 0] = -1;
+        if (dist[i] >= 0) {
             layer[i] = std::ranges::distance(std::begin(cum_sum), it);
-            distance.at(i) -= layer[i] == 0 ? cum_sum[dlist_size] : cum_sum[layer[i] - 1];
+            distance[i] -= layer[i] == 0 ? cum_sum[dlist_size - 1] : cum_sum[layer[i] - 1];
         }
     }
     return std::pair(layer, distance);
 }
 
 template auto find_in_structure(const std::valarray<double> &d_list,
-                                const std::vector<double> &dist) -> std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::vector<double>>;
+                                const std::valarray<double> &dist) -> std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::valarray<double>>;
 
 template<typename T>
 auto find_in_structure_inf(const std::valarray<T> &d_list,
-                           const std::vector<T> &dist) -> std::pair<std::valarray<std::size_t>, std::vector<T>> {
+                           const std::valarray<T> &dist) -> std::pair<std::valarray<std::size_t>, std::valarray<T>> {
 #ifdef _MSC_VER
-    const std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::vector<T>> found = find_in_structure(d_list[std::slice(1, d_list.size() - 2, 1)], dist);
+    std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::vector<T>> found = find_in_structure(d_list[std::slice(1, d_list.size() - 2, 1)], dist);
 #else
-    const std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::vector<T>> found = find_in_structure(std::valarray<T>(d_list[std::slice(1, d_list.size() - 2, 1)]), dist);
+    std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::valarray<T>> found = find_in_structure(std::valarray<T>(d_list[std::slice(1, d_list.size() - 2, 1)]), dist);
 #endif
-    std::valarray<std::size_t> layer(dist.size());
+    std::valarray<std::size_t> layer(dist.size());  // constructor of valarray<size_t> would be ambiguous
     for (std::size_t i = 0; i < dist.size(); i++) {
-        layer[i] = dist.at(i) < 0 ? 0 : found.first[i] + 1;
+        if (dist[i] < 0) {
+            layer[i] = 0;
+            found.second[i] = dist[i];
+        } else {
+            layer[i] = found.first[i];  // found.first[i] + 1 : found.first[i], type conversion
+        }
     }
     return std::pair(layer, found.second);
 }
 
 template auto find_in_structure_inf(const std::valarray<double> &d_list,
-                                    const std::vector<double> &dist) -> std::pair<std::valarray<std::size_t>, std::vector<double>>;
+                                    const std::valarray<double> &dist) -> std::pair<std::valarray<std::size_t>, std::valarray<double>>;
 
 template<std::floating_point T>
 auto layer_starts(const std::valarray<T> &d_list) -> std::valarray<T> {
@@ -1815,3 +1816,127 @@ auto inc_find_absorp_analytic_fn(const std::size_t layer, const inc_tmm_vec_dict
 }
 
 template auto inc_find_absorp_analytic_fn(std::size_t layer, const inc_tmm_vec_dict<double> &inc_data) -> AbsorpAnalyticVecFn<double>;
+
+// helper type for the visitor
+template<class... Ts>
+struct overloads : Ts... { using Ts::operator()...; };
+
+/*
+ * This function is vectorized. Analogous to position_resolved, but
+ * for layers (incoherent or coherent) in (partly) incoherent stacks.
+ * This is a new function, not from Steven Byrnes' tmm package.
+ * It assumes that in incoherent layers, we can assume the absorption has
+ * a Beer-Lambert profile (this is not really correct; actually, the absorption
+ * profile will depend on the coherence length, as discussed in the
+ * documentation for the tmm package). This is an approximation in order
+ * to be able to generate absorption profiles for partly coherent stacks.
+ * Starting with output of inc_tmm(), calculate the Poynting vector
+ * and absorbed energy density a distance "dist" into layer number "layer"
+ * */
+template<typename T>
+auto inc_position_resolved(std::valarray<std::size_t> &&layer, const std::valarray<T> &dist,
+                           const inc_tmm_vec_dict<T> &inc_tmm_data, const std::valarray<LayerType> &coherency_list,
+                           const std::valarray<std::valarray<T>> &alphas,
+                           const T zero_threshold) -> std::valarray<std::valarray<T>> {
+    // If duplicate elements exist, after unique, the last elements will be indeterminate!
+    const std::vector<std::valarray<T>> A_per_layer = inc_absorp_in_each_layer(inc_tmm_data);
+    const std::size_t num_layers = A_per_layer.size();
+    const std::size_t num_wl = A_per_layer.front().size();  // == alphas[0].size()
+    std::vector<std::valarray<T>> fraction_reaching(num_layers, std::valarray<T>(num_wl));
+    fraction_reaching.front() = 1 - A_per_layer.front();
+    std::variant<std::valarray<std::valarray<T>>, std::valarray<std::valarray<std::complex<T>>>> A_layer;
+    // Cumulative sum but cannot use std::accumulate
+    std::valarray<std::valarray<T>> A_local(std::valarray<T>(num_wl), dist.size());  // Note the order of dims
+    for (std::size_t i : std::views::iota(1U, num_layers)) {
+        for (std::size_t j : std::views::iota(0U, num_wl)) {
+            T cumsum_axis0 = A_per_layer.front()[j];
+            for (std::size_t k : std::views::iota(1U, i + 1)) {
+                cumsum_axis0 += A_per_layer.at(k)[j];
+            }
+            fraction_reaching.at(i)[j] = 1 - cumsum_axis0;
+        }
+    }
+    // const std::ranges::subrange<std::size_t*, std::size_t*, (std::ranges::subrange_kind)1> layers = std::ranges::unique(layer);
+    // Do not directly use the return value of std::ranges::unique() without erasing!
+    std::vector<T> layers;
+    std::ranges::unique_copy(layer, std::back_inserter(layers));
+    for (const auto [i, l] : std::views::enumerate(layers)) {  // unique layer indices
+        if (coherency_list[l] == LayerType::Coherent) {
+            AbsorpAnalyticVecFn<T> fn = inc_find_absorp_analytic_fn(l, inc_tmm_data);
+            A_layer = fn.run(dist[layer == l]);
+        } else {
+#ifdef _MSC_VER
+            A_layer = beer_lambert(alphas[l], fraction_reaching[i], dist[layer == l] * 1e9, A_per_layer[l]);
+#else
+            A_layer = beer_lambert(alphas[l], fraction_reaching[i],
+                                   std::valarray<T>(dist[layer == l] * 1e9), A_per_layer[l]);
+#endif
+        }
+        auto use_vaT = [i, zero_threshold, &fraction_reaching, num_wl](std::valarray<std::valarray<T>> &vaT) -> std::valarray<std::valarray<T>> {
+            // std::mask_array<std::valarray<T>> vaT_cond = vaT[fraction_reaching[i] < zero_threshold];
+            // Unfortunately, we cannot write vaT[fraction_reaching[i] < zero_threshold] = std::valarray<T>(0.0, vaT[0].size());
+            const std::size_t num_llayers = vaT[0].size();
+            std::valarray<std::valarray<T>> vaNewT(std::valarray<T>(num_wl), num_llayers);
+            for (std::size_t j : std::views::iota(0U, num_wl)) {
+                for (std::size_t k : std::views::iota(0U, num_llayers)) {
+                    vaNewT[k][j] = (fraction_reaching.at(i)[j] < zero_threshold) ? 0 : vaT[j][k];
+                }
+            }
+            // return rng2l_transpose(vaT);
+            return vaNewT;
+        };
+        auto use_vaCT = [i, zero_threshold, &fraction_reaching, num_wl](std::valarray<std::valarray<std::complex<T>>> &vaCT) -> std::valarray<std::valarray<T>> {
+            vaCT[fraction_reaching[i] < zero_threshold] = std::valarray<std::complex<T>>(0.0, vaCT[0].size());
+            const std::size_t num_llayers = vaCT[0].size();
+            std::valarray<std::valarray<T>> Areal_layer(std::valarray<T>(num_wl), num_llayers);
+            for (std::size_t j : std::views::iota(0U, num_wl)) {
+                for (std::size_t k : std::views::iota(0U, num_llayers)) {
+                    Areal_layer[k][j] = (fraction_reaching.at(i)[j] < zero_threshold) ? 0 : vaCT[j][k].real();
+                }
+            }
+            return Areal_layer;
+        };
+#if (__cpp_lib_variant >= 202306L)
+        std::valarray<std::valarray<T>> Areal_layer = A_layer.std::visit(overloads{use_vaT, use_vaCT});
+#else
+        std::valarray<std::valarray<T>> Areal_layer = std::visit(overloads{use_vaT, use_vaCT}, A_layer);
+#endif
+        A_local[layer == l] = Areal_layer;
+    }
+    return A_local;
+}
+
+template auto inc_position_resolved(std::valarray<std::size_t> &&layer, const std::valarray<double> &dist,
+                                    const inc_tmm_vec_dict<double> &inc_tmm_data,
+                                    const std::valarray<LayerType> &coherency_list,
+                                    const std::valarray<std::valarray<double>> &alphas,
+                                    double zero_threshold = 1e-6) -> std::valarray<std::valarray<double>>;
+
+template<typename T>
+auto beer_lambert(const std::valarray<T> &alphas, const std::valarray<T> &fraction, const std::valarray<T> &dist,
+                  const std::valarray<T> &A_total) -> std::valarray<std::valarray<T>> {
+    const std::size_t sz_d = dist.size();
+    const std::size_t sz_alpha = alphas.size();
+    std::valarray<std::valarray<T>> expn(std::valarray<T>(sz_d), sz_alpha);
+    // We are doing outer products here, similar to AbsorpAnalyticVecFn<T>::run()
+    for (std::size_t i = 0; i < sz_alpha; i++) {
+        for (std::size_t j = 0; j < sz_d; j++) {
+            expn[i][j] = std::exp(-alphas[i] * dist[j]);
+        }
+    }
+    const std::valarray<T> A_integrated = fraction * (1 - std::exp(-alphas * std::ranges::max(dist)));
+    // Check std::ranges::contains(A_integrated, 0))
+    std::valarray<T> scale = A_total / A_integrated;
+    std::ranges::replace_if(scale, [](const T sc) -> bool {
+        return std::isnan(sc) or std::isinf(sc);  // 0/0 is nan; otherwise /0 is inf.
+    }, 0);
+    std::valarray<std::valarray<T>> output(std::valarray<T>(sz_d), sz_alpha);
+    for (std::size_t i = 0; i < sz_alpha; i++) {
+        output[i] = scale[i] * fraction[i] * alphas[i] * expn[i];  // Not dividing 1e9 here
+    }
+    return output;
+}
+
+template auto beer_lambert(const std::valarray<double> &alphas, const std::valarray<double> &fraction,
+                           const std::valarray<double> &dist,
+                           const std::valarray<double> &A_total) -> std::valarray<std::valarray<double>>;

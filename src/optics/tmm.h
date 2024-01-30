@@ -219,9 +219,8 @@ public:
      * Calculates absorption at a given depth z, where z=0 is the start of the
      * layer.
      */
-    template<typename ZT>
-    requires std::is_same_v<ZT, std::valarray<T>> || std::is_same_v<ZT, T>
-    auto run(const ZT &z) const -> std::valarray<std::complex<T>>;
+    auto run(T z) const -> std::valarray<std::complex<T>>;
+    auto run(const std::valarray<T> &z) const -> std::valarray<std::valarray<std::complex<T>>>;
     /*
      * Flip the function front-to-back, to describe a(d-z) instead of a(z),
      * where d is layer thickness.
@@ -334,11 +333,11 @@ auto position_resolved(std::size_t layer, const std::valarray<T> &distance,
 
 template<typename T>
 auto find_in_structure(const std::valarray<T> &d_list,
-                       const std::vector<T> &dist) -> std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::vector<T>>;
+                       const std::valarray<T> &dist) -> std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::valarray<T>>;
 
 template<typename T>
 auto find_in_structure_inf(const std::valarray<T> &d_list,
-                           const std::vector<T> &dist) -> std::pair<std::valarray<std::size_t>, std::vector<T>>;
+                           const std::valarray<T> &dist) -> std::pair<std::valarray<std::size_t>, std::valarray<T>>;
 
 template<std::floating_point T>
 auto layer_starts(const std::valarray<T> &d_list) -> std::valarray<T>;
@@ -370,5 +369,15 @@ auto inc_absorp_in_each_layer(const inc_tmm_vec_dict<T> &inc_data) -> std::vecto
 
 template<typename T>
 auto inc_find_absorp_analytic_fn(std::size_t layer, const inc_tmm_vec_dict<T> &inc_data) -> AbsorpAnalyticVecFn<T>;
+
+template<typename T>
+auto inc_position_resolved(std::valarray<std::size_t> &&layer, const std::valarray<T> &dist,
+                           const inc_tmm_vec_dict<T> &inc_tmm_data, const std::valarray<LayerType> &coherency_list,
+                           const std::valarray<std::valarray<T>> &alphas,
+                           T zero_threshold = 1e-6) -> std::valarray<std::valarray<T>>;
+
+template<typename T>
+auto beer_lambert(const std::valarray<T> &alphas, const std::valarray<T> &fraction, const std::valarray<T> &dist,
+                  const std::valarray<T> &A_total) -> std::valarray<std::valarray<T>>;
 
 #endif // TMM_H
