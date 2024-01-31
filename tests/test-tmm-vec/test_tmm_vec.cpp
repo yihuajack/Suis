@@ -1499,5 +1499,5 @@ void run_all_except() {
 }
 
 auto main() -> int {
-    test_inc_position_resolved();
+    runall();
 }

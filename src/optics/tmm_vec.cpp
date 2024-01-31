@@ -1872,26 +1872,24 @@ auto inc_position_resolved(std::valarray<std::size_t> &&layer, const std::valarr
                                    std::valarray<T>(dist[layer == l] * 1e9), A_per_layer[l]);
 #endif
         }
+        // vaT (beer_lambert) is num_wl * num_llayers while vaCT (fn.run) is num_llayers * num_wl
         auto use_vaT = [i, zero_threshold, &fraction_reaching, num_wl](std::valarray<std::valarray<T>> &vaT) -> std::valarray<std::valarray<T>> {
             // std::mask_array<std::valarray<T>> vaT_cond = vaT[fraction_reaching[i] < zero_threshold];
             // Unfortunately, we cannot write vaT[fraction_reaching[i] < zero_threshold] = std::valarray<T>(0.0, vaT[0].size());
-            const std::size_t num_llayers = vaT[0].size();
-            std::valarray<std::valarray<T>> vaNewT(std::valarray<T>(num_wl), num_llayers);
-            for (std::size_t j : std::views::iota(0U, num_wl)) {
-                for (std::size_t k : std::views::iota(0U, num_llayers)) {
-                    vaNewT[k][j] = (fraction_reaching.at(i)[j] < zero_threshold) ? 0 : vaT[j][k];
-                }
+            vaT = rng2l_transpose(vaT);
+            // Now vaT is num_llayers * num_wl
+            for (std::size_t j : std::views::iota(0U, vaT.size())) {
+                vaT[j][fraction_reaching.at(i) < zero_threshold] = 0;
             }
-            // return rng2l_transpose(vaT);
-            return vaNewT;
+            return vaT;
         };
         auto use_vaCT = [i, zero_threshold, &fraction_reaching, num_wl](std::valarray<std::valarray<std::complex<T>>> &vaCT) -> std::valarray<std::valarray<T>> {
             vaCT[fraction_reaching[i] < zero_threshold] = std::valarray<std::complex<T>>(0.0, vaCT[0].size());
-            const std::size_t num_llayers = vaCT[0].size();
+            const std::size_t num_llayers = vaCT.size();
             std::valarray<std::valarray<T>> Areal_layer(std::valarray<T>(num_wl), num_llayers);
-            for (std::size_t j : std::views::iota(0U, num_wl)) {
-                for (std::size_t k : std::views::iota(0U, num_llayers)) {
-                    Areal_layer[k][j] = (fraction_reaching.at(i)[j] < zero_threshold) ? 0 : vaCT[j][k].real();
+            for (std::size_t j : std::views::iota(0U, num_llayers)) {
+                for (std::size_t k : std::views::iota(0U, num_wl)) {
+                    Areal_layer[j][k] = (fraction_reaching.at(i)[k] < zero_threshold) ? 0 : vaCT[j][k].real();
                 }
             }
             return Areal_layer;
