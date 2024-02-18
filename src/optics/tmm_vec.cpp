@@ -15,7 +15,7 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include "tmm.h"
-#include "utils.h"
+#include "tools/utils.h"
 
 using namespace std::complex_literals;
 

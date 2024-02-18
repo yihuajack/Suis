@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include "FixedMatrix.h"
 #include "tmm.h"
-#include "utils.h"
+#include "tools/utils.h"
 
 using namespace std::complex_literals;
 

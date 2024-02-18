@@ -8,6 +8,8 @@
 #include "import_qml_components_plugins.h"
 #include "import_qml_plugins.h"
 
+#include "backend_init.h"
+
 int main(int argc, char *argv[])
 {
     set_qt_environment();
