@@ -17,7 +17,14 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
 
     QQmlApplicationEngine engine;
-    const QUrl url(u"qrc:Main/main.qml"_qs);
+
+    // [cmake] CMake Warning (dev) at D:/Qt/6.6.2/msvc2019_64/lib/cmake/Qt6Core/Qt6CoreMacros.cmake:2829 (message):
+    // [cmake]   Qt policy QTP0001 is not set: ':/qt/qml/' is the default resource prefix
+    // [cmake]   for QML modules.  Check https://doc.qt.io/qt-6/qt-cmake-policy-qtp0001.html
+    // [cmake]   for policy details.  Use the qt_policy command to set the policy and
+    // [cmake]   suppress this warning.
+    // Use this Qurl instead of "qrc:Main/main.qml"
+    const QUrl url(u"qrc:/qt/qml/Main/main.qml"_qs);
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, &app,
         [url](QObject *obj, const QUrl &objUrl) {

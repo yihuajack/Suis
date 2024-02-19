@@ -60,8 +60,10 @@ auto real_if_close(const std::valarray<T1> &a, T2 tol) -> std::variant<std::vala
     return a;
 }
 
+// (C2765) Default function arguments cannot be specified in explicit specializations of function templates,
+// member function templates, and member functions of class templates when the class is implicitly instantiated.
 template auto real_if_close(const std::valarray<std::complex<double>> &a,
-                            double tol = TOL) -> std::variant<std::valarray<std::complex<double>>, std::valarray<double>>;
+                            double tol) -> std::variant<std::valarray<std::complex<double>>, std::valarray<double>>;
 
 // real_if_close for singleton
 // The compiler takes responsibility to match only std::complex<T>template<typename T>
@@ -104,7 +106,7 @@ auto linspace(const T start, const T stop, const std::size_t num) -> std::vector
     std::vector<T> result(num);
     T step = (stop - start) / static_cast<T>(num - 1);
     T current = start;
-    std::ranges::generate(result, [&current, &step] -> T {
+    std::ranges::generate(result, [&current, &step] /* -> T */ {  // (C2760)
         T value = current;
         current += step;
         return value;
@@ -119,7 +121,7 @@ auto linspace_va(const T start, const T stop, const std::size_t num) -> std::val
     std::valarray<T> result(num);
     T step = (stop - start) / static_cast<T>(num - 1);
     T current = start;
-    std::ranges::generate(result, [&current, &step] -> T {
+    std::ranges::generate(result, [&current, &step] /* -> T */ {  // (C2760)
         T value = current;
         current += step;
         return value;

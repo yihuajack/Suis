@@ -15,7 +15,7 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include "tmm.h"
-#include "tools/utils.h"
+#include "src/tools/utils.h"
 
 using namespace std::complex_literals;
 
@@ -925,7 +925,7 @@ auto coh_tmm_reverse(const char pol, const std::valarray<std::complex<T>> &n_lis
 #ifdef _MSC_VER
     const std::valarray<std::complex<T>> th_f = snell(n_list[std::slice(0, num_wl, 1)],
                                                 n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)],
-                                                th_0, num_wl);
+                                                th_0);
 #else
     const std::valarray<std::complex<T>> th_f = snell(std::valarray<std::complex<T>>(n_list[std::slice(0, num_wl, 1)]),
                                                       std::valarray<std::complex<T>>(n_list[std::slice((num_layers - 1) * num_wl, num_wl, 1)]),
@@ -1068,7 +1068,7 @@ auto position_resolved(const std::valarray<std::size_t> &layer, const std::valar
     std::valarray<bool> cond = (layer < 1 or 0 > distance or distance > std::get<std::valarray<T>>(coh_tmm_data.at("d_list"))[layer]) and (layer not_eq 0 or distance > 0);
     bool *pos = std::ranges::find(cond, true);
     // If std::cend(cond): Substitution failed: expression ::std::end(_Cont) is ill-formed.
-    // error C2672: “std::cend”: 未找到匹配的重载函数
+    // error C2672: “std::cend”: no matching overloaded function found
     // MSVC's <xutility> cbegin() and cend() requires const _Container& _Cont
     // while begin() and end() requires _Ty (&_Array)[_Size].
     // libstdc++ begin() and end(): valarray<_Tp>& or const valarray<_Tp>&
@@ -1338,7 +1338,8 @@ auto find_in_structure(const std::valarray<T> &d_list,
     // std::vector<T> d_array(dlist_size + 1, 0);
     // std::ranges::move(d_list, d_array.begin() + 1);
     std::valarray<T> cum_sum(dlist_size);
-    std::partial_sum(std::cbegin(d_list), std::cend(d_list), std::begin(cum_sum));
+    // MSVC-specific: std::begin()/std::end() instead of std::cbegin()/std::cend() (C2672)
+    std::partial_sum(std::begin(d_list), std::end(d_list), std::begin(cum_sum));
     std::valarray<typename std::iterator_traits<T *>::difference_type> layer(-1, dist_size);
     std::valarray<T> distance = dist;
     // dist -= cum_sum[layer - 1];
@@ -1362,7 +1363,7 @@ template<typename T>
 auto find_in_structure_inf(const std::valarray<T> &d_list,
                            const std::valarray<T> &dist) -> std::pair<std::valarray<std::size_t>, std::valarray<T>> {
 #ifdef _MSC_VER
-    std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::vector<T>> found = find_in_structure(d_list[std::slice(1, d_list.size() - 2, 1)], dist);
+    std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::valarray<T>> found = find_in_structure(d_list[std::slice(1, d_list.size() - 2, 1)], dist);
 #else
     std::pair<std::valarray<typename std::iterator_traits<T *>::difference_type>, std::valarray<T>> found = find_in_structure(std::valarray<T>(d_list[std::slice(1, d_list.size() - 2, 1)]), dist);
 #endif
@@ -1858,7 +1859,7 @@ auto inc_position_resolved(std::valarray<std::size_t> &&layer, const std::valarr
     }
     // const std::ranges::subrange<std::size_t*, std::size_t*, (std::ranges::subrange_kind)1> layers = std::ranges::unique(layer);
     // Do not directly use the return value of std::ranges::unique() without erasing!
-    std::vector<T> layers;
+    std::vector<std::size_t> layers;
     std::ranges::unique_copy(layer, std::back_inserter(layers));
     for (const auto [i, l] : std::views::enumerate(layers)) {  // unique layer indices
         if (coherency_list[l] == LayerType::Coherent) {
@@ -1908,7 +1909,7 @@ template auto inc_position_resolved(std::valarray<std::size_t> &&layer, const st
                                     const inc_tmm_vec_dict<double> &inc_tmm_data,
                                     const std::valarray<LayerType> &coherency_list,
                                     const std::valarray<std::valarray<double>> &alphas,
-                                    double zero_threshold = 1e-6) -> std::valarray<std::valarray<double>>;
+                                    double zero_threshold) -> std::valarray<std::valarray<double>>;
 
 template<typename T>
 auto beer_lambert(const std::valarray<T> &alphas, const std::valarray<T> &fraction, const std::valarray<T> &dist,
