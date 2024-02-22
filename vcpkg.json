@@ -1,4 +1,10 @@
 {
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
+  "name": "openscsim",
+  "version": "1.0.0",
+  "description": "Open-source Solar Cell Simulator",
+  "homepage": "https://github.com/yihuajack/OpenSCSim",
+  "license": "GPL-3.0",
   "dependencies": [
     "boost"
   ]

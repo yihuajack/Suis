@@ -17,11 +17,15 @@ option(LINK_INSIGHT "Link Qt Insight Tracker library" ON)
 # from content/CMakeLists.txt:5 (qt6_add_qml_module)
 option(BUILD_QDS_COMPONENTS "Build design studio components" ON)
 
-project(OpenSCSimApp
-    HOMEPAGE_URL "https://github.com/yihuajack/OpenSCSim"
-    LANGUAGES CXX)
+project(OpenSCSim
+        VERSION 1.0.0
+        DESCRIPTION "Open-source Solar Cell Simulator"
+        HOMEPAGE_URL "https://github.com/yihuajack/OpenSCSim"
+        LANGUAGES CXX)
 
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Visual Studio toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\6.6.2\msvc2019_64\lib\cmake
 # MinGW toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\6.6.2\mingw_64\lib\cmake
 # Visual Studio ARM64 toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\6.6.2\msvc2019_arm64\lib\cmake
@@ -35,7 +39,7 @@ find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Qml Quick)
 set(CMAKE_AUTOMOC ON)
 # set(CMAKE_AUTOUIC ON)
 # set(CMAKE_AUTORCC ON)
-find_package(Boost 1.83.0 REQUIRED)
+find_package(Boost 1.84.0 REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
 
@@ -43,57 +47,21 @@ if (Qt6_VERSION VERSION_GREATER_EQUAL 6.6)
     qt_standard_project_setup(REQUIRES 6.6)
 endif()
 
-qt_add_executable(OpenSCSimApp)
-
-target_sources(OpenSCSimApp PRIVATE
-    #headers
-    src/optics/FixedMatrix.h
-    src/optics/tmm.h
-    src/tools/Approx.h
-    src/tools/utils.h
-    src/backend_init.h
-    #sources
-    src/optics/FixedMatrix.cpp
-    src/optics/tmm.cpp
-    src/optics/tmm_vec.cpp
-    src/tools/Approx.cpp
-    src/tools/utils.cpp
-    src/backend_init.cpp
-    src/main.cpp
-)
-
-qt_add_resources(OpenSCSimApp "configuration"
-    PREFIX "/"
-    FILES
-        qtquickcontrols2.conf
-)
-
-target_link_libraries(OpenSCSimApp PRIVATE
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Qml
-    Qt6::Quick
-)
+qt_add_executable(OpenSCSim)
+add_subdirectory(src)
 
 if (BUILD_QDS_COMPONENTS)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/qmlcomponents)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/src/qmlcomponents)
 endif()
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/qmlmodules)
+include(${CMAKE_CURRENT_SOURCE_DIR}/src/qmlmodules)
 
 if (LINK_INSIGHT)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/insight)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/src/insight)
 endif ()
 
 include(GNUInstallDirs)
-install(TARGETS OpenSCSimApp
-    BUNDLE DESTINATION .
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
 
 # make IDEs aware of the QML import path
 set(QML_IMPORT_PATH ${PROJECT_BINARY_DIR}/qml CACHE PATH
         "Path to the custom QML components defined by the project")
-
-# add_subdirectory(src)

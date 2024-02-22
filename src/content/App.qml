@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
 
 import QtQuick 6.6
-import OpenSCSim
+import OpenSCSimGUI
 import QtQuick.VirtualKeyboard 6.6
 
 Window {
