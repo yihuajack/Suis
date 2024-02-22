@@ -1,11 +1,9 @@
 #include <filesystem>
 #include <boost/property_tree/ptree.hpp>
 
-#include "backend_init.h"
-
 class OpenSCSimConfig {
 private:
-    std::filesystem::path default_config = OpenSCSim::default_config;
+    std::filesystem::path default_config;
     std::filesystem::path user_config;
     std::filesystem::path user_folder;
     boost::property_tree::ptree default_data;
@@ -16,6 +14,7 @@ private:
     auto version() -> std::string const;
 public:
     // Singleton (design) pattern is not preferred here.
+    OpenSCSimConfig();
     OpenSCSimConfig(std::filesystem::path default_config, std::filesystem::path user_config);
 
     class OptionProxy {

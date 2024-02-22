@@ -7,6 +7,8 @@
 #include "backend_init.h"
 #include "Config.h"
 
+OpenSCSimConfig::OpenSCSimConfig() {}
+
 OpenSCSimConfig::OpenSCSimConfig(std::filesystem::path default_config,
                                  std::filesystem::path user_config) : default_config(std::move(default_config)),
                                                                       user_config(std::move(user_config)),
