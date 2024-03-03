@@ -18,8 +18,6 @@ int main(int argc, char *argv[])
     QGuiApplication::setApplicationName(QStringLiteral("OpenSCSim"));
     QGuiApplication::setApplicationDisplayName(QStringLiteral("OpenSCSim - Solar Cell Simulator"));
 
-    QApplication qapp(argc, argv);
-
     QGuiApplication app(argc, argv);
 
     QQmlApplicationEngine engine;
@@ -30,7 +28,7 @@ int main(int argc, char *argv[])
     // [cmake]   for policy details.  Use the qt_policy command to set the policy and
     // [cmake]   suppress this warning.
     // Use this Qurl instead of "qrc:Main/main.qml"
-    const QUrl url(u"qrc:/qt/qml/Main/main.qml"_qs);
+    const QUrl url(u"qrc:/qt/qml/com/github/yihuajack/main.qml"_qs);
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, &app,
         [url](QObject *obj, const QUrl &objUrl) {

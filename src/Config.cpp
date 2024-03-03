@@ -4,7 +4,6 @@
 // #include <boost/exception/error_info.hpp>
 #include <boost/property_tree/ini_parser.hpp>  // Already includes <boost/property_tree/ptree.hpp>
 
-#include "backend_init.h"
 #include "Config.h"
 
 OpenSCSimConfig::OpenSCSimConfig() {}

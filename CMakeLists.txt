@@ -47,7 +47,9 @@ if (Qt6_VERSION VERSION_GREATER_EQUAL 6.6)
     qt_standard_project_setup(REQUIRES 6.6)
 endif()
 
-qt_add_executable(OpenSCSim)
+qt_add_executable(OpenSCSim
+        src/Application.cpp
+        src/Application.h)
 add_subdirectory(src)
 
 if (BUILD_QDS_COMPONENTS)
