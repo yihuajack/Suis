@@ -2,7 +2,11 @@
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
 
 import QtQuick 6.6
+<<<<<<< Updated upstream:src/content/App.qml
 import OpenSCSimGUI
+=======
+import Suis
+>>>>>>> Stashed changes:content/App.qml
 import QtQuick.VirtualKeyboard 6.6
 
 Window {
@@ -10,7 +14,7 @@ Window {
     height: mainScreen.height
 
     visible: true
-    title: "OpenSCSim"
+    title: "Suis"
 
     Screen01 {
         id: mainScreen

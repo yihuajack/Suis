@@ -1,7 +1,7 @@
 #include <filesystem>
 #include <boost/property_tree/ptree.hpp>
 
-class OpenSCSimConfig {
+class SuisConfig {
 private:
     std::filesystem::path default_config;
     std::filesystem::path user_config;
@@ -14,8 +14,8 @@ private:
     auto version() -> std::string const;
 public:
     // Singleton (design) pattern is not preferred here.
-    OpenSCSimConfig();
-    OpenSCSimConfig(std::filesystem::path default_config, std::filesystem::path user_config);
+    SuisConfig();
+    SuisConfig(std::filesystem::path default_config, std::filesystem::path user_config);
 
     class OptionProxy {
     private:

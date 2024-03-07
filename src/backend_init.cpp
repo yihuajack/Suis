@@ -10,12 +10,12 @@ void backend_init() {
 #ifdef _MSC_VER
     char *user_path;
     std::size_t len_userdata;
-    errno_t err_userdata = _dupenv_s(&user_path, &len_userdata, "OPENSCSIM_USER_DATA");
+    errno_t err_userdata = _dupenv_s(&user_path, &len_userdata, "SUIS_USER_DATA");
     if (err_userdata) {
         throw std::runtime_error("_dupenv_s fails to get user data environment variable, errno is " + std::to_string(err_userdata) + ".");
     }
 #else
-    char *user_path = std::getenv("OPENSCSIM_USER_DATA");
+    char *user_path = std::getenv("SUIS_USER_DATA");
 #endif
     if (!user_path) {
         throw std::runtime_error("getenv fails to get user data environment variable.");
@@ -23,14 +23,14 @@ void backend_init() {
     free(user_path);
      */
     QProcessEnvironment sysenv = QProcessEnvironment::systemEnvironment();
-    QString user_path_str = sysenv.value("OPENSCSIM_USER_DATA", "");
+    QString user_path_str = sysenv.value("SUIS_USER_DATA", "");
     std::filesystem::path user_path;
     if (user_path_str.isEmpty()) {
         QStandardPaths::StandardLocation home_loc = QStandardPaths::HomeLocation;  // the same as QDir::homePath()
         QString home_path = QStandardPaths::displayName(home_loc);
         user_path = home_path.toStdString();
-        user_path_str = "~/.openscsim";
-        user_path /= ".openscsim";
+        user_path_str = "~/.suis";
+        user_path /= ".suis";
     } else {
         user_path = user_path_str.toStdString();
     }
@@ -43,6 +43,6 @@ void backend_init() {
         // QDir::mkdir() is enough. Alternatively use QDir::mkpath() to create all parent directories.
         quser_pathdir.mkdir(user_path_str);
     }
-    std::filesystem::path user_config = user_path / "openscsim.ini";
+    std::filesystem::path user_config = user_path / "suis.ini";
 
 }

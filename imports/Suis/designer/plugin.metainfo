@@ -1,6 +1,10 @@
 MetaInfo {
     Type {
+<<<<<<< Updated upstream:src/imports/OpenSCSimGUI/designer/plugin.metainfo
         name: "OpenSCSimGUI.EventListSimulator"
+=======
+        name: "Suis.EventListSimulator"
+>>>>>>> Stashed changes:imports/OpenSCSim/designer/plugin.metainfo
         icon: ":/qtquickplugin/images/item-icon16.png"
 
         Hints {

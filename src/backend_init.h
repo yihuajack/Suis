@@ -2,8 +2,8 @@
 
 #include "Config.h"
 
-namespace OpenSCSim {
-    const std::filesystem::path OPENSCSIM_ROOT = "..";
-    const std::filesystem::path default_config = OPENSCSIM_ROOT / "openscsim.ini";
-    // OpenSCSimConfig config;
+namespace Suis {
+    const std::filesystem::path SUIS_ROOT = "..";
+    const std::filesystem::path default_config = SUIS_ROOT / "suis.ini";
+    // SuisConfig config;
 }

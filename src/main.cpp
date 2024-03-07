@@ -15,8 +15,8 @@ int main(int argc, char *argv[])
     set_qt_environment();
 
     QGuiApplication::setOrganizationName(QStringLiteral("Yihua Liu"));
-    QGuiApplication::setApplicationName(QStringLiteral("OpenSCSim"));
-    QGuiApplication::setApplicationDisplayName(QStringLiteral("OpenSCSim - Solar Cell Simulator"));
+    QGuiApplication::setApplicationName(QStringLiteral("Suis"));
+    QGuiApplication::setApplicationDisplayName(QStringLiteral("Suis - Solar Cell Simulator"));
 
     QGuiApplication app(argc, argv);
 

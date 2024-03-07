@@ -17,10 +17,10 @@ option(LINK_INSIGHT "Link Qt Insight Tracker library" ON)
 # from content/CMakeLists.txt:5 (qt6_add_qml_module)
 option(BUILD_QDS_COMPONENTS "Build design studio components" ON)
 
-project(OpenSCSim
+project(SuisApp
         VERSION 1.0.0
         DESCRIPTION "Open-source Solar Cell Simulator"
-        HOMEPAGE_URL "https://github.com/yihuajack/OpenSCSim"
+        HOMEPAGE_URL "https://github.com/yihuajack/Suis"
         LANGUAGES CXX)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
@@ -32,7 +32,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Alternatively use --toolchain instead of CMAKE_TOOLCHAIN_FILE
 # set(CMAKE_PREFIX_PATH "D:\\Qt\\6.6.2\\msvc2019_64\\lib\\cmake")
 # After updating MSVC, remember to manually update the path to cl.exe in
-# build-OpenSCSim-Desktop_Qt_6_6_2_MSVC2019_64bit-Debug\vcpkg-dependencies\toolchain.cmake
+# build-Suis-Desktop_Qt_6_6_2_MSVC2019_64bit-Debug\vcpkg-dependencies\toolchain.cmake
 # where CMAKE_C_COMPILER, CMAKE_CXX_COMPILER, and VCPKG_TARGET_TRIPLET are set.
 
 find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Qml Quick)
@@ -47,9 +47,16 @@ if (Qt6_VERSION VERSION_GREATER_EQUAL 6.6)
     qt_standard_project_setup(REQUIRES 6.6)
 endif()
 
-qt_add_executable(OpenSCSim
+qt_add_executable(SuisApp
         src/Application.cpp
         src/Application.h)
+
+qt_add_resources(SuisApp "configuration"
+        PREFIX "/"
+        FILES
+        qtquickcontrols2.conf
+)
+
 add_subdirectory(src)
 
 if (BUILD_QDS_COMPONENTS)

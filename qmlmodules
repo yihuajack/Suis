@@ -14,5 +14,5 @@ add_subdirectory(src/imports)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     contentplugin
-    OpenSCSimGUIplugin
+    Suisplugin
 )

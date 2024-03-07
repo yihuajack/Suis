@@ -1,4 +1,4 @@
-target_sources(OpenSCSim PRIVATE
+target_sources(SuisApp PRIVATE
         #headers
         optics/FixedMatrix.h
         optics/tmm.h
@@ -17,20 +17,14 @@ target_sources(OpenSCSim PRIVATE
         main.cpp
 )
 
-qt_add_resources(OpenSCSim "configuration"
-        PREFIX "/"
-        FILES
-        qtquickcontrols2.conf
-)
-
-target_link_libraries(OpenSCSim PRIVATE
+target_link_libraries(SuisApp PRIVATE
         Qt6::Core
         Qt6::Gui
         Qt6::Qml
         Qt6::Quick
 )
 
-install(TARGETS OpenSCSim
+install(TARGETS SuisApp
         BUNDLE DESTINATION .
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

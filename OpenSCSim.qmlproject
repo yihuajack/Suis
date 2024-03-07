@@ -91,7 +91,7 @@ Project {
     importPaths: [ "imports", "asset_imports" ]
 
     /* Required for deployment */
-    targetDirectory: "/opt/OpenSCSim"
+    targetDirectory: "/opt/Suis"
 
     qdsVersion: "4.1"
 

@@ -6,9 +6,9 @@
 
 #include "Config.h"
 
-OpenSCSimConfig::OpenSCSimConfig() {}
+SuisConfig::SuisConfig() {}
 
-OpenSCSimConfig::OpenSCSimConfig(std::filesystem::path default_config,
+SuisConfig::SuisConfig(std::filesystem::path default_config,
                                  std::filesystem::path user_config) : default_config(std::move(default_config)),
                                                                       user_config(std::move(user_config)),
                                                                       user_folder(user_config.parent_path()) {
@@ -26,11 +26,11 @@ OpenSCSimConfig::OpenSCSimConfig(std::filesystem::path default_config,
 }
 
 /*
- * Resets the default OpenSCSim configuration in the user home folder.
+ * Resets the default Suis configuration in the user home folder.
  */
-void OpenSCSimConfig::reset_defaults(bool confirm) {
+void SuisConfig::reset_defaults(bool confirm) {
     if (!confirm) {
-        std::cout << "This action will delete any custom OpenSCSim configuration. "
+        std::cout << "This action will delete any custom Suis configuration. "
                      "Are you sure you want to continue (Y/n)?";
         char response;
         std::cin >> response;
@@ -48,14 +48,14 @@ void OpenSCSimConfig::reset_defaults(bool confirm) {
 /*
  * Saves the current user configuration
  */
-void OpenSCSimConfig::_save_user_config() const {
+void SuisConfig::_save_user_config() const {
     boost::property_tree::write_ini(user_config.generic_string(), user_data);
 }
 
 /*
  * Restores all the default values without touching user additions.
  */
-void OpenSCSimConfig::restore_defaults() {
+void SuisConfig::restore_defaults() {
     for (const boost::property_tree::ptree::value_type &s : default_data) {
         for (const boost::property_tree::ptree::value_type &o : default_data.get_child(s.second.data())) {
             user_data.put(o.first.data(), o.second.data());
@@ -68,7 +68,7 @@ void OpenSCSimConfig::restore_defaults() {
  *
  * :return: The version number
  */
-auto OpenSCSimConfig::version() -> std::string const {
+auto SuisConfig::version() -> std::string const {
     /* try {
         // std::string of the parameter is path_type, std::string of the return value is template class Type.
         return user_data.get<std::string>("Configuration.version");
@@ -80,15 +80,15 @@ auto OpenSCSimConfig::version() -> std::string const {
     return version_data.value_or("");
 }
 
-OpenSCSimConfig::OptionProxy::OptionProxy(const boost::property_tree::ptree &option_tree) : option_tree(option_tree) {}
+SuisConfig::OptionProxy::OptionProxy(const boost::property_tree::ptree &option_tree) : option_tree(option_tree) {}
 
-auto OpenSCSimConfig::OptionProxy::operator[](const std::string &option_key) const -> std::string {
+auto SuisConfig::OptionProxy::operator[](const std::string &option_key) const -> std::string {
     return option_tree.get<std::string>(option_key);
 }
 
-auto OpenSCSimConfig::operator[](const std::string &section_key) const -> OpenSCSimConfig::OptionProxy {
+auto SuisConfig::operator[](const std::string &section_key) const -> SuisConfig::OptionProxy {
     const boost::property_tree::ptree &option_tree = user_data.get_child(section_key);
-    return OpenSCSimConfig::OptionProxy(option_tree);
+    return SuisConfig::OptionProxy(option_tree);
 }
 
 /*
@@ -97,7 +97,7 @@ auto OpenSCSimConfig::operator[](const std::string &section_key) const -> OpenSC
  * :param show: True/False for showing/hiding the loading messages
  * :return: None
  */
-auto OpenSCSimConfig::verbose_loading(std::optional<bool> show) -> bool const {
+auto SuisConfig::verbose_loading(std::optional<bool> show) -> bool const {
     if (show.has_value()) {
         // user_data.put("Configuration.verbose_loading", std::format("{}", show.value()));
         user_data.put("Configuration.verbose_loading", show.value());
