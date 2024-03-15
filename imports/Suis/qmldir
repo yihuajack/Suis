@@ -1,10 +1,5 @@
-<<<<<<< Updated upstream:src/imports/OpenSCSimGUI/qmldir
-Module OpenSCSimGUI
-=======
 Module Suis
->>>>>>> Stashed changes:imports/OpenSCSim/qmldir
 singleton Constants 1.0 Constants.qml
 EventListSimulator 1.0 EventListSimulator.qml
 EventListModel 1.0 EventListModel.qml
 DirectoryFontLoader 1.0 DirectoryFontLoader.qml
-

@@ -8,12 +8,8 @@ Check out https://doc.qt.io/qtcreator/creator-quick-ui-forms.html for details on
 */
 import QtQuick 6.6
 import QtQuick.Controls 6.6
-<<<<<<<< Updated upstream:src/content/Screen01.ui.qml
-import OpenSCSimGUI
-========
 import Suis 1.0
 import FlowView 1.0
->>>>>>>> Stashed changes:src/content/WelcomeScreen.ui.qml
 
 Rectangle {
     id: rectangle
