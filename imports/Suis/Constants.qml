@@ -19,6 +19,7 @@ QtObject {
                                               })
 
     readonly property color backgroundColor: "#c2c2c2"
+    readonly property color barColor: "Grey"
     readonly property int defaultMargin: 8
 
     property StudioApplication application: StudioApplication {

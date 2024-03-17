@@ -5,19 +5,47 @@ import QtQuick 6.6
 import QtQuick.Controls 6.6
 import Suis 1.0
 
-Rectangle {
-    id: wizardRoot
+WizardFlowForm {
+    id: wizardFlow
     width: Constants.width
     height: Constants.height
 
-    color: Constants.backgroundColor
-
     state: "initial"
+
+    onNextClicked: {
+        wizardFlow.state = "parsetOptical"
+    }
+
+    WelcomePage {
+        id: welcomePage
+        visible: wizardFlow.state === "initial"
+        anchors.fill: parent
+    }
+
+    OpticalParsetPage {
+        id: opticalParsetPage
+        visible: wizardFlow.state === "parSetOptical"
+        anchors.fill: parent
+    }
+
+    ElectricalParsetPage {
+        id: electricalParsetPage
+        visible: wizardFlow.state === "parSetElectrical"
+        anchors.fill: parent
+    }
 
     states: [
         State {
-            name: "clicked"
-            when: button.checked
+            name: "initial"
+        },
+        State {
+            name: "parSetOptical"
+        },
+        State {
+            name: "parSetElectrical"
+        },
+        State {
+            name: "finish"
         }
     ]
 }

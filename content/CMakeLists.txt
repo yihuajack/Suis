@@ -10,6 +10,12 @@ qt6_add_qml_module(content
         App.qml
         WelcomePage.qml
         WelcomePageForm.ui.qml
+        OpticalParsetPage.qml
+        OpticalParsetPageForm.ui.qml
+        ElectricalParsetPage.qml
+        ElectricalParsetPageForm.ui.qml
+        WizardFlow.qml
+        WizardFlowForm.ui.qml
 
     RESOURCES
         fonts/fonts.txt

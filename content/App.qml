@@ -12,8 +12,7 @@ Window {
     visible: true
     title: qsTr("Suis")
 
-    WelcomeScreen {
-        id: welcomeScreen
+    WizardFlow {
     }
 
     InputPanel {

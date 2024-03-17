@@ -15,35 +15,18 @@ Item {
     height: Constants.height - 100
     anchors.top: parent.top
 
-    Text {
-        id: label
-        y: 213
-        text: qsTr("Parameter Wizard")
-        font.family: Constants.font.family
+    Button {
+        id: importElecButton
+        text: qsTr("Import Electrical Parameters")
         anchors.verticalCenter: parent.verticalCenter
         anchors.verticalCenterOffset: 0
-        font.pointSize: 24
-        anchors.horizontalCenterOffset: 0
         anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: 0
+        checkable: true
 
-        SequentialAnimation {
-            id: animation
-
-            ColorAnimation {
-                id: colorAnimation1
-                target: label
-                property: "color"
-                to: "#2294c6"
-                from: Constants.backgroundColor
-            }
-
-            ColorAnimation {
-                id: colorAnimation2
-                target: label
-                property: "color"
-                to: Constants.backgroundColor
-                from: "#2294c6"
-            }
+        Connections {
+            target: importElecButton
+            onClicked: importElecClicked()
         }
     }
 }
