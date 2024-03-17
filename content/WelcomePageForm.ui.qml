@@ -9,38 +9,54 @@ Check out https://doc.qt.io/qtcreator/creator-quick-ui-forms.html for details on
 import QtQuick 6.6
 import QtQuick.Controls 6.6
 import Suis 1.0
-import FlowView 1.0
 
-Rectangle {
-    id: rectangle
+Item {
+    id: root
     width: Constants.width
     height: Constants.height
 
-    color: Constants.backgroundColor
+    signal startClicked
+    signal exitClicked
 
     Button {
-        id: button
-        text: qsTr("Press me")
+        id: startButton
+        text: qsTr("Start")
         anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: -1
-        anchors.horizontalCenterOffset: -99
+        anchors.verticalCenterOffset: 0
+        anchors.horizontalCenterOffset: -50
+        checkable: true
+        anchors.horizontalCenter: parent.horizontalCenter
+
+        Connections {
+            target: startButton
+            onClicked: startClicked()
+        }
+    }
+
+    Button {
+        id: exitButton
+        text: qsTr("Exit")
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: 0
+        anchors.horizontalCenterOffset: 50
         checkable: true
         anchors.horizontalCenter: parent.horizontalCenter
 
         Connections {
             target: button
-            onClicked: animation.start()
+            onClicked: exitClicked()
         }
     }
 
     Text {
         id: label
+        y: 213
         text: qsTr("Parameter Wizard")
         anchors.top: button.bottom
         font.family: Constants.font.family
         anchors.topMargin: -418
         font.pointSize: 24
-        anchors.horizontalCenterOffset: -469
+        anchors.horizontalCenterOffset: 0
         anchors.horizontalCenter: parent.horizontalCenter
 
         SequentialAnimation {
@@ -63,15 +79,4 @@ Rectangle {
             }
         }
     }
-    states: [
-        State {
-            name: "clicked"
-            when: button.checked
-
-            PropertyChanges {
-                target: label
-                text: qsTr("Button Checked")
-            }
-        }
-    ]
 }

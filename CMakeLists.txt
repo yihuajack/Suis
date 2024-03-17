@@ -60,13 +60,13 @@ qt_add_resources(SuisApp "configuration"
 add_subdirectory(src)
 
 if (BUILD_QDS_COMPONENTS)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/src/qmlcomponents)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/qmlcomponents)
 endif()
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/src/qmlmodules)
+include(${CMAKE_CURRENT_SOURCE_DIR}/qmlmodules)
 
 if (LINK_INSIGHT)
-    include(${CMAKE_CURRENT_SOURCE_DIR}/src/insight)
+    include(${CMAKE_CURRENT_SOURCE_DIR}/insight)
 endif ()
 
 include(GNUInstallDirs)

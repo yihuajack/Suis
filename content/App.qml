@@ -1,4 +1,4 @@
-// Copyright (C) 2021 The Qt Company Ltd.
+// Copyright (C) 2024 Yihua Liu
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
 
 import QtQuick 6.6
@@ -6,14 +6,14 @@ import Suis
 import QtQuick.VirtualKeyboard 6.6
 
 Window {
-    width: mainScreen.width
-    height: mainScreen.height
+    width: Screen.desktopAvailableWidth
+    height: Screen.desktopAvailableHeight
 
     visible: true
-    title: "Suis"
+    title: qsTr("Suis")
 
-    Screen01 {
-        id: mainScreen
+    WelcomeScreen {
+        id: welcomeScreen
     }
 
     InputPanel {
@@ -32,4 +32,3 @@ Window {
         anchors.right: parent.right
     }
 }
-
