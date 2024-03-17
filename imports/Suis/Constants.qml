@@ -20,7 +20,7 @@ QtObject {
 
     readonly property color backgroundColor: "#c2c2c2"
     readonly property color barColor: "Grey"
-    readonly property int defaultMargin: 8
+    readonly property int defaultMargin: 20
 
     property StudioApplication application: StudioApplication {
         fontPath: Qt.resolvedUrl("../../content/" + relativeFontDirectory)

@@ -6,6 +6,7 @@ import Suis
 import QtQuick.VirtualKeyboard 6.6
 
 Window {
+    id: mainWindow
     width: Screen.desktopAvailableWidth
     height: Screen.desktopAvailableHeight
 
@@ -13,6 +14,7 @@ Window {
     title: qsTr("Suis")
 
     WizardFlow {
+        onCancelClicked: mainWindow.close()
     }
 
     InputPanel {
@@ -25,8 +27,8 @@ Window {
                 easing.type: Easing.InOutQuad
             }
         }
-        anchors.leftMargin: Constants.width/10
-        anchors.rightMargin: Constants.width/10
+        anchors.leftMargin: Constants.width / 10
+        anchors.rightMargin: Constants.width / 10
         anchors.left: parent.left
         anchors.right: parent.right
     }

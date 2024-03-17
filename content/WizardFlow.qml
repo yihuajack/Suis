@@ -13,7 +13,10 @@ WizardFlowForm {
     state: "initial"
 
     onNextClicked: {
-        wizardFlow.state = "parsetOptical"
+        if (wizardFlow.state === "initial")
+            wizardFlow.state = "parSetOptical"
+        else if (wizardFlow.state === "parSetOptical")
+            wizardFlow.state = "parSetElectrical"
     }
 
     WelcomePage {

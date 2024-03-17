@@ -18,15 +18,51 @@ Item {
     Button {
         id: importOptButton
         text: qsTr("Import Optical Parameters")
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: 0
+        y: 300
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.horizontalCenterOffset: 0
         checkable: true
 
         Connections {
             target: importOptButton
-            onClicked: importOptClicked()
+            onClicked: optFolderDialog.open()
         }
     }
+
+    Button {
+        id: plotOptButton
+        text: qsTr("Plot Optical Parameters")
+        visible: opticalParsetPage.state === "optParImported"
+        y: 600
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: 0
+        checkable: true
+
+        Connections {
+            target: plotOptButton
+            onClicked: {
+                raImage.visible = true
+            }
+        }
+    }
+
+    Image {
+        id: raImage
+        source: "file:///E:/Documents/Master/ECO/GCL/slide_materials/feb_26/RA_device2.png"
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: Constants.defaultMargin + 150
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: 0
+        fillMode: Image.PreserveAspectFit
+        visible: false
+    }
+
+    states: [
+        State {
+            name: "optInit"
+        },
+        State {
+            name: "optParImported"
+        }
+    ]
 }
