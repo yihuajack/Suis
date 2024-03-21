@@ -64,7 +64,7 @@ void SuisConfig::restore_defaults() {
 }
 
 /*
- * Provides the Solcore version
+ * Provides the Suis version
  *
  * :return: The version number
  */

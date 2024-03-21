@@ -3,3 +3,12 @@
 //
 
 #include "Application.h"
+
+Application *Application::instance() {
+    static Application app;
+    return &app;
+}
+
+Application::Application() {
+
+}

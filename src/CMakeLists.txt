@@ -1,12 +1,12 @@
 target_sources(SuisApp PRIVATE
-        #headers
+        # headers
         optics/FixedMatrix.h
         optics/tmm.h
         tools/Approx.h
         tools/utils.h
         backend_init.h
         Config.h
-        #sources
+        # sources
         optics/FixedMatrix.cpp
         optics/tmm.cpp
         optics/tmm_vec.cpp

@@ -37,9 +37,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Qml Quick)
 set(CMAKE_AUTOMOC ON)
-# set(CMAKE_AUTOUIC ON)
-# set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
 find_package(Boost 1.84.0 REQUIRED)
+find_package(SQLite3 3.45.0 REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
 

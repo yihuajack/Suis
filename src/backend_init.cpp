@@ -5,7 +5,7 @@
 #include "backend_init.h"
 
 void backend_init() {
-    /*Let us expected P1031R2: Low level file i/o library (https://wg21.link/p1031r2)
+    /*Let us expect P1031R2: Low level file i/o library (https://wg21.link/p1031r2)
      * https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1031r2.pdf (https://ned14.github.io/llfio/)
 #ifdef _MSC_VER
     char *user_path;
@@ -36,7 +36,7 @@ void backend_init() {
     }
     // std::filesystem::path::format has native_format, generic_format, and auto_format.
     // generic_format uses slashes, while native_format of Windows paths uses backslashes.
-    // We can convert std::filesyttem::path to std::string by std::filesystem::path::generic_string() bu
+    // We can convert std::filesystem::path to std::string by std::filesystem::path::generic_string() bu
     // QDir() constructor accepts both QString and std::filesystem::path
     QDir quser_pathdir(user_path);
     if (!quser_pathdir.exists()) {

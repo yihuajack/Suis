@@ -8,6 +8,7 @@
 #include "import_qml_components_plugins.h"
 #include "import_qml_plugins.h"
 
+#include "Application.h"
 #include "backend_init.h"
 
 int main(int argc, char *argv[])
@@ -18,7 +19,12 @@ int main(int argc, char *argv[])
     QGuiApplication::setApplicationName(QStringLiteral("Suis"));
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Suis - Solar Cell Simulator"));
 
-    QGuiApplication app(argc, argv);
+    // qmlRegisterSingletonType<CppBackend>(
+    //     "backend", 1, 0, "BackendObject",
+    //     [](QQmlEngine *, QJSEngine *) { return new CppBackend; });
+    // qApp and qGuiApp are predefined macros in qguiapplication.h!
+    QGuiApplication qGuiApplication(argc, argv);
+    Application *application = Application::instance();
 
     QQmlApplicationEngine engine;
 
@@ -30,7 +36,7 @@ int main(int argc, char *argv[])
     // Use this Qurl instead of "qrc:Main/main.qml"
     const QUrl url(u"qrc:/qt/qml/com/github/yihuajack/main.qml"_qs);
     QObject::connect(
-        &engine, &QQmlApplicationEngine::objectCreated, &app,
+        &engine, &QQmlApplicationEngine::objectCreated, &qGuiApplication,
         [url](QObject *obj, const QUrl &objUrl) {
             if (!obj && url == objUrl)
                 QCoreApplication::exit(-1);
@@ -42,9 +48,11 @@ int main(int argc, char *argv[])
 
     engine.load(url);
 
+    // application->setQmlEngine(&engine);
+
     if (engine.rootObjects().isEmpty()) {
         return -1;
     }
 
-    return app.exec();
+    return qGuiApplication.exec();
 }
