@@ -6,10 +6,11 @@
 #define APPLICATION_H
 
 #include <QGuiApplication>
+#include <QSettings>
 
 class Application final : public QObject {
     Q_OBJECT
-    // Q_DISABLE_COPY_MOVE(Application)
+    Q_DISABLE_COPY_MOVE(Application)
 
 public:
     static Application *instance();
@@ -21,12 +22,9 @@ public:
     // the constructor should be declared as Application(int &argc, char **argv)
 private:
     explicit Application();
-    ~Application() = default;
+    ~Application() override = default;
 
-    Application(const Application &) = delete;
-    Application &operator=(const Application &) = delete;
-    Application(Application &&) = delete;
-    Application &operator=(Application &&) = delete;
+    QSettings *m_settings{};
 };
 
 #endif // APPLICATION_H

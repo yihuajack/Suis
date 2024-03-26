@@ -17,6 +17,7 @@ int main(int argc, char *argv[])
 
     QGuiApplication::setOrganizationName(QStringLiteral("Yihua Liu"));
     QGuiApplication::setApplicationName(QStringLiteral("Suis"));
+    QGuiApplication::setOrganizationDomain(QStringLiteral("yihuajack.github.io"));
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Suis - Solar Cell Simulator"));
 
     // qmlRegisterSingletonType<CppBackend>(
@@ -35,6 +36,7 @@ int main(int argc, char *argv[])
     // [cmake]   suppress this warning.
     // Use this Qurl instead of "qrc:Main/main.qml"
     const QUrl url(u"qrc:/qt/qml/com/github/yihuajack/main.qml"_qs);
+    // Consider using KDSingleApplication
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, &qGuiApplication,
         [url](QObject *obj, const QUrl &objUrl) {
@@ -54,5 +56,5 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    return qGuiApplication.exec();
+    return QGuiApplication::exec();
 }

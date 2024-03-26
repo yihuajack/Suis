@@ -9,9 +9,9 @@
 SuisConfig::SuisConfig() {}
 
 SuisConfig::SuisConfig(std::filesystem::path default_config,
-                                 std::filesystem::path user_config) : default_config(std::move(default_config)),
-                                                                      user_config(std::move(user_config)),
-                                                                      user_folder(user_config.parent_path()) {
+                       std::filesystem::path user_config) : default_config(std::move(default_config)),
+                                                            user_config(std::move(user_config)),
+                                                            user_folder(user_config.parent_path()) {
     boost::property_tree::ini_parser::read_ini(default_config.generic_string(), default_data);
     QFile user_config_file;
     if (!user_config_file.exists()) {

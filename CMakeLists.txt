@@ -41,6 +41,8 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 find_package(Boost 1.84.0 REQUIRED)
 find_package(SQLite3 3.45.0 REQUIRED)
+# Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR)
+# See https://bugreports.qt.io/browse/QTBUG-92587
 
 include_directories(${Boost_INCLUDE_DIRS})
 

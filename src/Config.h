@@ -13,7 +13,6 @@ private:
     void restore_defaults();
     auto version() -> std::string const;
 public:
-    // Singleton (design) pattern is not preferred here.
     SuisConfig();
     SuisConfig(std::filesystem::path default_config, std::filesystem::path user_config);
 

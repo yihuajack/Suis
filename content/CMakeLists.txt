@@ -19,4 +19,5 @@ qt6_add_qml_module(content
 
     RESOURCES
         fonts/fonts.txt
+        images/RA_device2.png
 )

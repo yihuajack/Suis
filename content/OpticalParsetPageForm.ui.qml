@@ -48,7 +48,7 @@ Item {
 
     Image {
         id: raImage
-        source: "file:///E:/Documents/Master/ECO/GCL/slide_materials/feb_26/RA_device2.png"
+        source: "images/RA_device2.png"
         anchors.bottom: parent.bottom
         anchors.bottomMargin: Constants.defaultMargin + 150
         anchors.horizontalCenter: parent.horizontalCenter
