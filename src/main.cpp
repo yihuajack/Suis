@@ -11,21 +11,21 @@
 #include "Application.h"
 #include "backend_init.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     set_qt_environment();
 
     QGuiApplication::setOrganizationName(QStringLiteral("Yihua Liu"));
     QGuiApplication::setApplicationName(QStringLiteral("Suis"));
-    QGuiApplication::setOrganizationDomain(QStringLiteral("yihuajack.github.io"));
+    QGuiApplication::setOrganizationDomain(QStringLiteral("yihuajack.github.io"));  // for macOS/iOS
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Suis - Solar Cell Simulator"));
+    QGuiApplication::setApplicationVersion("1.0");  // QT_VERSION_STR = "6.6.2"
 
     // qmlRegisterSingletonType<CppBackend>(
     //     "backend", 1, 0, "BackendObject",
     //     [](QQmlEngine *, QJSEngine *) { return new CppBackend; });
     // qApp and qGuiApp are predefined macros in qguiapplication.h!
-    QGuiApplication qGuiApplication(argc, argv);
-    Application *application = Application::instance();
+    std::unique_ptr<Application> app;
+    app = std::make_unique<Application>(argc, argv);
 
     QQmlApplicationEngine engine;
 
@@ -35,10 +35,13 @@ int main(int argc, char *argv[])
     // [cmake]   for policy details.  Use the qt_policy command to set the policy and
     // [cmake]   suppress this warning.
     // Use this Qurl instead of "qrc:Main/main.qml"
-    const QUrl url(u"qrc:/qt/qml/com/github/yihuajack/main.qml"_qs);
+    using namespace Qt::Literals::StringLiterals;
+    // QString operator""_qs introduced since 6.2 deprecated since 6.8, use QString operator""_s instead.
+    // See https://github.com/qbittorrent/qBittorrent/issues/19184.
+    const QUrl url(u"qrc:/qt/qml/com/github/yihuajack/main.qml"_s);
     // Consider using KDSingleApplication
     QObject::connect(
-        &engine, &QQmlApplicationEngine::objectCreated, &qGuiApplication,
+        &engine, &QQmlApplicationEngine::objectCreated, app.get(),
         [url](QObject *obj, const QUrl &objUrl) {
             if (!obj && url == objUrl)
                 QCoreApplication::exit(-1);
@@ -49,8 +52,6 @@ int main(int argc, char *argv[])
     engine.addImportPath(":/");
 
     engine.load(url);
-
-    // application->setQmlEngine(&engine);
 
     if (engine.rootObjects().isEmpty()) {
         return -1;

@@ -50,9 +50,7 @@ if (Qt6_VERSION VERSION_GREATER_EQUAL 6.6)
     qt_standard_project_setup(REQUIRES 6.6)
 endif()
 
-qt_add_executable(SuisApp
-        src/Application.cpp
-        src/Application.h)
+qt_add_executable(SuisApp)
 
 qt_add_resources(SuisApp "configuration"
         PREFIX "/"

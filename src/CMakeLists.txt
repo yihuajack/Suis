@@ -5,7 +5,11 @@ target_sources(SuisApp PRIVATE
         tools/Approx.h
         tools/utils.h
         backend_init.h
+        Application.h
+        CommandLineParseResult.h
         Config.h
+        Profile.h
+        ProfilePrivate.h
         # sources
         optics/FixedMatrix.cpp
         optics/tmm.cpp
@@ -13,7 +17,11 @@ target_sources(SuisApp PRIVATE
         tools/Approx.cpp
         tools/utils.cpp
         backend_init.cpp
+        Application.cpp
+        CommandLineParseResult.cpp
         Config.cpp
+        Profile.cpp
+        ProfilePrivate.cpp
         main.cpp
 )
 
