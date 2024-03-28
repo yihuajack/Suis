@@ -8,7 +8,7 @@
 template auto Utils::Log::complex_to_string_with_name(const std::complex<double> c, const std::string &name) -> std::string;
 
 template<Utils::Log::TwoDContainer Container>
-void print_spec2d_container(const Container &container) {
+void Utils::Log::print_spec2d_container(const Container &container) {
     for (const auto &row: container) {
         for (const auto &item : row) {
             std::cout << item << ' ';
@@ -24,7 +24,7 @@ void print_spec2d_container(const Container &container) {
 // https://stackoverflow.com/questions/13777681/demangling-in-msvc
 #if defined(__GNUC__) || defined(__clang__)
 #include <cxxabi.h>
-auto demangle(const char *mangled_name) -> std::string {
+auto Utils::Log::demangle(const char *mangled_name) -> std::string {
     int status = 0;
     // Implicit conversion from char * to std::string.
     // If using char *, we need to manually free it, which is not RAII.
@@ -39,7 +39,7 @@ auto demangle(const char *mangled_name) -> std::string {
 // Do not mix #if defined and #elifdef!
 // Normally, `undname` command is only accessible under Developer Command Prompt/PowerShell for VS
 #elif defined(_MSC_VER)
-auto demangle(const char *mangled_name) -> std::string {
+auto Utils::Log::demangle(const char *mangled_name) -> std::string {
     // Assemble the command to run the 'undname' utility
     std::string command = "undname -n\"" + std::string(mangled_name) + "\"";
     // Open a pipe to the command
@@ -60,12 +60,12 @@ auto demangle(const char *mangled_name) -> std::string {
     return result;
 }
 #else
-auto demangle(const char *mangled_name) -> std::string {
+auto Utils::Log::demangle(const char *mangled_name) -> std::string {
     throw std::logic_error("Demangling only by gcc, clang, and msvc is supported.");
 }
 #endif
 
-void print_container(const std::ranges::common_range auto &container) {
+void Utils::Log::print_container(const std::ranges::common_range auto &container) {
     for (const auto &item: container) {
         std::cout << item << ' ';
     }

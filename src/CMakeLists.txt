@@ -3,6 +3,7 @@ target_sources(SuisApp PRIVATE
         optics/FixedMatrix.h
         optics/tmm.h
         utils/Approx.h
+        utils/Fs.h
         utils/Log.h
         utils/Math.h
         utils/Range.h
@@ -11,13 +12,16 @@ target_sources(SuisApp PRIVATE
         CommandLineParseResult.h
         Config.h
         Global.h
+        Preferences.h
         Profile.h
         ProfilePrivate.h
+        SettingsStorage.h
         # sources
         optics/FixedMatrix.cpp
         optics/tmm.cpp
         optics/tmm_vec.cpp
         utils/Approx.cpp
+        utils/Fs.cpp
         utils/Log.cpp
         utils/Math.cpp
         utils/Range.cpp
@@ -25,8 +29,10 @@ target_sources(SuisApp PRIVATE
         Application.cpp
         CommandLineParseResult.cpp
         Config.cpp
+        Preferences.cpp
         Profile.cpp
         ProfilePrivate.cpp
+        SettingsStorage.cpp
         main.cpp
 )
 

@@ -30,6 +30,7 @@
 #include "Global.h"
 #include "Profile.h"
 #include "SettingsStorage.h"
+#include "utils/Fs.h"
 
 #include <chrono>
 #include <memory>
@@ -139,9 +140,7 @@ void SettingsStorage::readNativeSettings() {
         finalPathStr.erase(index, 4);
 
         const std::filesystem::path finalPath {finalPathStr};
-        if (not QFile::remove(finalPath)) {
-            qWarning() << "Fail to remove file " << finalPathStr;
-        }
+        Utils::Fs::removeFile(finalPath);
         QFile::rename(newPath, finalPath);
     } else {
         deserialize(m_data, m_nativeSettingsName);
@@ -180,9 +179,7 @@ bool SettingsStorage::writeNativeSettings() const {
     }
 
     if (status != QSettings::NoError) {
-        if (not QFile::remove(newPath)) {
-            qWarning() << "Fail to remove file " << newPath.string();
-        }
+        Utils::Fs::removeFile(newPath);
         return false;
     }
 
@@ -191,14 +188,11 @@ bool SettingsStorage::writeNativeSettings() const {
     finalPathStr.erase(index, 4);
 
     const std::filesystem::path finalPath {finalPathStr};
-    if (not QFile::remove(finalPath)) {
-        qWarning() << "Fail to remove file " << finalPathStr;
-    }
+    Utils::Fs::removeFile(finalPath);
     return QFile::rename(newPath, finalPath);
 }
 
-void SettingsStorage::removeValue(const QString &key)
-{
+void SettingsStorage::removeValue(const QString &key) {
     const QWriteLocker locker(&m_lock);
     if (m_data.remove(key)) {
         m_dirty = true;

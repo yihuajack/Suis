@@ -22,6 +22,7 @@ namespace Utils::Range {
     auto rng2d_transpose(const U &old_va, std::size_t num_rows) -> U;
 
     template<std::ranges::sized_range U>
+    requires std::ranges::sized_range<std::ranges::range_value_t<U>> and (not std::ranges::range<typename std::ranges::range_value_t<U>::value_type>)
     auto rng2l_transpose(const U &old_rng) -> U;
 
     template<std::ranges::sized_range U, typename T, std::size_t N>
