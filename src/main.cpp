@@ -14,7 +14,8 @@
 int main(int argc, char *argv[]) {
     set_qt_environment();
 
-    QGuiApplication::setOrganizationName(QStringLiteral("Yihua Liu"));
+    // Application organization name would affect QSettings locations.
+    // QGuiApplication::setOrganizationName(QStringLiteral("Yihua Liu"));
     QGuiApplication::setApplicationName(QStringLiteral("Suis"));
     QGuiApplication::setOrganizationDomain(QStringLiteral("yihuajack.github.io"));  // for macOS/iOS
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Suis - Solar Cell Simulator"));

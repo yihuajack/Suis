@@ -5,7 +5,8 @@
 #include <stdexcept>
 #include "FixedMatrix.h"
 #include "tmm.h"
-#include "src/tools/utils.h"
+#include "src/utils/Log.h"
+#include "src/utils/Math.h"
 
 using namespace std::complex_literals;
 
@@ -88,22 +89,22 @@ auto is_forward_angle(const std::complex<T> n, const std::complex<T> theta) -> b
         throw std::runtime_error("For materials with gain, it's ambiguous which "
                                  "beam is incoming vs outgoing. See "
                                  "https://arxiv.org/abs/1603.02720 Appendix C.\n" +
-                                 complex_to_string_with_name(n, "n") + "\t" +
-                                 complex_to_string_with_name(theta, "angle"));
+                                 Utils::Log::complex_to_string_with_name(n, "n") + "\t" +
+                                 Utils::Log::complex_to_string_with_name(theta, "angle"));
     }
     const std::complex<T> ncostheta = n * std::cos(theta);
-    const bool answer = std::abs(ncostheta.imag()) > TOL * EPSILON<T> ? ncostheta.imag() > 0 : ncostheta.real() > 0;
+    const bool answer = std::abs(ncostheta.imag()) > Utils::Math::TOL * Utils::Math::EPSILON<T> ? ncostheta.imag() > 0 : ncostheta.real() > 0;
     try {
-        if ((answer and (ncostheta.imag() <= -TOL * EPSILON<T> or
-                         ncostheta.real() <= -TOL * EPSILON<T> or
-                         std::real(n * std::cos(std::conj(theta))) <= -TOL * EPSILON<T>)) or
-            (not answer and (ncostheta.imag() >= TOL * EPSILON<T> or
-                             ncostheta.real() >= TOL * EPSILON<T> or
-                             std::real(n * std::cos(std::conj(theta))) >= TOL * EPSILON<T>))) {
+        if ((answer and (ncostheta.imag() <= -Utils::Math::TOL * Utils::Math::EPSILON<T> or
+                         ncostheta.real() <= -Utils::Math::TOL * Utils::Math::EPSILON<T> or
+                         std::real(n * std::cos(std::conj(theta))) <= -Utils::Math::TOL * Utils::Math::EPSILON<T>)) or
+            (not answer and (ncostheta.imag() >= Utils::Math::TOL * Utils::Math::EPSILON<T> or
+                             ncostheta.real() >= Utils::Math::TOL * Utils::Math::EPSILON<T> or
+                             std::real(n * std::cos(std::conj(theta))) >= Utils::Math::TOL * Utils::Math::EPSILON<T>))) {
             throw std::runtime_error("It's not clear which beam is incoming vs outgoing. Weird"
                                      " index maybe?\n" +
-                                     complex_to_string_with_name(n, "n") + "\t" +
-                                     complex_to_string_with_name(theta, "angle"));
+                                     Utils::Log::complex_to_string_with_name(n, "n") + "\t" +
+                                     Utils::Log::complex_to_string_with_name(theta, "angle"));
         }
     } catch (const std::runtime_error &angle_value_warning) {
         std::cerr << angle_value_warning.what() << '\n';
@@ -349,7 +350,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     if (not std::isinf(d_list[0]) or not std::isinf(d_list[d_list.size() - 1])) {
         throw std::invalid_argument("d_list must start and end with inf!");
     }
-    if (std::abs((n_list[0] * std::sin(th_0)).imag()) >= TOL * EPSILON<T> or not is_forward_angle(n_list[0], th_0)) {
+    if (std::abs((n_list[0] * std::sin(th_0)).imag()) >= Utils::Math::TOL * Utils::Math::EPSILON<T> or not is_forward_angle(n_list[0], th_0)) {
         throw std::invalid_argument("Error in n0 or th0!");
     }
     const std::size_t num_layers = n_list.size();
@@ -466,7 +467,7 @@ auto coh_tmm(const char pol, const std::vector<std::complex<T>> &n_list, const s
     if (not std::isinf(d_list.front()) or not std::isinf(d_list[d_list.size() - 1])) {
         throw std::invalid_argument("d_list must start and end with inf!");
     }
-    if (std::abs((n_list.front() * std::sin(th_0)).imag()) >= TOL * EPSILON<T> or not is_forward_angle(n_list.front(), th_0)) {
+    if (std::abs((n_list.front() * std::sin(th_0)).imag()) >= Utils::Math::TOL * Utils::Math::EPSILON<T> or not is_forward_angle(n_list.front(), th_0)) {
         throw std::invalid_argument("Error in n0 or th0!");
     }
     const std::size_t num_layers = n_list.size();
@@ -949,7 +950,7 @@ template<std::floating_point T>
 auto inc_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
              const std::valarray<LayerType> &c_list, const std::complex<T> th_0, const T lam_vac) -> inc_tmm_dict<T> {
     // Input tests
-    if (std::holds_alternative<std::complex<T>>(real_if_close(n_list[0] * std::sin(th_0)))) {
+    if (std::holds_alternative<std::complex<T>>(Utils::Math::real_if_close(n_list[0] * std::sin(th_0)))) {
         throw std::runtime_error("Error in n0 or th0!");
     }
     inc_tmm_dict<T> group_layer_data = inc_group_layers(n_list, d_list, c_list);

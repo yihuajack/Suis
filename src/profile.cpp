@@ -1,5 +1,5 @@
 /*
- * Bittorrent Client using Qt and libtorrent.
+ * Copyright (C) 2024  Yihua Liu <yihuajack@live.cn>
  * Copyright (C) 2016  Eugene Shalygin <eugene.shalygin@gmail.com>
  * Copyright (C) 2012  Christophe Dumez
  *
@@ -77,6 +77,7 @@ std::filesystem::path Profile::location(const SpecialFolder folder) const {
 
         default:
             Q_ASSERT_X(false, Q_FUNC_INFO, "Unknown SpecialFolder value.");
+            return {};  /* Unreachable */
     }
 }
 
@@ -98,9 +99,16 @@ std::unique_ptr<QSettings> Profile::applicationSettings(const std::u16string &na
 
 void Profile::ensureDirectoryExists(const SpecialFolder folder) const {
     const std::filesystem::path locationPath = location(folder);
-    if (not locationPath.empty() and not std::filesystem::create_directories(locationPath)) {
-        qFatal("Could not create required directory '%s'",
-               qUtf8Printable(QString::fromStdString(locationPath.string())));
+    std::error_code ec;
+    if (not std::filesystem::exists(locationPath)) {
+        std::filesystem::create_directories(locationPath, ec);
+    }
+    // Note that create_directories() will return false if the directory already exists, even though it does nothing!
+    // If that is the case, error_code will be 0.
+    if (not locationPath.empty() and ec) {
+        qFatal("Could not create required directory '%s'. Error code is '%d'",
+               qUtf8Printable(QString::fromStdString(locationPath.string())),  /* or c_str() */
+               ec.value());
     }
 }
 

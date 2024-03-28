@@ -3,12 +3,14 @@ project(test-tmm)
 
 set(CMAKE_CXX_STANDARD 23)
 
-add_executable(test-tmm test_tmm.cpp ../../src/optics/tmm.cpp
+add_executable(test-tmm test_tmm.cpp
+        ../../src/optics/tmm.cpp
         ../../src/optics/FixedMatrix.cpp
-        ../../src/tools/utils.cpp
+        ../../src/utils/Log.cpp
+        ../../src/utils/Math.cpp
 )
 
-target_include_directories(test-tmm PRIVATE ${CMAKE_SOURCE_DIR}/../../src/optics ${CMAKE_SOURCE_DIR}/../../src/tools)
+# target_include_directories(test-tmm PRIVATE ${CMAKE_SOURCE_DIR}/../../src/optics ${CMAKE_SOURCE_DIR}/../../src/utils)
 
 # For MSVC Compatibility
 # See https://stackoverflow.com/questions/6563810/m-pi-works-with-math-h-but-not-with-cmath-in-visual-studio/6563891

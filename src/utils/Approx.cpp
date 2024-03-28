@@ -3,9 +3,13 @@
 //
 
 #include <algorithm>
+#include <ranges>
 #include <tuple>
 #include <vector>
+
 #include "Approx.h"
+#include "../Global.h"
+#include "Range.h"
 
 template<nested_range R>
 auto flatten_t::operator()(R &&r) const {
@@ -92,12 +96,11 @@ auto ApproxBase<U, T>::operator==(const U &actual) const -> bool {
                         return a == _approx_scalar<typename U::value_type>(x);
                     });
         } else if constexpr (std::ranges::sized_range<typename U::value_type>) {  // ApproxNestedRange
-            constexpr flatten_t flatten;
-            if constexpr (IsComplex<typename inner_type<U>::type> and std::is_same_v<typename inner_type<U>::type::value_type, T>) {
+            if constexpr (IsComplex<typename Utils::Range::inner_type<U>::type> and std::is_same_v<typename Utils::Range::inner_type<U>::type::value_type, T>) {
                 // std::vector<std::vector<std::complex<T>>> -> std::complex<T>
-                const std::pair<typename inner_type<U>::type const&, typename inner_type<U>::type const&> elem = std::any_cast<std::ranges::zip_view<std::ranges::ref_view<typename inner_type<U>::type const>, std::ranges::ref_view<typename inner_type<U>::type const>>>(_yield_comparisons(actual));
+                const std::pair<typename Utils::Range::inner_type<U>::type const&, typename Utils::Range::inner_type<U>::type const&> elem = std::any_cast<std::ranges::zip_view<std::ranges::ref_view<typename Utils::Range::inner_type<U>::type const>, std::ranges::ref_view<typename Utils::Range::inner_type<U>::type const>>>(_yield_comparisons(actual));
                 return elem.first == _approx_scalar(elem.second);
-            } else if constexpr (std::is_same_v<std::ranges::range_value_t<typename inner_type<U>::type>, T>) {
+            } else if constexpr (std::is_same_v<std::ranges::range_value_t<typename Utils::Range::inner_type<U>::type>, T>) {
                 // std::vector<std::vector<T> -> std::vector<T>
                 return std::ranges::all_of(
                         std::any_cast<std::ranges::zip_view<std::ranges::join_view<std::ranges::transform_view<std::ranges::ref_view<U const>, flatten_t>>,

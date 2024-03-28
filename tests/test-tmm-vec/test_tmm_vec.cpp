@@ -7,9 +7,10 @@
 #include <cassert>
 #include <numbers>
 #include <functional>
-#include "tmm.h"
-#include "utils.h"
-#include "Approx.h"
+#include "../../src/optics/tmm.h"
+#include "../../src/utils/Approx.h"
+#include "../../src/utils/Math.h"
+#include "../../src/utils/Range.h"
 
 using namespace std::complex_literals;
 
@@ -109,7 +110,7 @@ void test_interface_T() {
 void test_coh_tmm_exceptions() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -124,7 +125,7 @@ void test_coh_tmm_s_r() {
     // EWG 13 N3639, N3497, N3467, N3412 Runtime-sized arrays with automatic storage duration
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -136,7 +137,7 @@ void test_coh_tmm_s_r() {
 void test_coh_tmm_s_t() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -148,7 +149,7 @@ void test_coh_tmm_s_t() {
 void test_coh_tmm_s_R() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -160,7 +161,7 @@ void test_coh_tmm_s_R() {
 void test_coh_tmm_s_T() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -172,7 +173,7 @@ void test_coh_tmm_s_T() {
 void test_coh_tmm_s_power_entering() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -184,7 +185,7 @@ void test_coh_tmm_s_power_entering() {
 void test_coh_tmm_s_vw_list() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -211,14 +212,14 @@ void test_coh_tmm_s_vw_list() {
             -8.86075993e-02 - 4.05953564e-01i,
             0.00000000e+00 + 0.00000000e+00i
     });
-    const std::vector<std::complex<double>> s_vw_list = vva2_flatten<std::valarray<std::vector<std::array<std::complex<double>, 2>>>, std::complex<double>, 2>(std::get<std::valarray<std::vector<std::array<std::complex<double>, 2>>>>(result.at("vw_list")));
+    const std::vector<std::complex<double>> s_vw_list = Utils::Range::vva2_flatten<std::valarray<std::vector<std::array<std::complex<double>, 2>>>, std::complex<double>, 2>(std::get<std::valarray<std::vector<std::array<std::complex<double>, 2>>>>(result.at("vw_list")));
     assert(s_vw_list == svwl_approx);
 }
 
 void test_coh_tmm_p_power_entering() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -230,7 +231,7 @@ void test_coh_tmm_p_power_entering() {
 void test_coh_tmm_p_vw_list() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -257,14 +258,14 @@ void test_coh_tmm_p_vw_list() {
             -9.02947159e-02 - 4.09448171e-01i,
             0.00000000e+00 + 0.00000000e+00i
     });
-    const std::vector<std::complex<double>> p_vw_list = vva2_flatten<std::valarray<std::vector<std::array<std::complex<double>, 2>>>, std::complex<double>, 2>(std::get<std::valarray<std::vector<std::array<std::complex<double>, 2>>>>(result.at("vw_list")));
+    const std::vector<std::complex<double>> p_vw_list = Utils::Range::vva2_flatten<std::valarray<std::vector<std::array<std::complex<double>, 2>>>, std::complex<double>, 2>(std::get<std::valarray<std::vector<std::array<std::complex<double>, 2>>>>(result.at("vw_list")));
     assert(p_vw_list == pvwl_approx);
 }
 
 void test_coh_tmm_kz_list() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -282,7 +283,7 @@ void test_coh_tmm_kz_list() {
 void test_coh_tmm_th_list() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -300,7 +301,7 @@ void test_coh_tmm_th_list() {
 void test_coh_tmm_inputs() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -322,7 +323,7 @@ void test_coh_tmm_inputs() {
 void test_coh_tmm_reverse() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -373,7 +374,7 @@ void test_coh_tmm_reverse() {
     assert(std::get<std::valarray<double>>(result.at("R")) == R_approx);
     assert(std::get<std::valarray<double>>(result.at("T")) == T_approx);
     assert(std::get<std::valarray<double>>(result.at("power_entering")) == power_approx);
-    const std::vector<std::complex<double>> vw_list = vva2_flatten<std::valarray<std::vector<std::array<std::complex<double>, 2>>>, std::complex<double>, 2>(std::get<std::valarray<std::vector<std::array<std::complex<double>, 2>>>>(result.at("vw_list")));
+    const std::vector<std::complex<double>> vw_list = Utils::Range::vva2_flatten<std::valarray<std::vector<std::array<std::complex<double>, 2>>>, std::complex<double>, 2>(std::get<std::valarray<std::vector<std::array<std::complex<double>, 2>>>>(result.at("vw_list")));
     assert(vw_list == vwl_approx);
     assert(std::get<std::valarray<std::complex<double>>>(result.at("th_list")) == thl_approx);
     assert(std::get<std::valarray<std::complex<double>>>(result.at("kz_list")) == kzl_approx);
@@ -382,7 +383,7 @@ void test_coh_tmm_reverse() {
 void test_ellips_psi() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -394,7 +395,7 @@ void test_ellips_psi() {
 void test_ellips_Delta() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -406,7 +407,7 @@ void test_ellips_Delta() {
 void test_unpolarized_RT_R() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -418,7 +419,7 @@ void test_unpolarized_RT_R() {
 void test_unpolarized_RT_T() {
     std::valarray<std::complex<double>> n_list = {1.5, 1.0 + 0.4i, 2.0 + 3i, 5, 4.0 + 1i,
                                                   1.3, 1.2 + 0.2i, 1.5 + 0.3i, 4, 3.0 + 0.1i};
-    n_list = rng2d_transpose(n_list, 2);
+    n_list = Utils::Range::rng2d_transpose(n_list, 2);
     const std::valarray<double> d_list = {INFINITY, 200, 187.3, 1973.5, INFINITY};
     constexpr std::complex<double> th_0 = 0.3;
     const std::valarray<double> lam_vac = {400, 1770};
@@ -486,7 +487,7 @@ void test_position_resolved_s_poyn() {
     const std::unordered_map<std::string, std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> pr_result = position_resolved({0, 1, 1, 2, 2, 3, 3, 4, 4},
                                                                                                                                                   {20, 10, 200, 20, 50.8, 10, 2000, 0, 200},
                                                                                                                                                   coh_tmm_data);
-    const ApproxSequenceLike<std::valarray<double>, double> poyn_approx = approx<std::valarray<double>, double>(rng2d_transpose(std::valarray<double>{
+    const ApproxSequenceLike<std::valarray<double>, double> poyn_approx = approx<std::valarray<double>, double>(Utils::Range::rng2d_transpose(std::valarray<double>{
             0.00000000e+00, 8.24769450e-01, 2.59652919e-02, 3.88663596e-03,
             2.08618804e-04, 1.15234465e-09, 1.15234465e-09, 1.15234466e-09,
             2.07458676e-12,
@@ -555,7 +556,7 @@ void test_position_resolved_s_absor() {
     const std::unordered_map<std::string, std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> pr_result = position_resolved({0, 1, 1, 2, 2, 3, 3, 4, 4},
                                                                                                                                                   {20, 10, 200, 20, 50.8, 10, 2000, 0, 200},
                                                                                                                                                   coh_tmm_data);
-    const ApproxSequenceLike<std::valarray<double>, double> absorption_approx = approx<std::valarray<double>, double>(rng2d_transpose(std::valarray<double>{
+    const ApproxSequenceLike<std::valarray<double>, double> absorption_approx = approx<std::valarray<double>, double>(Utils::Range::rng2d_transpose(std::valarray<double>{
             0.00000000e+00, 1.02697381e-02, 1.64378595e-04, 3.69077590e-04,
             1.98105861e-05, 0.00000000e+00, 0.00000000e+00, 3.64128877e-11,
             6.55547748e-14,
@@ -624,7 +625,7 @@ void test_position_resolved_p_poyn() {
     const std::unordered_map<std::string, std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> pr_result = position_resolved({0, 1, 1, 2, 2, 3, 3, 4, 4},
                                                                                                                                                   {20, 10, 200, 20, 50.8, 10, 2000, 0, 200},
                                                                                                                                                   coh_tmm_data);
-    const ApproxSequenceLike<std::valarray<double>, double> poyn_approx = approx<std::valarray<double>, double>(rng2d_transpose(std::valarray<double>{
+    const ApproxSequenceLike<std::valarray<double>, double> poyn_approx = approx<std::valarray<double>, double>(Utils::Range::rng2d_transpose(std::valarray<double>{
             0.00000000e+00, 8.45520745e-01, 2.87382013e-02, 4.30170256e-03,
             2.30897897e-04, 1.24068740e-09, 1.24068740e-09, 1.24068740e-09,
             2.23363177e-12,
@@ -693,7 +694,7 @@ void test_position_resolved_p_absor() {
     const std::unordered_map<std::string, std::variant<std::valarray<double>, std::valarray<std::complex<double>>>> pr_result = position_resolved({0, 1, 1, 2, 2, 3, 3, 4, 4},
                                                                                                                                                   {20, 10, 200, 20, 50.8, 10, 2000, 0, 200},
                                                                                                                                                   coh_tmm_data);
-    const ApproxSequenceLike<std::valarray<double>, double> absor_approx = approx<std::valarray<double>, double>(rng2d_transpose(std::valarray<double>{
+    const ApproxSequenceLike<std::valarray<double>, double> absor_approx = approx<std::valarray<double>, double>(Utils::Range::rng2d_transpose(std::valarray<double>{
             0.00000000e+00, 1.08969642e-02, 5.17505408e-04, 4.08492602e-04,
             2.19262267e-05, 0.00000000e+00, 0.00000000e+00, 3.92044315e-11,
             7.05804410e-14,
@@ -711,7 +712,7 @@ void test_find_in_structure_exception() {
 
 void test_find_in_structure() {
     // Approx only applies to std::floating_point
-    const std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::valarray<double>> result = find_in_structure({200, 187.3, 1973.5}, linspace_va<double>(0, 700, 10));
+    const std::pair<std::valarray<std::iterator_traits<double *>::difference_type>, std::valarray<double>> result = find_in_structure({200, 187.3, 1973.5}, Utils::Math::linspace_va<double>(0, 700, 10));
     const std::valarray<std::iterator_traits<double *>::difference_type> layer_approx{1, 1, 1, 2, 2, 3, 3, 3, 3, 3};
     assert(std::ranges::equal(result.first, layer_approx));
     const ApproxSequenceLike<std::valarray<double>, double> dist_approx = approx<std::valarray<double>, double>({0., 77.77777778, 155.55555556, 33.33333333, 111.11111111,
@@ -720,7 +721,7 @@ void test_find_in_structure() {
 }
 
 void test_find_in_structure_inf() {
-    const std::pair<std::valarray<std::size_t>, std::valarray<double>> result = find_in_structure_inf({INFINITY, 200, 187.3, 1973.5, INFINITY}, linspace_va<double>(0, 700, 10));
+    const std::pair<std::valarray<std::size_t>, std::valarray<double>> result = find_in_structure_inf({INFINITY, 200, 187.3, 1973.5, INFINITY}, Utils::Math::linspace_va<double>(0, 700, 10));
     const std::valarray<std::iterator_traits<double *>::difference_type> layer_approx{1, 1, 1, 2, 2, 3, 3, 3, 3, 3};
     assert(std::ranges::equal(result.first, layer_approx));
     const ApproxSequenceLike<std::valarray<double>, double> dist_approx = approx<std::valarray<double>, double>({0., 77.77777778, 155.55555556, 33.33333333, 111.11111111,
@@ -972,7 +973,7 @@ void test_run_array() {
         0.01179895 + 0.i, 0.00772895 + 0.i, 0.00570666 + 0.i, 0.0043161 + 0.i, 0.00277534 + 0.i, 0.00118025 + 0.i, 0.00016438 + 0.i,
         0.00206809 + 0.i, 0.00196401 + 0.i, 0.00182646 + 0.i, 0.00166052 + 0.i, 0.00147356 + 0.i, 0.00127472 + 0.i, 0.00107422 + 0.i
     }, 1e-4);
-    const std::vector<std::complex<double>> run_result = vv_flatten<std::valarray<std::valarray<std::complex<double>>>, std::complex<double>>(a.run(linspace_va<double>(0, 200, 7)));
+    const std::vector<std::complex<double>> run_result = Utils::Range::vv_flatten<std::valarray<std::valarray<std::complex<double>>>, std::complex<double>>(a.run(Utils::Math::linspace_va<double>(0, 200, 7)));
     assert(run_result == run_approx);
 }
 
@@ -1117,7 +1118,7 @@ void test_absorp_in_each_layer() {
             {"th_0", 0.3},
             {"lam_vac", std::valarray<double>{400, 1770}}
     };
-    const std::vector<double> ab_result = vv_flatten<std::valarray<std::valarray<double>>, double>(absorp_in_each_layer(coh_tmm_data));
+    const std::vector<double> ab_result = Utils::Range::vv_flatten<std::valarray<std::valarray<double>>, double>(absorp_in_each_layer(coh_tmm_data));
     const ApproxSequenceLike<std::vector<double>, double> ab_approx = approx<std::vector<double>, double>({
             6.51396300e-02, 6.12213100e-02,
             9.08895166e-01, 3.25991032e-01,
@@ -1224,11 +1225,11 @@ void test_inc_tmm_s_power_entering_list() {
     const std::valarray<double> lam_vac = {400, 1770};
     const inc_tmm_vec_dict<double> result = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
     const ApproxSequenceLike<std::vector<double>, double> sp_approx = approx<std::vector<double>, double>(
-            rng2d_transpose(
+            Utils::Range::rng2d_transpose(
                     std::vector<double>{1.00000000e+00, 1.09570873e-09, 1.09570873e-09,
                                         1.00000000e+00, 3.87024124e-01, 3.87024124e-01}
                     , 2));
-    const std::vector<double> sp_result = vv_flatten<std::vector<std::valarray<double>>, double>(std::get<std::vector<std::valarray<double>>>(result.at("power_entering_list")));
+    const std::vector<double> sp_result = Utils::Range::vv_flatten<std::vector<std::valarray<double>>, double>(std::get<std::vector<std::valarray<double>>>(result.at("power_entering_list")));
     assert(sp_result == sp_approx);
 }
 
@@ -1326,7 +1327,7 @@ void test_inc_absorp_in_each_layer() {
             {"coh_tmm_data_list", std::move(coh_tmm_data_list)},
             {"coh_tmm_bdata_list", std::move(coh_tmm_bdata_list)},
             {"stackFB_list", std::move(stackFB_list)},
-            {"power_entering_list", rng2l_transpose(std::vector<std::valarray<double>>{
+            {"power_entering_list", Utils::Range::rng2l_transpose(std::vector<std::valarray<double>>{
                     {1, 4.99455112e-02, 1.22080402e-04, 1.22080402e-04},
                     {1, 6.56777243e-01, 3.88581656e-01, 3.88581656e-01}})},
             {"stack_d_list", std::vector<std::vector<double>>{{INFINITY, 200, INFINITY}}},
@@ -1405,7 +1406,7 @@ void test_inc_position_resolved() {
     const std::valarray<double> lam_vac = {100, 500};
     const std::valarray<LayerType> c_list = {LayerType::Incoherent, LayerType::Coherent, LayerType::Incoherent, LayerType::Incoherent};
     const inc_tmm_vec_dict<double> inc_tmm_data = inc_tmm('s', n_list, d_list, c_list, th_0, lam_vac);
-    const std::valarray<double> dist = linspace_va(0.0, 1100.0, 12.0);
+    const std::valarray<double> dist = Utils::Math::linspace_va(0.0, 1100.0, 12.0);
     // layer is going to be uniqued later
     auto [layer, d_in_layer] = find_in_structure_inf(d_list, dist);
     std::valarray<std::valarray<double>> alphas(std::valarray<double>(2), 4);
@@ -1415,7 +1416,7 @@ void test_inc_position_resolved() {
         }
     }
     const ApproxNestedRange<std::valarray<std::valarray<double>>, double> incpr_approx = approx<std::valarray<std::valarray<double>>, double>(
-            rng2l_transpose(std::valarray<std::valarray<double>>{
+            Utils::Range::rng2l_transpose(std::valarray<std::valarray<double>>{
         {0, 5.41619013e-02, 1.11248375e-04, 7.66705892e-03,
          4.38516795e+00, 2.50714861e+03, 1.43341858e+06, 8.19532120e+08,
          4.68553223e+11, 2.67887148e+14, 1.53159813e+17, 0},
@@ -1426,10 +1427,10 @@ void test_inc_position_resolved() {
 }
 
 void test_beer_lambert() {
-    const std::valarray<double> alphas = linspace_va(0.0, 1.0, 5.0);
-    const std::valarray<double> fraction = linspace_va(0.2, 1.0, 5.0);
+    const std::valarray<double> alphas = Utils::Math::linspace_va(0.0, 1.0, 5.0);
+    const std::valarray<double> fraction = Utils::Math::linspace_va(0.2, 1.0, 5.0);
     const std::valarray<double> A_total = {0, 9.99999989e-09, 2.99999992e-08, 5.99999978e-08, 9.99999950e-08};
-    const std::valarray<double> dist = linspace_va(0.0, 100e-9, 4.0);
+    const std::valarray<double> dist = Utils::Math::linspace_va(0.0, 100e-9, 4.0);
     const ApproxNestedRange<std::valarray<std::valarray<double>>, double> bl_approx = approx<std::valarray<std::valarray<double>>, double>(std::valarray<std::valarray<double>>{{0, 0, 0, 0},
                                                                                                                                                                                 {0.1, 0.1, 0.1, 0.1},
                                                                                                                                                                                 {0.3, 0.3, 0.29999999, 0.29999999},

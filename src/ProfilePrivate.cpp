@@ -1,5 +1,5 @@
 /*
- * Bittorrent Client using Qt and libtorrent.
+ * Copyright (C) 2024  Yihua Liu <yihuajack@live.cn>
  * Copyright (C) 2016  Eugene Shalygin <eugene.shalygin@gmail.com>
  * Copyright (C) 2012  Christophe Dumez
  *
@@ -64,35 +64,11 @@ std::filesystem::path Private::DefaultProfile::cacheLocation() const {
 }
 
 std::filesystem::path Private::DefaultProfile::configLocation() const {
-#if defined(Q_OS_WIN)
-    // On Windows QSettings stores files in FOLDERID_RoamingAppData\AppName
-    return locationWithConfigurationName(QStandardPaths::AppDataLocation);
-#else
     return locationWithConfigurationName(QStandardPaths::AppConfigLocation);
-#endif
 }
 
 std::filesystem::path Private::DefaultProfile::dataLocation() const {
-#if defined(Q_OS_WIN) || defined (Q_OS_MACOS)
     return locationWithConfigurationName(QStandardPaths::AppLocalDataLocation);
-#else
-    // On Linux keep using the legacy directory ~/.local/share/data/ if it exists
-    const std::filesystem::path genericDataPath {QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation).toStdString()};
-    const std::filesystem::path profilePath {profileName()};
-    // Constness of paths prevents automatic move
-    std::filesystem::path legacyDir = genericDataPath / std::filesystem::path(u"data"s) / profilePath;
-
-    std::filesystem::path dataDir = genericDataPath / profilePath;
-
-    if (not std::filesystem::exists(dataDir) and std::filesystem::exists(legacyDir)) {
-        qWarning("The legacy data directory '%s' is used. It is recommended to move its content to '%s'",
-                 qUtf8Printable(QString::fromStdString(legacyDir.string())), qUtf8Printable(QString::fromStdString(dataDir.string())));
-
-        return legacyDir;
-    }
-
-    return dataDir;
-#endif
 }
 
 std::filesystem::path Private::DefaultProfile::downloadLocation() const {

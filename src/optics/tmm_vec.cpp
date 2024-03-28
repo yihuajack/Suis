@@ -15,7 +15,8 @@
 #include <boost/numeric/ublas/matrix.hpp>
 #include <boost/numeric/ublas/vector.hpp>
 #include "tmm.h"
-#include "src/tools/utils.h"
+#include "src/utils/Math.h"
+#include "src/utils/Range.h"
 
 using namespace std::complex_literals;
 
@@ -53,7 +54,7 @@ void AbsorpAnalyticVecFn<T>::fill_in(const coh_tmm_vec_dict<T> &coh_tmm_data, co
         [](const std::pair<std::size_t const &, std::size_t const &> &pair) -> std::size_t {
             return pair.first + pair.second;
         }), std::begin(l_indices));
-    l_indices = rng2d_transpose(l_indices, num_layers);
+    l_indices = Utils::Range::rng2d_transpose(l_indices, num_layers);
     const std::valarray<std::vector<std::array<std::complex<T>, 2>>> vw_list_l = vw_list[layer];
     std::valarray<std::complex<T>> v(num_layers * num_wl);
     std::valarray<std::complex<T>> w(num_layers * num_wl);
@@ -568,7 +569,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
 #endif
         std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::imag)),
             // Note the order of front-binding!
-                            std::bind_front(std::less_equal<>(), TOL * EPSILON<T>))) {
+                            std::bind_front(std::less_equal<>(), Utils::Math::TOL * Utils::Math::EPSILON<T>))) {
         throw std::invalid_argument("Error in n0 or th0!");
     }
     const std::valarray<std::complex<T>> th_list = list_snell(n_list, th_0, num_wl);
@@ -613,7 +614,7 @@ auto coh_tmm(const char pol, const std::valarray<std::complex<T>> &n_list, const
     // RtlRegisterSecureMemoryCacheCallback -> RtlAllocateHeap -> .misaligned_access -> RtlIsZeroMemory
     // Return code -1073740940 (0xC0000374) (STATUS_HEAP_CORRUPTION)
     // Transpose num_wl * num_layers to num_layers * num_wl
-    std::valarray<std::complex<T>> delta = kz_list * rng2d_transpose(compvec_d_list, num_wl);
+    std::valarray<std::complex<T>> delta = kz_list * Utils::Range::rng2d_transpose(compvec_d_list, num_wl);
     // std::slice_array does not have std::begin() or std::end().
     std::ranges::transform(std::begin(delta) + num_wl, std::begin(delta) + (num_layers - 1) * num_wl, std::begin(delta) + num_wl, [](const std::complex<T> delta_i) {
         return delta_i.imag() > 100 ? delta_i.real() + 100i : delta_i;
@@ -796,7 +797,7 @@ auto coh_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
 #endif
                             std::views::transform(std::bind_front<T (*)(const std::complex<T> &)>(std::imag)),
             // Note the order of front-binding!
-                            std::bind_front(std::less_equal<>(), TOL * EPSILON<T>))) {
+                            std::bind_front(std::less_equal<>(), Utils::Math::TOL * Utils::Math::EPSILON<T>))) {
         throw std::invalid_argument("Error in n0 or th0!");
     }
     std::vector<std::valarray<std::complex<T>>> th_list = list_snell(n_list, th_0);
@@ -1081,7 +1082,7 @@ auto position_resolved(const std::valarray<std::size_t> &layer, const std::valar
     std::ranges::move(std::views::repeat(distance | std::views::transform([](const T real) -> std::complex<T> {
         return real;
     }), num_wl) | std::views::join, std::begin(comp_dist));
-    comp_dist = rng2d_transpose(comp_dist, num_wl);
+    comp_dist = Utils::Range::rng2d_transpose(comp_dist, num_wl);
     const std::valarray<std::complex<T>> Ef = v * std::exp(1i * kz * comp_dist);
     const std::valarray<std::complex<T>> Eb = w * std::exp(-1i * kz * comp_dist);
     std::valarray<T> poyn(num_layers * num_wl);
@@ -1570,7 +1571,7 @@ auto inc_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
              const std::valarray<T> &lam_vac) -> inc_tmm_vec_dict<T> {
     const std::size_t num_layers = n_list.size();
     const std::size_t num_wl = lam_vac.size();
-    if (std::holds_alternative<std::valarray<std::complex<T>>>(real_if_close<std::complex<T>, T>(std::valarray<std::complex<T>>(n_list.front() * std::sin(th_0))))) {
+    if (std::holds_alternative<std::valarray<std::complex<T>>>(Utils::Math::real_if_close<std::complex<T>, T>(std::valarray<std::complex<T>>(n_list.front() * std::sin(th_0))))) {
         throw std::runtime_error("Error in n0 or th0!");
     }
     inc_tmm_vec_dict<T> group_layer_data = inc_group_layers(n_list, d_list, c_list);
@@ -1877,7 +1878,7 @@ auto inc_position_resolved(std::valarray<std::size_t> &&layer, const std::valarr
         auto use_vaT = [i, zero_threshold, &fraction_reaching, num_wl](std::valarray<std::valarray<T>> &vaT) -> std::valarray<std::valarray<T>> {
             // std::mask_array<std::valarray<T>> vaT_cond = vaT[fraction_reaching[i] < zero_threshold];
             // Unfortunately, we cannot write vaT[fraction_reaching[i] < zero_threshold] = std::valarray<T>(0.0, vaT[0].size());
-            vaT = rng2l_transpose(vaT);
+            vaT = Utils::Range::rng2l_transpose(vaT);
             // Now vaT is num_llayers * num_wl
             for (std::size_t j : std::views::iota(0U, vaT.size())) {
                 vaT[j][fraction_reaching.at(i) < zero_threshold] = 0;

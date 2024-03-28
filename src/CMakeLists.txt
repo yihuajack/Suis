@@ -2,20 +2,25 @@ target_sources(SuisApp PRIVATE
         # headers
         optics/FixedMatrix.h
         optics/tmm.h
-        tools/Approx.h
-        tools/utils.h
+        utils/Approx.h
+        utils/Log.h
+        utils/Math.h
+        utils/Range.h
         backend_init.h
         Application.h
         CommandLineParseResult.h
         Config.h
+        Global.h
         Profile.h
         ProfilePrivate.h
         # sources
         optics/FixedMatrix.cpp
         optics/tmm.cpp
         optics/tmm_vec.cpp
-        tools/Approx.cpp
-        tools/utils.cpp
+        utils/Approx.cpp
+        utils/Log.cpp
+        utils/Math.cpp
+        utils/Range.cpp
         backend_init.cpp
         Application.cpp
         CommandLineParseResult.cpp

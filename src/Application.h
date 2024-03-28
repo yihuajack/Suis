@@ -8,6 +8,8 @@
 #include <QGuiApplication>
 #include <QSettings>
 
+#include "CommandLineParseResult.h"
+
 class Application final : public QGuiApplication {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(Application)
@@ -19,8 +21,7 @@ public:
     explicit Application(int &argc, char **argv);
     ~Application() override = default;
 private:
-
-    QSettings *m_settings{};
+    CommandLineParseResult m_commandLineArgs;
 };
 
 #endif // APPLICATION_H

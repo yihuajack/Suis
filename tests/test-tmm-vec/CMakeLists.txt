@@ -27,16 +27,17 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 
 # apt mantic packages 1.74.0 does not compile
-find_package(Boost 1.83.0 REQUIRED)
+find_package(Boost 1.84.0 REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(test-tmm-vec test_tmm_vec.cpp
         ../../src/optics/tmm_vec.cpp
         ../../src/optics/tmm.cpp
-        ../../src/tools/Approx.cpp
         ../../src/optics/FixedMatrix.cpp  # Unfortunately, this file is not used but coupled with this project.
-        ../../src/tools/utils.cpp
+        ../../src/utils/Approx.cpp
+        ../../src/utils/Math.cpp
+        ../../src/utils/Range.cpp
 )
 
-target_include_directories(test-tmm-vec PRIVATE ${CMAKE_SOURCE_DIR}/../../src/optics ${CMAKE_SOURCE_DIR}/../../src/tools)
+# target_include_directories(test-tmm-vec PRIVATE ${CMAKE_SOURCE_DIR}/../../src/optics ${CMAKE_SOURCE_DIR}/../../src/tools)

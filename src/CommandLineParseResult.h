@@ -11,6 +11,7 @@
 
 struct CommandLineParseResult {
     std::filesystem::path profileDir;
+    std::u16string configName;
 };
 
 CommandLineParseResult parseCommandLine(QCommandLineParser &parser, const QCoreApplication &app);

@@ -1,13 +1,16 @@
 // GCC has already forwarded <algorithm> from <valarray>, but it is not the case for MSVC.
 #include <algorithm>
+#include <iostream>
 #include <numbers>
 #include <numeric>
 #include <unordered_set>
 // Using target_include_directories(tmm PRIVATE ${CMAKE_SOURCE_DIR}/../../src/optics)
 // We can directly include tmm.h rather than #include "../../src/optics/tmm.h"
 // See https://stackoverflow.com/questions/31969547/what-is-the-difference-between-include-directories-and-target-include-directorie
-#include "tmm.h"
-#include "utils.h"
+// Yet it is not convenient for debugging
+#include "../../src/optics/tmm.h"
+#include "../../src/utils/Log.h"
+#include "../../src/utils/Math.h"
 
 // Till the code is written (Dec. 5, 2023), only Clang libc++ completely supports formatting ranges (P2286R8)
 // #if _LIBCPP_STD_VER >= 23
@@ -368,7 +371,7 @@ void incoherent_test() {
     n_list = {nair, nfilm, nsub, nf};
     std::valarray<double> d_list_inc;
     double dsub = NAN;
-    const std::array<double, 357> ls_arr = linspace<double, 357>(10000.0, 30000.0);
+    const std::array<double, 357> ls_arr = Utils::Math::linspace<double, 357>(10000.0, 30000.0);
     for (const char pol : std::unordered_set<char>{'s', 'p'}) {
         d_list_inc = {INFINITY, 100, 1, INFINITY};  // sub thickness doesn't matter here
         inc_data = inc_tmm(pol, n_list, d_list_inc, c_list, th0, lam_vac);
@@ -400,7 +403,7 @@ void incoherent_test() {
     for (const char pol : std::unordered_set<char>{'s', 'p'}) {
         inc_absorp = {0, 0, 0, 0};
         coh_absorp = {0, 0, 0, 0};
-        for (const double pt_lam_vac : linspace(40.0, 50.0, num_pts)) {
+        for (const double pt_lam_vac : Utils::Math::linspace(40.0, 50.0, num_pts)) {
             inc_data = inc_tmm(pol, n_list, d_list, c_list, th0, pt_lam_vac);
             inc_each = inc_absorp_in_each_layer(inc_data);
             std::transform(inc_each.cbegin(), inc_each.cend(), std::begin(inc_absorp), std::begin(inc_absorp), std::plus<double>());
@@ -411,8 +414,8 @@ void incoherent_test() {
         coh_absorp /= num_pts;
         std::cout << "Coherent with random wavelength should agree with incoherent. "
                      "The two rows of this array should be the same:\n";
-        print_container(inc_absorp);
-        print_container(coh_absorp);
+        Utils::Log::print_container(inc_absorp);
+        Utils::Log::print_container(coh_absorp);
     }
 }
 
@@ -479,8 +482,8 @@ void coh_overflow_test() {
     std::cout << std::format("{}", std::get<std::vector<std::array<std::complex<double>, 2>>>(data.at("vw_list")).imag();
     std::cout << std::format("{}", std::get<std::vector<std::array<std::complex<double>, 2>>>(data2.at("vw_list")).imag());
 #else
-    print_spec2d_container<std::vector<std::array<std::complex<double>, 2>>>(std::get<std::vector<std::array<std::complex<double>, 2>>>(data.at("vw_list")));
-    print_spec2d_container<std::vector<std::array<std::complex<double>, 2>>>(std::get<std::vector<std::array<std::complex<double>, 2>>>(data2.at("vw_list")));
+    Utils::Log::print_spec2d_container<std::vector<std::array<std::complex<double>, 2>>>(std::get<std::vector<std::array<std::complex<double>, 2>>>(data.at("vw_list")));
+    Utils::Log::print_spec2d_container<std::vector<std::array<std::complex<double>, 2>>>(std::get<std::vector<std::array<std::complex<double>, 2>>>(data2.at("vw_list")));
 #endif
 }
 
@@ -501,8 +504,8 @@ void inc_overflow_test() {
     const std::valarray<LayerType> c_list2 = std::valarray(c_list[std::slice(0, 3, 1)]);
     const inc_tmm_dict<double> data2 = inc_tmm('s', n_list2, d_list2, c_list2, std::complex<double>(0, 0), lam);
     std::cout << "First entries of the following two lists should agree:\n";
-    print_container(std::get<std::vector<double>>(data.at("power_entering_list")));
-    print_container(std::get<std::vector<double>>(data2.at("power_entering_list")));
+    Utils::Log::print_container(std::get<std::vector<double>>(data.at("power_entering_list")));
+    Utils::Log::print_container(std::get<std::vector<double>>(data2.at("power_entering_list")));
 }
 
 auto main() -> int {

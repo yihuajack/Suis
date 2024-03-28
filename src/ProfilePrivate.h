@@ -1,5 +1,5 @@
 /*
- * Bittorrent Client using Qt and libtorrent.
+ * Copyright (C) 2024  Yihua Liu <yihuajack@live.cn>
  * Copyright (C) 2016  Eugene Shalygin <eugene.shalygin@gmail.com>
  * Copyright (C) 2012  Christophe Dumez
  *
