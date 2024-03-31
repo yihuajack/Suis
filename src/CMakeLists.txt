@@ -1,5 +1,7 @@
 target_sources(SuisApp PRIVATE
         # headers
+        material/OpticMaterial.h
+        material/MaterialSystem.h
         optics/FixedMatrix.h
         optics/tmm.h
         utils/Approx.h
@@ -7,16 +9,18 @@ target_sources(SuisApp PRIVATE
         utils/Log.h
         utils/Math.h
         utils/Range.h
-        backend_init.h
         Application.h
         CommandLineParseResult.h
-        Config.h
         Global.h
+        Parameter.h
         Preferences.h
+        Process.h
         Profile.h
         ProfilePrivate.h
         SettingsStorage.h
         # sources
+        material/OpticMaterial.cpp
+        material/MaterialSystem.cpp
         optics/FixedMatrix.cpp
         optics/tmm.cpp
         optics/tmm_vec.cpp
@@ -25,11 +29,11 @@ target_sources(SuisApp PRIVATE
         utils/Log.cpp
         utils/Math.cpp
         utils/Range.cpp
-        backend_init.cpp
         Application.cpp
         CommandLineParseResult.cpp
-        Config.cpp
+        Parameter.cpp
         Preferences.cpp
+        Process.cpp
         Profile.cpp
         ProfilePrivate.cpp
         SettingsStorage.cpp

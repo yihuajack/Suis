@@ -109,17 +109,18 @@ void SettingsStorage::readNativeSettings() {
     // If serialization operation was not successful we return empty string.
     const auto deserialize = [](QVariantHash &data, const std::u16string &nativeSettingsName) -> std::filesystem::path {
         std::unique_ptr<QSettings> nativeSettings = Profile::instance()->applicationSettings(nativeSettingsName);
-        if (nativeSettings->allKeys().isEmpty())
+        if (nativeSettings->allKeys().isEmpty()) {
             return {};
+        }
 
         // Copy everything into memory. This means even keys inserted in the file manually
         // or that we don't touch directly in this code (eg disabled by ifdef). This ensures
         // that they will be copied over when save our settings to disk.
-        for (const QString &key : asConst(nativeSettings->allKeys()))
-        {
+        for (const QString &key : asConst(nativeSettings->allKeys())) {
             const QVariant value = nativeSettings->value(key);
-            if (value.isValid())
+            if (value.isValid()) {
                 data[key] = value;
+            }
         }
 
         return nativeSettings->fileName().toStdString();
@@ -155,8 +156,9 @@ bool SettingsStorage::writeNativeSettings() const {
     // between deleting the file and recreating it. This is a safety measure.
     // Write everything to qBittorrent_new.ini/qBittorrent_new.conf and if it succeeds
     // replace qBittorrent.ini/qBittorrent.conf with it.
-    for (auto i = m_data.begin(); i != m_data.end(); ++i)
+    for (auto i = m_data.begin(); i != m_data.end(); ++i) {
         nativeSettings->setValue(i.key(), i.value());
+    }
 
     nativeSettings->sync(); // Important to get error status
     const QSettings::Status status = nativeSettings->status();

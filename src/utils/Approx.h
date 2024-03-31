@@ -1,5 +1,5 @@
 //
-// Created by Yihua on 2023/11/28.
+// Created by Yihua Liu on 2023/11/28.
 //
 
 #ifndef APPROX_H

@@ -46,9 +46,6 @@ WizardFlowForm {
         },
         State {
             name: "parSetElectrical"
-        },
-        State {
-            name: "finish"
         }
     ]
 }

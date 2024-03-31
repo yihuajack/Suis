@@ -1,5 +1,5 @@
 //
-// Created by Yihua on 2024/03/28.
+// Created by Yihua Liu on 2024/03/28.
 //
 
 #ifndef UTILS_MATH_H

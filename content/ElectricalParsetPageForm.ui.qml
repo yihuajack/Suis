@@ -26,7 +26,16 @@ Item {
 
         Connections {
             target: importElecButton
-            onClicked: importElecClicked()
+            onClicked: elecFolderDialog.open()
         }
     }
+
+    states: [
+        State {
+            name: "elecInit"
+        },
+        State {
+            name: "elecParImported"
+        }
+    ]
 }

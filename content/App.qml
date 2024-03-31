@@ -4,9 +4,10 @@
 import QtQuick 6.6
 import Suis
 import QtQuick.VirtualKeyboard 6.6
+import Process 1.0
 
 Window {
-    id: mainWindow
+    id: wizardWindow
     width: Screen.desktopAvailableWidth
     height: Screen.desktopAvailableHeight
 
@@ -14,12 +15,18 @@ Window {
     title: qsTr("Suis")
 
     WizardFlow {
-        onCancelClicked: mainWindow.close()
+        onCancelClicked: wizardWindow.close()
+        onFinishClicked: {
+            wizardWindow.close()
+            simWindow.show()
+            // "-nosplash", "-nodesktop", "-r"
+            simProcess.start("matlab", ["-batch", "\"run('E:/Documents/GitHub/ddmodel-octave/demo_eco_pin.m')\""], Process.ReadOnly)
+        }
     }
 
     InputPanel {
         id: inputPanel
-        property bool showKeyboard :  active
+        property bool showKeyboard : active
         y: showKeyboard ? parent.height - height : parent.height
         Behavior on y {
             NumberAnimation {

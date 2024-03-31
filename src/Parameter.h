@@ -1,13 +1,21 @@
-enum class LayerType {LAYER, ACTIVE, JUNCTION};
-enum class VFunType {CONSTANT, SWEEPANDSTILL, SIN, SWEEP};
-enum class G1FunType {CONSTANT, SWEEPANDSTILL, SIN, SWEEP};
-enum class G2FunType {CONSTANT, SWEEPANDSTILL, SQAURE};
-enum class TMeshType {LINEAR, LOG10, LOG10_DOUBLE};
+/*
+ * Copyright (C) 2024  Yihua Liu <yihuajack@live.cn>
+ */
+
+#include <boost/units/systems/si.hpp>
+#include <boost/units/systems/si/codata_constants.hpp>
+
+enum class LayerType {Layer, Active, Junction};
+enum class VFunType {Constant, SweepAndStill, Sin, Sweep};
+enum class G1FunType {Constant, SweepAndStill, Sin, Sweep};
+enum class G2FunType {Constant, SweepAndStill, Square};
+enum class TMeshType {Linear, Log10, Log10_Double};
 
 class Parameter {
 public:
     // Physical constants
-    const double kB = 8.617330350e-5;  // Boltzmann constant [eV K^-1]
+    // constexpr boost::units::quantity<boost::units::si::energy> eV = boost::units::si::volt * boost::units::si::constants::codata::e;
+    const boost::units::quantity<boost::units::si::constants::codata::energy_over_temperature> kB = boost::units::si::constants::codata::k_B;  // Boltzmann constant [eV K^-1]
     const double eps0 = 552434;  // Epsilon_0 [e^2 eV^-1 cm^-1] - Checked (02-11-15)
     const double q = 1;  // Charge of the species in units of e.
     const double e = 1.60217662e-19;  // Elementary charge in Coulombs.
@@ -29,12 +37,12 @@ public:
      * (either LAYER or ACTIVE type)
      * with different properties
      */
-    LayerType layer_type = LayerType::ACTIVE;
+    LayerType layer_type = LayerType::Active;
     std::string material = "MAPbICl";
 
     /* Time mesh */
     // 1 for linear, 2 for log10
-    TMeshType tmesh_type = TMeshType::LOG10;  // Mesh type - for use with meshgen_t
+    TMeshType tmesh_type = TMeshType::Log10;  // Mesh type - for use with meshgen_t
     double t0 = 1e-16;  // Initial log mesh time value
     double tmax = 1e-12;  // Max time value
     std::size_t tpoints = 100;  // Number of time points
@@ -56,8 +64,8 @@ public:
     std::string light_source2 = "laser";
     double laser_lambda1 = 0;
     double laser_lambda2 = 638;
-    G1FunType g1_fun_type = G1FunType::CONSTANT;
-    G2FunType g2_fun_type = G2FunType::CONSTANT;
+    G1FunType g1_fun_type = G1FunType::Constant;
+    G2FunType g2_fun_type = G2FunType::Constant;
     double g1_fun_arg = 0;
     double g2_fun_arg = 0;
     bool side = false;  // illumination side false = left, true = right
@@ -75,6 +83,6 @@ public:
     double Rs_initial = 0;  // Switch to allow linear ramp of Rs on first application
 
     /* Voltage function parameters */
-    VFunType V_fun_type = VFunType::CONSTANT;
+    VFunType V_fun_type = VFunType::Constant;
     double V_fun_arg = 0;
 };

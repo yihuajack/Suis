@@ -79,7 +79,7 @@ class SettingsStorage final : public QObject {
     Q_DISABLE_COPY_MOVE(SettingsStorage)
 
     SettingsStorage();
-    ~SettingsStorage();
+    ~SettingsStorage() override;
 
 public:
     static void initInstance();

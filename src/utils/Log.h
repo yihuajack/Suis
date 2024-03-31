@@ -1,5 +1,5 @@
 //
-// Created by Yihua on 2024/03/28.
+// Created by Yihua Liu on 2024/03/28.
 //
 
 #ifndef UTILS_LOG_H
@@ -78,5 +78,7 @@ namespace Utils::Log {
     // but can be a generalized template<typename Container, typename T>
     template<TwoDContainer Container>
     void print_spec2d_container(const Container &container);
+
+    auto demangle(const char *mangled_name) -> std::string;
 }
 #endif  // UTILS_LOG_H

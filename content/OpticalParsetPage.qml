@@ -3,6 +3,7 @@
 
 import QtQuick 6.6
 import QtQuick.Dialogs 6.6
+import QtCore 6.6  // StandardPaths: QtLabsPlatform is deprecated since 6.4
 
 OpticalParsetPageForm {
     id: opticalParsetPage
@@ -12,6 +13,7 @@ OpticalParsetPageForm {
     FolderDialog {
         id: optFolderDialog
         title: "Choose Optical Parameter Database Folder"
+        currentFolder: StandardPaths.standardLocations(StandardPaths.AppConfigLocation)[0]
         onAccepted: {
             opticalParsetPage.state = "optParImported"
         }
