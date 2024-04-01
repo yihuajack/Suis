@@ -8,7 +8,8 @@ qt6_add_qml_module(content
     RESOURCE_PREFIX "/qt/qml"
     QML_FILES
         App.qml
-        SimWindow.qml
+        SimPage.qml
+        Splash.qml
         WelcomePage.qml
         WelcomePageForm.ui.qml
         OpticalParsetPage.qml
@@ -20,5 +21,6 @@ qt6_add_qml_module(content
 
     RESOURCES
         fonts/fonts.txt
+        images/SuisLogo.svg
         images/RA_device2.png
 )

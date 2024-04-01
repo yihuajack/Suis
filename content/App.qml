@@ -1,42 +1,80 @@
-// Copyright (C) 2024 Yihua Liu
-// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+/**
+ * Copyright (C) 2024 Yihua Liu
+ * SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+ */
 
-import QtQuick 6.6
+// Since Qt 6.0, Qt and QtQuick, QtQuick.Controls have the same version number.
+import QtQuick
+import QtQuick.Controls
+import QtQuick.VirtualKeyboard
 import Suis
-import QtQuick.VirtualKeyboard 6.6
-import Process 1.0
+import Process
 
-Window {
-    id: wizardWindow
-    width: Screen.desktopAvailableWidth
-    height: Screen.desktopAvailableHeight
+QtObject {
+    id: root
 
-    visible: true
-    title: qsTr("Suis")
+    property var wizardWindow: Window {
+        width: Screen.desktopAvailableWidth
+        height: Screen.desktopAvailableHeight
 
-    WizardFlow {
-        onCancelClicked: wizardWindow.close()
-        onFinishClicked: {
-            wizardWindow.close()
-            simWindow.show()
-            // "-nosplash", "-nodesktop", "-r"
-            simProcess.start("matlab", ["-batch", "\"run('E:/Documents/GitHub/ddmodel-octave/demo_eco_pin.m')\""], Process.ReadOnly)
+        visible: false
+        title: qsTr("Suis Parameter Wizard")
+
+        WizardFlow {
+            id: wizardFlow
+            onCancelClicked: wizardWindow.close()
+            onFinishClicked: {
+                // let windowComponent = Qt.createComponent("qrc:/qt/qml/content/SimWindow.qml");
+                // let newWindow = windowComponent.createObject(parent)
+                wizardWindow.close()
+                root.mainWindow.show()
+
+                // "-nosplash", "-nodesktop", "-r"
+                root.mainWindow.simProcess.start("matlab", ["-batch", "\"run('E:/Documents/GitHub/ddmodel-octave/demo_eco_pin.m')\""], Process.ReadOnly)
+            }
+        }
+
+        InputPanel {
+            id: inputPanel
+            property bool showKeyboard : active
+            y: showKeyboard ? parent.height - height : parent.height
+            Behavior on y {
+                NumberAnimation {
+                    duration: 200
+                    easing.type: Easing.InOutQuad
+                }
+            }
+            anchors.leftMargin: Constants.width / 10
+            anchors.rightMargin: Constants.width / 10
+            anchors.left: parent.left
+            anchors.right: parent.right
         }
     }
 
-    InputPanel {
-        id: inputPanel
-        property bool showKeyboard : active
-        y: showKeyboard ? parent.height - height : parent.height
-        Behavior on y {
-            NumberAnimation {
-                duration: 200
-                easing.type: Easing.InOutQuad
+    property var mainWindow: ApplicationWindow {
+        visible: false
+        width: 640
+        height: 480
+        title: qsTr("Suis")
+
+        SimPage {
+            id: simPage
+        }
+
+        Process {
+            id: simProcess
+
+            property string output: ""
+
+            onReadyReadStandardOutput: {
+                output = simProcess.readAll()
+                term.text += output
             }
         }
-        anchors.leftMargin: Constants.width / 10
-        anchors.rightMargin: Constants.width / 10
-        anchors.left: parent.left
-        anchors.right: parent.right
+    }
+
+    property var splashWindow: Splash {
+        visible: true
+        onTimeout: wizardWindow.visible = true
     }
 }

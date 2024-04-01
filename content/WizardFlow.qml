@@ -1,39 +1,41 @@
-// Copyright (C) 2024 Yihua Liu
-// SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+/**
+ * Copyright (C) 2024 Yihua Liu
+ * SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+ */
 
-import QtQuick 6.6
-import QtQuick.Controls 6.6
-import Suis 1.0
+import QtQuick
+import QtQuick.Controls
+import Suis
 
 WizardFlowForm {
-    id: wizardFlow
+    id: root
     width: Constants.width
     height: Constants.height
 
     state: "initial"
 
     onNextClicked: {
-        if (wizardFlow.state === "initial")
-            wizardFlow.state = "parSetOptical"
-        else if (wizardFlow.state === "parSetOptical")
-            wizardFlow.state = "parSetElectrical"
+        if (root.state === "initial")
+            root.state = "parSetOptical"
+        else if (root.state === "parSetOptical")
+            root.state = "parSetElectrical"
     }
 
     WelcomePage {
         id: welcomePage
-        visible: wizardFlow.state === "initial"
+        visible: root.state === "initial"
         anchors.fill: parent
     }
 
     OpticalParsetPage {
         id: opticalParsetPage
-        visible: wizardFlow.state === "parSetOptical"
+        visible: root.state === "parSetOptical"
         anchors.fill: parent
     }
 
     ElectricalParsetPage {
         id: electricalParsetPage
-        visible: wizardFlow.state === "parSetElectrical"
+        visible: root.state === "parSetElectrical"
         anchors.fill: parent
     }
 

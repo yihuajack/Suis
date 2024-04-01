@@ -53,7 +53,7 @@ Rectangle {
             anchors.right: parent.right
             anchors.rightMargin: Constants.defaultMargin + 100
             checkable: true
-            visible: wizardFlow.state !== "parSetElectrical"
+            visible: root.state !== "parSetElectrical"
 
             Connections {
                 target: nextButton
@@ -64,7 +64,7 @@ Rectangle {
         Button {
             id: finishButton
             text: qsTr("Finish")
-            visible: wizardFlow.state === "parSetElectrical"
+            visible: root.state === "parSetElectrical"
             anchors.verticalCenter: parent.verticalCenter
             anchors.verticalCenterOffset: 0
             anchors.right: parent.right
