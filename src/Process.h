@@ -31,9 +31,9 @@ signals:
     void readyReadStandardOutput();
 
 public:
-    Process(QObject* parent = nullptr);
-    virtual ~Process();
-    Q_INVOKABLE void start(const QString& program, const QStringList& arguments = QStringList(), OpenMode mode = ReadWrite);
+    explicit Process(QObject* parent = nullptr);
+    ~Process() override;
+    Q_INVOKABLE void start(const QString& program, const QStringList& arguments = QStringList(), Process::OpenMode mode = ReadWrite);
     Q_INVOKABLE QByteArray readAllStandardError();
     Q_INVOKABLE QByteArray readAllStandardOutput();
 

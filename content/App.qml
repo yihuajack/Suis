@@ -28,9 +28,7 @@ QtObject {
                 // let newWindow = windowComponent.createObject(parent)
                 wizardWindow.close()
                 root.mainWindow.show()
-
-                // "-nosplash", "-nodesktop", "-r"
-                root.mainWindow.simProcess.start("matlab", ["-batch", "\"run('E:/Documents/GitHub/ddmodel-octave/demo_eco_pin.m')\""], Process.ReadOnly)
+                mainWindow.simStart()
             }
         }
 
@@ -56,6 +54,11 @@ QtObject {
         width: 640
         height: 480
         title: qsTr("Suis")
+
+        function simStart() {
+            // "-nosplash", "-nodesktop", "-r"
+            simProcess.start("matlab", ["-batch", "\"run('E:/Documents/GitHub/ddmodel-octave/demo_eco_pin.m')\""], Process.ReadOnly)
+        }
 
         SimPage {
             id: simPage

@@ -3,6 +3,7 @@
 //
 
 // https://stackoverflow.com/questions/74364607/qt-application-hangs-on-process-start-function-happens-only-when-function-is
+// https://forum.qt.io/topic/117436/run-a-sh-shell-while-clicking-button-in-qml-with-qt5-15-0/21
 #include "Process.h"
 
 Process::Process(QObject* parent) : QObject(parent), m_Process(nullptr) {
