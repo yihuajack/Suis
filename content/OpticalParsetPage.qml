@@ -1,7 +1,7 @@
 // Copyright (C) 2024 Yihua Liu
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
 
-import QtQuick 6.6
+import QtQuick
 import QtQuick.Dialogs 6.6
 import QtCore 6.6  // StandardPaths: QtLabsPlatform is deprecated since 6.4
 

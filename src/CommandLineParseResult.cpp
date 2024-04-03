@@ -10,9 +10,13 @@ CommandLineParseResult parseCommandLine(QCommandLineParser &parser, const QCoreA
     parser.setApplicationDescription(u"Suis - Solar Cell Simulator"_s);
     parser.addHelpOption();
     parser.addVersionOption();
-    const QCommandLineOption profileOption("profile", "The path to profile directory");
+    const QCommandLineOption profileOption("profile",
+                                           QCoreApplication::translate("main", "The path to profile <directory>"),
+                                           QCoreApplication::translate("main", "directory"));
     parser.addOption(profileOption);
-    const QCommandLineOption configNameOption("config", "Store configuration files in <dir>");
+    const QCommandLineOption configNameOption("config",
+                                              QCoreApplication::translate("main", "Store configuration files in <dir>"),
+                                              QCoreApplication::translate("main", "dir"));
     parser.addOption(configNameOption);
     parser.process(app);
     CommandLineParseResult result;

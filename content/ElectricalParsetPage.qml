@@ -1,4 +1,4 @@
-import QtQuick 6.6
+import QtQuick
 import QtQuick.Dialogs 6.6
 import QtCore 6.6  // StandardPaths: QtLabsPlatform is deprecated since 6.4
 

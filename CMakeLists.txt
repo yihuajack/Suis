@@ -26,16 +26,16 @@ project(SuisApp
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# Visual Studio toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\6.6.2\msvc2019_64\lib\cmake
-# MinGW toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\6.6.2\mingw_64\lib\cmake
-# Visual Studio ARM64 toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\6.6.2\msvc2019_arm64\lib\cmake
+# Visual Studio toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\<qtver>\msvc2019_64\lib\cmake
+# MinGW toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\<qtver>mingw_64\lib\cmake
+# MSVC 2019 ARM64: msvc2019_arm64, LLVM-MinGW: llvm-mingw_64
 # Alternatively use --toolchain instead of CMAKE_TOOLCHAIN_FILE
-# set(CMAKE_PREFIX_PATH "D:\\Qt\\6.6.2\\msvc2019_64\\lib\\cmake")
+# set(CMAKE_PREFIX_PATH "D:\\Qt\\<qtver>\\msvc2019_64\\lib\\cmake")
 # After updating MSVC, remember to manually update the path to cl.exe in
 # build-Suis-Desktop_Qt_6_6_2_MSVC2019_64bit-Debug\vcpkg-dependencies\toolchain.cmake
 # where CMAKE_C_COMPILER, CMAKE_CXX_COMPILER, and VCPKG_TARGET_TRIPLET are set.
 
-find_package(Qt6 6.6 REQUIRED COMPONENTS Core Gui Qml Quick)
+find_package(Qt6 6.7 REQUIRED COMPONENTS Core Gui Qml Quick)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
@@ -46,8 +46,8 @@ find_package(SQLite3 3.45.0 REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
 
-if (Qt6_VERSION VERSION_GREATER_EQUAL 6.6)
-    qt_standard_project_setup(REQUIRES 6.6)
+if (Qt6_VERSION VERSION_GREATER_EQUAL 6.7)
+    qt_standard_project_setup(REQUIRES 6.7)
 endif()
 
 qt_add_executable(SuisApp)
