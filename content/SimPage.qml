@@ -12,16 +12,6 @@ Page {
     id: root
     anchors.fill: parent
 
-    ScrollView {
-        id: view
-        anchors.fill: parent
-
-        TextArea {
-            id: term
-            textFormat: TextArea.RichText
-        }
-    }
-
     footer: RowLayout {
         Layout.fillWidth: true
 

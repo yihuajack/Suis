@@ -62,6 +62,16 @@ QtObject {
 
         SimPage {
             id: simPage
+
+            ScrollView {
+                id: view
+                anchors.fill: parent
+
+                TextArea {
+                    id: term
+                    textFormat: TextArea.RichText
+                }
+            }
         }
 
         Process {
@@ -70,7 +80,7 @@ QtObject {
             property string output: ""
 
             onReadyReadStandardOutput: {
-                output = simProcess.readAll()
+                output = simProcess.readAllStandardOutput()
                 term.text += output
             }
         }

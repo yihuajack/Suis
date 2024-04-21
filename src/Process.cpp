@@ -46,3 +46,7 @@ QByteArray Process::readAllStandardError() {
 QByteArray Process::readAllStandardOutput() {
     return m_Process ? m_Process->readAllStandardOutput() : QByteArray();
 }
+
+qint64 Process::write(const QString& data) {
+    return m_Process ? m_Process->write(qUtf8Printable(data)) : 0;
+}

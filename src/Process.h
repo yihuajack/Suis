@@ -36,6 +36,7 @@ public:
     Q_INVOKABLE void start(const QString& program, const QStringList& arguments = QStringList(), Process::OpenMode mode = ReadWrite);
     Q_INVOKABLE QByteArray readAllStandardError();
     Q_INVOKABLE QByteArray readAllStandardOutput();
+    Q_INVOKABLE qint64 write(const QString& data);
 
 protected:
     QProcess* m_Process;

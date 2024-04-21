@@ -7,8 +7,8 @@ this file manually, you might introduce QML code that is not supported by Qt Des
 Check out https://doc.qt.io/qtcreator/creator-quick-ui-forms.html for details on .ui.qml files.
 */
 import QtQuick
-import QtQuick.Controls 6.6
-import Suis 1.0
+import QtQuick.Controls
+import Suis
 
 Rectangle {
     id: root

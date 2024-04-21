@@ -6,8 +6,8 @@ Check out https://doc.qt.io/qtcreator/creator-quick-ui-forms.html for details on
 */
 
 import QtQuick
-import QtQuick.Controls 6.6
-import Suis 1.0
+import QtQuick.Controls
+import Suis
 
 Item {
     id: root

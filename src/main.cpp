@@ -9,6 +9,7 @@
 #include "import_qml_plugins.h"
 
 #include "Application.h"
+#include "material/MaterialSystemModel.h"
 #include "Process.h"
 
 int main(int argc, char *argv[]) {
@@ -19,9 +20,10 @@ int main(int argc, char *argv[]) {
     QGuiApplication::setApplicationName(QStringLiteral("Suis"));
     QGuiApplication::setOrganizationDomain(QStringLiteral("yihuajack.github.io"));  // for macOS/iOS
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Suis - Solar Cell Simulator"));
-    QGuiApplication::setApplicationVersion("1.0");  // QT_VERSION_STR = "6.6.2"
+    QGuiApplication::setApplicationVersion("1.0");
 
     qmlRegisterType<Process>("Process", 1, 0, "Process");
+    qmlRegisterType<MaterialSystemModel>("MaterialSystemModel", 1, 0, "MaterialSystemModel");
 
     // qmlRegisterSingletonType<CppBackend>(
     //     "backend", 1, 0, "BackendObject",
