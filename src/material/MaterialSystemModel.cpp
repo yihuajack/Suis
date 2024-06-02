@@ -12,7 +12,7 @@ MaterialSystemModel::MaterialSystemModel() {
 }
 
 int MaterialSystemModel::rowCount(const QModelIndex &) const {
-    return m_list.count();
+    return static_cast<int>(m_list.count());
 }
 
 QHash<int, QByteArray> MaterialSystemModel::roleNames() const {
@@ -39,16 +39,21 @@ bool MaterialSystemModel::setData(const QModelIndex &index, const QVariant &valu
         return false;
     }
 
-    QString db_path_str = value.toString();
+    const QString db_path_str = value.toString();
     const QMap<QString, DbModel*>::const_iterator it = m_list.cbegin() + index.row();
     if (role == DbImportedPathRole) {
-        m_list[it.key()]->setDbImportedPath(value.toString());
-        QDir db_dir(db_path_str);
-        if (it.key() == "Suis") {
-            if (not db_dir.exists()) {
-                qWarning("Cannot find the example directory");
-            }
-        }
+        // Note that what the Qt documentation does not clearly explain is that
+        // QDir::AllDirs means exactly to ignore regular expression name filters
+        // and forces to push hidden directories.
+        // QDirs does not push hidden directories unless explicitly requested by QDir::Hidden.
+        // See the source code of `qdiriterator.cpp`.
+        // Both of them never pushes the current directory "." and the parent directory "..".
+        // Both of them do not follow symbolic links unless explicitly requested.
+        // QDir::entryList -> QDirIterator::next -> QDirIteratorPrivate::advance
+        // -> QDirIteratorPrivate::entryMatches -> QDirIteratorPrivate::checkAndPushDirectory,
+        // QDirIteratorPrivate::matchesFilters.
+        DbModel solcore_db_model(it.key());
+        m_list.insert(it.key(), &solcore_db_model);
     }
 
     emit dataChanged(index, index, {role});

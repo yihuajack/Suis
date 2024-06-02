@@ -13,20 +13,33 @@
 class DbModel : public QAbstractListModel {
     Q_OBJECT
 
+    Q_PROPERTY(QString dbPath READ dbPath WRITE setDbPath NOTIFY dbPathChanged)
+
 private:
+    QString m_db_name;
     QMap<QString, OpticMaterial> m_list;
-    std::filesystem::path m_db_imported_path;
+    QString m_db_path;
+
+    void import();
 
 public:
     enum Roles {
         MatNameRole = Qt::UserRole
     };
 
+    explicit DbModel(QString db_name);
     [[nodiscard]] int rowCount(const QModelIndex &) const override;
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
     [[nodiscard]] QVariant data(const QModelIndex &index, int role) const override;
 
-    void setDbImportedPath(const QString &path);
+    [[nodiscard]] QString dbPath() const;
+    void setDbPath(const QString& db_path);
+
+signals:
+    void dbPathChanged();
+
+public slots:
+    void readDb();
 };
 
 

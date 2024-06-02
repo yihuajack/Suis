@@ -44,11 +44,21 @@ target_sources(SuisApp PRIVATE
         main.cpp
 )
 
+include(FetchContent)
+FetchContent_Declare(
+        QXlsx
+        GIT_REPOSITORY https://github.com/QtExcel/QXlsx.git
+        GIT_TAG        v1.4.8
+        SOURCE_SUBDIR  QXlsx
+)
+FetchContent_MakeAvailable(QXlsx)
+
 target_link_libraries(SuisApp PRIVATE
         Qt6::Core
         Qt6::Gui
         Qt6::Qml
         Qt6::Quick
+        QXlsx
 )
 
 install(TARGETS SuisApp

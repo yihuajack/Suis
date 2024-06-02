@@ -9,6 +9,7 @@
 #include "import_qml_plugins.h"
 
 #include "Application.h"
+#include "material/DbModel.h"
 #include "material/MaterialSystemModel.h"
 #include "Process.h"
 
@@ -23,6 +24,7 @@ int main(int argc, char *argv[]) {
     QGuiApplication::setApplicationVersion("1.0");
 
     qmlRegisterType<Process>("Process", 1, 0, "Process");
+    qmlRegisterType<DbModel>("DbModel", 1, 0, "DbModel");
     qmlRegisterType<MaterialSystemModel>("MaterialSystemModel", 1, 0, "MaterialSystemModel");
 
     // qmlRegisterSingletonType<CppBackend>(
