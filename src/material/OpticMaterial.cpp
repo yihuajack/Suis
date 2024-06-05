@@ -7,11 +7,11 @@
 
 #include "OpticMaterial.h"
 
-OpticMaterial::OpticMaterial(QString mat_name, const QString& mat_path) : mat_name(std::move(mat_name)) {
-    readMat(mat_path);
+OpticMaterial::OpticMaterial(const DbType& db_type, QString mat_name, const QString& mat_path) : mat_name(std::move(mat_name)) {
+    readMat(db_type, mat_path);
 }
 
-void OpticMaterial::readMat(const QString& path) {
+void OpticMaterial::readMat(const DbType& db_type, const QString& path) {
     const std::filesystem::path nk_path(path.toStdString());
     QFile n_file = nk_path / "n.txt";
     QFile k_file = nk_path / "k.txt";

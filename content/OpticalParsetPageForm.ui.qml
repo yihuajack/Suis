@@ -15,54 +15,20 @@ Item {
     height: Constants.height - 100
     anchors.top: parent.top
 
-    Button {
-        id: importOptButton
-        text: qsTr("Import Optical Parameters")
-        y: 300
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: 0
-        checkable: true
-
-        Connections {
-            target: importOptButton
-            onClicked: optFolderDialog.open()
-        }
-    }
-
-    Button {
-        id: plotOptButton
-        text: qsTr("Plot Optical Parameters")
-        visible: opticalParsetPage.state === "optParImported"
-        y: 600
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: 0
-        checkable: true
-
-        Connections {
-            target: plotOptButton
-            onClicked: {
-                raImage.visible = true
-            }
-        }
-    }
-
-    Image {
-        id: raImage
-        source: "images/RA_device2.png"
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: Constants.defaultMargin + 150
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: 0
-        fillMode: Image.PreserveAspectFit
-        visible: false
-    }
-
-    states: [
-        State {
-            name: "optInit"
-        },
-        State {
-            name: "optParImported"
-        }
-    ]
+    // Button {
+    //     id: plotOptButton
+    //     text: qsTr("Plot Optical Parameters")
+    //     visible: opticalParsetPage.state === "optParImported"
+    //     y: 600
+    //     anchors.horizontalCenter: parent.horizontalCenter
+    //     anchors.horizontalCenterOffset: 0
+    //     checkable: true
+    //
+    //     Connections {
+    //         target: plotOptButton
+    //         onClicked: {
+    //             raImage.visible = true
+    //         }
+    //     }
+    // }
 }

@@ -14,10 +14,10 @@ QtObject {
     id: root
 
     property var wizardWindow: Window {
-        width: Screen.desktopAvailableWidth
-        height: Screen.desktopAvailableHeight
-
-        visible: false
+        // screen: Qt.application.screens[0]
+        width: Constants.width
+        height: Constants.height
+        visibility: Window.Hidden
         title: qsTr("Suis Parameter Wizard")
 
         WizardFlow {
@@ -57,7 +57,7 @@ QtObject {
 
         function simStart() {
             // "-nosplash", "-nodesktop", "-r"
-            simProcess.start("matlab", ["-batch", "\"run('E:/Documents/GitHub/ddmodel-octave/demo_eco_pin.m')\""], Process.ReadOnly)
+            simProcess.start("matlab", ["-batch", "\"run('E:/Documents/GitHub/ddmodel-octave/demo_ms_pin.m')\""], Process.ReadOnly)
         }
 
         SimPage {
@@ -88,6 +88,6 @@ QtObject {
 
     property var splashWindow: Splash {
         visible: true
-        onTimeout: wizardWindow.visible = true
+        onTimeout: wizardWindow.visibility = Window.Maximized
     }
 }

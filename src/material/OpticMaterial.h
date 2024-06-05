@@ -9,12 +9,12 @@
 #include <QString>
 
 enum class DbType {
-    SOLCORE_DB
+    DF, SOLCORE
 };
 
 class OpticMaterial {
 public:
-    OpticMaterial(DbType db_type, QString mat_name, const QString& mat_path);
+    OpticMaterial(const DbType& db_type, QString mat_name, const QString& mat_path);
 
 private:
     QString mat_name;
@@ -23,7 +23,7 @@ private:
     std::vector<double> k_wl;
     std::vector<double> k_data;
 
-    void readMat(const QString& path);
+    void readMat(const DbType& db_type, const QString& path);
 };
 
 

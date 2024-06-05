@@ -1,10 +1,40 @@
 pragma Singleton
-import QtQuick 6.2
+import QtQuick
 import QtQuick.Studio.Application
 
 QtObject {
-    readonly property int width: Screen.desktopAvailableWidth
-    readonly property int height: Screen.desktopAvailableHeight
+    function getMinWidth() {
+        let minWidth = Screen.width
+        const screens = Qt.application.screens
+        // Note that screen[i].desktopAvailableWidth is always the total width of multiple monitor screens if they are
+        // set as extended horizontally.
+        for (let i = 0; i < screens.length; i++) {
+            if (screens[i].width < minWidth) {
+                minWidth = screens[i].width
+            }
+        }
+        return minWidth
+    }
+
+    function getMinHeight() {
+        let minHeight = Screen.height
+        let maxHeight = Screen.height
+        const screens = Qt.application.screens
+        // Note that screen[i].desktopAvailableHeight is always the maximum height of multiple monitor screens if they
+        // are set as extended horizontally.
+        for (let i = 0; i < screens.length; i++) {
+            if (screens[i].height < minHeight) {
+                minHeight = screens[i].height
+            }
+            if (screens[i].height > maxHeight) {
+                maxHeight = screens[i].height
+            }
+        }
+        return minHeight - maxHeight + Screen.desktopAvailableHeight  // excluding window manager reserved areas
+    }
+
+    readonly property int width: 1024
+    readonly property int height: 768
 
     property string relativeFontDirectory: "fonts"
 

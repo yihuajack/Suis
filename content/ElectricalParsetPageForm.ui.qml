@@ -14,28 +14,4 @@ Item {
     width: Constants.width
     height: Constants.height - 100
     anchors.top: parent.top
-
-    Button {
-        id: importElecButton
-        text: qsTr("Import Electrical Parameters")
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: 0
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: 0
-        checkable: true
-
-        Connections {
-            target: importElecButton
-            onClicked: elecFolderDialog.open()
-        }
-    }
-
-    states: [
-        State {
-            name: "elecInit"
-        },
-        State {
-            name: "elecParImported"
-        }
-    ]
 }

@@ -17,7 +17,6 @@ Item {
 
     Text {
         id: label
-        y: 213
         text: qsTr("Parameter Wizard")
         font.family: Constants.font.family
         anchors.verticalCenter: parent.verticalCenter

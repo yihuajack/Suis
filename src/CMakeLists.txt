@@ -1,8 +1,6 @@
 target_sources(SuisApp PRIVATE
         # headers
-        material/CustomDbModel.h
-        material/MaterialSystemModel.h
-        material/DbModel.h
+        material/MaterialDbModel.h
         material/OpticMaterial.h
         optics/FixedMatrix.h
         optics/tmm.h
@@ -21,9 +19,7 @@ target_sources(SuisApp PRIVATE
         ProfilePrivate.h
         SettingsStorage.h
         # sources
-        material/CustomDbModel.cpp
-        material/MaterialSystemModel.cpp
-        material/DbModel.cpp
+        material/MaterialDbModel.cpp
         material/OpticMaterial.cpp
         optics/FixedMatrix.cpp
         optics/tmm.cpp

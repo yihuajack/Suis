@@ -4,124 +4,124 @@
  */
 
 import QtQuick
+import QtQuick.Controls  // Dialog
 import QtQuick.Dialogs
 import QtCore  // StandardPaths: QtLabsPlatform is deprecated since 6.4
-import DbModel
-import MaterialSystemModel
+import Qt.labs.folderlistmodel
+import MaterialDbModel
 
 OpticalParsetPageForm {
     id: opticalParsetPage
 
-    state: "optInit"
+    property string databasePath: ""
+    property var matList: []
 
-    DbModel {
-        id: dbModel
+    Column {
+        spacing: 10
+        padding: 10
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.verticalCenterOffset: 0
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.horizontalCenterOffset: 0
+
+        Row {
+            spacing: 10
+
+            ComboBox {
+                id: dbTypeCombo
+                width: 150
+                model: ["Solcore", "Suis"]
+                onCurrentIndexChanged: {
+                    importButton.enabled = currentIndex !== -1
+                }
+            }
+
+            TextField {
+                id: pathTextField
+                width: 400
+                placeholderText: "Database Path"
+                text: databasePath
+                onTextChanged: {
+                    databasePath = text
+                }
+            }
+
+            Button {
+                id: importButton
+                text: "Import"
+                enabled: false
+                onClicked: {
+                    if (dbTypeCombo.currentIndex === 0) {
+                        folderDialog.open()
+                    } else if (dbTypeCombo.currentIndex === 1) {
+                        fileDialog.open()
+                    }
+                }
+            }
+
+            Button {
+                id: showButton
+                text: "Show"
+                onClicked: {
+                    if (databasePath !== "") {
+                        if (dbTypeCombo.currentIndex === 0) {
+                            matList = readSolcoreDb(databasePath)
+                        } else if (dbTypeCombo.currentIndex === 1) {
+                            matList = readDfDb(databasePath)
+                        }
+                        fileListDialog.open()
+                    }
+                }
+            }
+        }
     }
 
     FolderDialog {
-        id: optFolderDialog
-        title: "Choose the Optical Parameter Database Folder"
-        currentFolder: StandardPaths.standardLocations(StandardPaths.AppConfigLocation)[0]  // Qt.resolvedUrl("./")
+        id: folderDialog
+        title: "Select Database Folder"
         onAccepted: {
-            opticalParsetPage.state = "optParImported"
-            dbModel.dbPath = selectedFolder
+            databasePath = selectedFolder
+            pathTextField.text = selectedFolder
         }
     }
 
-    MaterialSystemModel {
-        id: matSysModel
+    FileDialog {
+        id: fileDialog
+        title: "Select Database File"
+        nameFilters: ["*.xlsx"]
+        onAccepted: {
+            databasePath = selectedFile
+            pathTextField.text = selectedFile
+        }
     }
 
     Dialog {
-        id: matListDialog
-        width: 400
-        height: 300
-        title: "Imported Materials"
+        id: fileListDialog
+        title: "Imported Optical Materials"
+        standardButtons: Dialog.Ok
 
-        ListView {
-            anchors.fill: parent
-            model: dbModel
+        Column {
+            spacing: 10
+            padding: 10
 
-            delegate: Item {
+            ListView {
                 width: parent.width
-                height: 50
+                height: parent.height - 50
+                model: matList
 
-                Text {
-                    text: model.dbName
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.horizontalCenter: parent.horizontalCenter
+                delegate: Item {
+                    width: parent.width
+                    height: 30
+
+                    Text {
+                        text: modelData
+                    }
                 }
             }
         }
     }
 
-    ListView {
-        id: dbListView
-        model: matSysModel
-
-        delegate: Item {
-            width: parent.width
-            height: 50
-            Grid {
-                columns: 3
-                rows: 2  // by default
-                spacing: 10
-                Text {
-                    id: dbNameText
-                    text: matSysModel.db_name
-                    anchors {
-                        left: parent.left
-                        leftMargin: 10
-                        verticalCenter: parent.verticalCenter
-                    }
-                }
-
-                TextField {  // not readOnly
-                    id: dbPathText
-                    anchors {
-                        left: dbNameText.right
-                        leftMargin: 10
-                        verticalCenter: parent.verticalCenter
-                    }
-                    Layout.fillWidth: true
-                    placeholderText: "Enter database path"
-                    text: selectedFolderPath
-                }
-
-                Button {
-                    text: "Select"
-                    width: 100
-                    height: 30
-                    anchors {
-                        right: parent.right
-                        rightMargin: 10
-                        verticalCenter: parent.verticalCenter
-                    }
-                    onClicked: optFolderDialog.open()
-                }
-
-                Item {}
-
-                Text {
-                    anchors {
-                        top: rowLayout.bottom + 10
-                        left: rowLayout.dbPathText.left
-                        verticalCenter: parent.verticalCenter
-                    }
-                }
-
-                Button {
-                    text: "Show"
-                    width: 100
-                    height: 30
-                    anchors {
-                        right: parent.right
-                        rightMargin: 10
-                        verticalCenter: parent.verticalCenter
-                    }
-                    onClicked: matListDialog.open()
-                }
-            }
-        }
+    FolderListModel {
+        id: folderListModel
     }
 }

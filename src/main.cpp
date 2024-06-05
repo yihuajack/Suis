@@ -9,8 +9,7 @@
 #include "import_qml_plugins.h"
 
 #include "Application.h"
-#include "material/DbModel.h"
-#include "material/MaterialSystemModel.h"
+#include "material/MaterialDbModel.h"
 #include "Process.h"
 
 int main(int argc, char *argv[]) {
@@ -23,9 +22,8 @@ int main(int argc, char *argv[]) {
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Suis - Solar Cell Simulator"));
     QGuiApplication::setApplicationVersion("1.0");
 
+    qmlRegisterType<Process>("MaterialDbModel", 1, 0, "MaterialDbModel");
     qmlRegisterType<Process>("Process", 1, 0, "Process");
-    qmlRegisterType<DbModel>("DbModel", 1, 0, "DbModel");
-    qmlRegisterType<MaterialSystemModel>("MaterialSystemModel", 1, 0, "MaterialSystemModel");
 
     // qmlRegisterSingletonType<CppBackend>(
     //     "backend", 1, 0, "BackendObject",
