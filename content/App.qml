@@ -88,6 +88,6 @@ QtObject {
 
     property var splashWindow: Splash {
         visible: true
-        onTimeout: wizardWindow.visibility = Window.Maximized
+        onTimeout: wizardWindow.visibility = Window.Windowed
     }
 }

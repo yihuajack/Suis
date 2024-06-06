@@ -12,7 +12,7 @@ MaterialDbModel::MaterialDbModel(QObject *parent) : QObject(parent) {}
 QStringList MaterialDbModel::readSolcoreDb(const QString &folderPath) {
     QDir db_dir(folderPath);
     if (not db_dir.exists()) {
-        qWarning("Cannot find Solcore's material data directory.");
+        qWarning("Cannot find Solcore's material data directory %s.", qUtf8Printable(folderPath));
     }
     db_dir.setFilter(QDir::Dirs);
     QStringList name_filters;
@@ -30,7 +30,7 @@ QStringList MaterialDbModel::readSolcoreDb(const QString &folderPath) {
 QStringList MaterialDbModel::readDfDb(const QString &filePath) {
     QFile db_file(filePath);
     if (not db_file.exists()) {
-        qWarning("Cannot find DriftFusion's material data file.");
+        qWarning("Cannot find DriftFusion's material data file %s.", qUtf8Printable(filePath));
     }
     return {};
 }

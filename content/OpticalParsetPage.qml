@@ -7,14 +7,149 @@ import QtQuick
 import QtQuick.Controls  // Dialog
 import QtQuick.Dialogs
 import QtCore  // StandardPaths: QtLabsPlatform is deprecated since 6.4
-import Qt.labs.folderlistmodel
-import MaterialDbModel
+import MaterialDbModel  // Qt.labs.folderlistmodel
 
 OpticalParsetPageForm {
     id: opticalParsetPage
 
-    property string databasePath: ""
-    property var matList: []
+    MaterialDbModel {
+        id: matDbModel
+    }
+
+    ListModel {
+        id: listModel
+        ListElement {
+            name: "Solcore"
+            checked: false
+            status: 0
+        }
+
+        ListElement {
+            name: "Df"
+            checked: false
+            status: 0
+        }
+    }
+
+    ListView {
+        anchors.fill: parent
+        model: listModel
+        delegate: Item {
+            width: parent.width
+            height: 200
+
+            property string databasePath: ""
+            property var matList: []
+
+            Row {
+                spacing: 10
+                anchors.verticalCenter: parent.verticalCenter
+
+                CheckBox {
+                    id: checkSolcore
+                    text: "Solcore"
+                    onCheckedChanged: {
+                        model.checked = checked
+                    }
+                }
+
+                TextField {
+                    id: pathTextField
+                    width: 400
+                    placeholderText: "Enter the Database Path"
+                    text: databasePath
+                    onTextChanged: {
+                        model.pathText = text
+                    }
+                }
+
+                Button {
+                    id: importButton
+                    text: "Import"
+                    enabled: model.checked
+                    onClicked: {
+                        if (model.name === "Solcore") {  // maybe better than using index
+                            folderDialog.open()
+                        } else if (model.name === "Df") {
+                            fileDialog.open()
+                        }
+                    }
+                }
+
+                Button {
+                    id: showButton
+                    text: "Show"
+                    enabled: model.status === 1
+                    onClicked: {
+                        matListDialog.open()
+                    }
+                }
+
+                Text {
+                    id: statusText
+                    left: pathTextField.left
+                    top: pathTextField.bottom - 10
+                    width: pathTextField.width
+                    height: pathTextField.height
+                    text: ""
+                }
+
+                FolderDialog {
+                    id: folderDialog
+                    title: qStr("Select Database Folder")
+                    onAccepted: {
+                        if (model.name === "Solcore") {  // folderDialogLoader.sourceComponent = folderDialogComponent;
+                            databasePath = selectedFolder
+                            matList = matDbModel.readSolcoreDb(databasePath)
+                            model.status = matList.length !== 0
+                            showButton.enabled = true
+                            statusText.text = statusInfo(model.status)
+                        }
+                    }
+                }
+
+                FileDialog {
+                    id: fileDialog
+                    titile: qStr("Select Database File")
+                    nameFilters: ["*.xlsx"]
+                    onAccepted: {
+                        if (model.name === "Df") {
+                            databasePath = selectedFile
+                            model.status = matDbModel.readDfDb(databasePath)
+                            showButton.enabled = true
+                            statusText.text = statusInfo(model.status)
+                        }
+                    }
+                }
+
+                Dialog {
+                    id: matListDialog
+                    title: "Imported Optical Materials"
+                    standardButtons: Dialog.Ok
+
+                    Column {
+                        spacing: 10
+                        padding: 10
+
+                        ListView {
+                            width: parent.width
+                            height: parent.height - 50
+                            model: matList
+
+                            delegate: Item {
+                                width: parent.width
+                                height: 30
+
+                                Text {
+                                    text: modelData
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     Column {
         spacing: 10
@@ -25,103 +160,6 @@ OpticalParsetPageForm {
         anchors.horizontalCenterOffset: 0
 
         Row {
-            spacing: 10
-
-            ComboBox {
-                id: dbTypeCombo
-                width: 150
-                model: ["Solcore", "Suis"]
-                onCurrentIndexChanged: {
-                    importButton.enabled = currentIndex !== -1
-                }
-            }
-
-            TextField {
-                id: pathTextField
-                width: 400
-                placeholderText: "Database Path"
-                text: databasePath
-                onTextChanged: {
-                    databasePath = text
-                }
-            }
-
-            Button {
-                id: importButton
-                text: "Import"
-                enabled: false
-                onClicked: {
-                    if (dbTypeCombo.currentIndex === 0) {
-                        folderDialog.open()
-                    } else if (dbTypeCombo.currentIndex === 1) {
-                        fileDialog.open()
-                    }
-                }
-            }
-
-            Button {
-                id: showButton
-                text: "Show"
-                onClicked: {
-                    if (databasePath !== "") {
-                        if (dbTypeCombo.currentIndex === 0) {
-                            matList = readSolcoreDb(databasePath)
-                        } else if (dbTypeCombo.currentIndex === 1) {
-                            matList = readDfDb(databasePath)
-                        }
-                        fileListDialog.open()
-                    }
-                }
-            }
         }
-    }
-
-    FolderDialog {
-        id: folderDialog
-        title: "Select Database Folder"
-        onAccepted: {
-            databasePath = selectedFolder
-            pathTextField.text = selectedFolder
-        }
-    }
-
-    FileDialog {
-        id: fileDialog
-        title: "Select Database File"
-        nameFilters: ["*.xlsx"]
-        onAccepted: {
-            databasePath = selectedFile
-            pathTextField.text = selectedFile
-        }
-    }
-
-    Dialog {
-        id: fileListDialog
-        title: "Imported Optical Materials"
-        standardButtons: Dialog.Ok
-
-        Column {
-            spacing: 10
-            padding: 10
-
-            ListView {
-                width: parent.width
-                height: parent.height - 50
-                model: matList
-
-                delegate: Item {
-                    width: parent.width
-                    height: 30
-
-                    Text {
-                        text: modelData
-                    }
-                }
-            }
-        }
-    }
-
-    FolderListModel {
-        id: folderListModel
     }
 }

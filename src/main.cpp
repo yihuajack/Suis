@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Suis - Solar Cell Simulator"));
     QGuiApplication::setApplicationVersion("1.0");
 
-    qmlRegisterType<Process>("MaterialDbModel", 1, 0, "MaterialDbModel");
+    qmlRegisterType<MaterialDbModel>("MaterialDbModel", 1, 0, "MaterialDbModel");
     qmlRegisterType<Process>("Process", 1, 0, "Process");
 
     // qmlRegisterSingletonType<CppBackend>(

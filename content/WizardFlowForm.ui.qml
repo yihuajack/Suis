@@ -1,19 +1,17 @@
-
-
 /*
 This is a UI file (.ui.qml) that is intended to be edited in Qt Design Studio only.
 It is supposed to be strictly declarative and only uses a subset of QML. If you edit
 this file manually, you might introduce QML code that is not supported by Qt Design Studio.
 Check out https://doc.qt.io/qtcreator/creator-quick-ui-forms.html for details on .ui.qml files.
 */
+
 import QtQuick
 import QtQuick.Controls
 import Suis
 
 Rectangle {
     id: root
-    width: Constants.width
-    height: Constants.height
+    anchors.fill: parent
 
     signal backClicked
     signal nextClicked
@@ -24,11 +22,11 @@ Rectangle {
 
     Rectangle {
         id: bottomBar
-        width: Constants.width
+        width: parent.width
         height: 100
         color: Constants.barColor
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: Constants.defaultMargin
+        // anchors.bottomMargin: Constants.defaultMargin
 
         Button {
             id: backButton
