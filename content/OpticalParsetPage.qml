@@ -21,13 +21,11 @@ OpticalParsetPageForm {
         ListElement {
             name: "Solcore"
             checked: false
-            status: 0
         }
 
         ListElement {
             name: "Df"
             checked: false
-            status: 0
         }
     }
 
@@ -53,13 +51,23 @@ OpticalParsetPageForm {
                     }
                 }
 
-                TextField {
-                    id: pathTextField
+                Column {
                     width: 400
-                    placeholderText: "Enter the Database Path"
-                    text: databasePath
-                    onTextChanged: {
-                        model.pathText = text
+                    spacing: 10
+
+                    TextField {
+                        id: pathTextField
+                        enabled: model.checked
+                        placeholderText: "Enter the Database Path"
+                        text: databasePath
+                        onTextChanged: {
+                            model.pathText = text
+                        }
+                    }
+
+                    Text {
+                        id: statusText
+                        text: ""
                     }
                 }
 
@@ -85,39 +93,31 @@ OpticalParsetPageForm {
                     }
                 }
 
-                Text {
-                    id: statusText
-                    left: pathTextField.left
-                    top: pathTextField.bottom - 10
-                    width: pathTextField.width
-                    height: pathTextField.height
-                    text: ""
-                }
-
                 FolderDialog {
                     id: folderDialog
-                    title: qStr("Select Database Folder")
+                    title: qsTr("Select Database Folder")
                     onAccepted: {
                         if (model.name === "Solcore") {  // folderDialogLoader.sourceComponent = folderDialogComponent;
                             databasePath = selectedFolder
-                            matList = matDbModel.readSolcoreDb(databasePath)
-                            model.status = matList.length !== 0
+                            let result = matDbModel.readSolcoreDb(databasePath)
+                            matList = result.matlist
                             showButton.enabled = true
-                            statusText.text = statusInfo(model.status)
+                            statusText.text = statusInfo(result.status)
                         }
                     }
                 }
 
                 FileDialog {
                     id: fileDialog
-                    titile: qStr("Select Database File")
+                    title: qsTr("Select Database File")
                     nameFilters: ["*.xlsx"]
                     onAccepted: {
                         if (model.name === "Df") {
                             databasePath = selectedFile
-                            model.status = matDbModel.readDfDb(databasePath)
+                            let result = matDbModel.readDfDb(databasePath)
+                            matList = result.matlist
                             showButton.enabled = true
-                            statusText.text = statusInfo(model.status)
+                            statusText.text = statusInfo(result.status)
                         }
                     }
                 }
@@ -151,15 +151,16 @@ OpticalParsetPageForm {
         }
     }
 
-    Column {
-        spacing: 10
-        padding: 10
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: 0
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: 0
-
-        Row {
+    function statusInfo(status) {
+        switch (status) {
+            case 0:
+                return "Database is successfully imported"
+            case 1:
+                return "Cannot find the path"
+            case 2:
+                return "Cannot find the n/k file"
+            default:
+                return "Invalid status"
         }
     }
 }

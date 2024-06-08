@@ -6,7 +6,7 @@
 #define SUISAPP_MATERIALDBMODEL_H
 
 #include <QObject>
-#include <QStringList>
+#include <QVariantMap>
 
 #include "OpticMaterial.h"
 
@@ -15,8 +15,8 @@ class MaterialDbModel : public QObject {
 public:
     explicit MaterialDbModel(QObject *parent = nullptr);
 
-    Q_INVOKABLE QStringList readSolcoreDb(const QString& folderPath);
-    Q_INVOKABLE QStringList readDfDb(const QString& filePath);
+    Q_INVOKABLE QVariantMap readSolcoreDb(const QString& folderPath);
+    Q_INVOKABLE QVariantMap readDfDb(const QString& filePath);
 
 private:
     QMap<QString, OpticMaterial> m_list;

@@ -3,6 +3,7 @@
 //
 
 #include <filesystem>
+#include <stdexcept>
 #include <QDir>
 
 #include "OpticMaterial.h"
@@ -15,9 +16,13 @@ void OpticMaterial::readMat(const DbType& db_type, const QString& path) {
     const std::filesystem::path nk_path(path.toStdString());
     QFile n_file = nk_path / "n.txt";
     QFile k_file = nk_path / "k.txt";
-    if (not n_file.open(QIODevice::ReadOnly) or not k_file.open(QIODevice::ReadOnly)) {
-        qWarning() << n_file.errorString() << k_file.errorString();
-        return;
+    if (not n_file.open(QIODevice::ReadOnly)) {
+        qWarning() << n_file.errorString();
+        throw std::runtime_error(n_file.errorString().toStdString());
+    }
+    if (not k_file.open(QIODevice::ReadOnly)) {
+        qWarning() << k_file.errorString();
+        throw std::runtime_error(k_file.errorString().toStdString());
     }
     QTextStream n_stream(&n_file);
     QTextStream k_stream(&k_file);
