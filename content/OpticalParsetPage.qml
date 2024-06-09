@@ -57,6 +57,7 @@ OpticalParsetPageForm {
 
                     TextField {
                         id: pathTextField
+                        width: 400
                         enabled: model.checked
                         placeholderText: "Enter the Database Path"
                         text: databasePath
@@ -110,7 +111,7 @@ OpticalParsetPageForm {
                 FileDialog {
                     id: fileDialog
                     title: qsTr("Select Database File")
-                    nameFilters: ["*.xlsx"]
+                    nameFilters: ["*.xlsx", "*.ini"]
                     onAccepted: {
                         if (model.name === "Df") {
                             databasePath = selectedFile
@@ -158,7 +159,7 @@ OpticalParsetPageForm {
             case 1:
                 return "Cannot find the path"
             case 2:
-                return "Cannot find the n/k file"
+                return "Fail to import the n/k file"
             default:
                 return "Invalid status"
         }

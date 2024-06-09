@@ -1,5 +1,6 @@
 target_sources(SuisApp PRIVATE
         # headers
+        material/IniConfigParser.h
         material/MaterialDbModel.h
         material/OpticMaterial.h
         optics/FixedMatrix.h
@@ -19,6 +20,7 @@ target_sources(SuisApp PRIVATE
         ProfilePrivate.h
         SettingsStorage.h
         # sources
+        material/IniConfigParser.cpp
         material/MaterialDbModel.cpp
         material/OpticMaterial.cpp
         optics/FixedMatrix.cpp

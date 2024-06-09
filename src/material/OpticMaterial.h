@@ -6,6 +6,7 @@
 #define SUISAPP_OPTIC_MATERIAL_H
 
 #include <vector>
+#include <QFileInfo>
 #include <QString>
 
 enum class DbType {
@@ -14,7 +15,7 @@ enum class DbType {
 
 class OpticMaterial {
 public:
-    OpticMaterial(const DbType& db_type, QString mat_name, const QString& mat_path);
+    OpticMaterial(const DbType& db_type, QString mat_name, const QFileInfo& mat_f);
 
 private:
     QString mat_name;
@@ -23,7 +24,7 @@ private:
     std::vector<double> k_wl;
     std::vector<double> k_data;
 
-    void readMat(const DbType& db_type, const QString& path);
+    void readMat(const DbType& db_type, const QFileInfo& mat_f);
 };
 
 
