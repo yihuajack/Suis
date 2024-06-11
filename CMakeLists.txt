@@ -26,14 +26,18 @@ project(SuisApp
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# CMake Arguments:
+# -DCMAKE_TOOLCHAIN_FILE="D:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\vcpkg\scripts\buildsystems\vcpkg.cmake"
 # Visual Studio toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\<qtver>\msvc2019_64\lib\cmake
 # MinGW toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\<qtver>mingw_64\lib\cmake
 # MSVC 2019 ARM64: msvc2019_arm64, LLVM-MinGW: llvm-mingw_64
 # Alternatively use --toolchain instead of CMAKE_TOOLCHAIN_FILE
 # set(CMAKE_PREFIX_PATH "D:\\Qt\\<qtver>\\msvc2019_64\\lib\\cmake")
 # After updating MSVC, remember to manually update the path to cl.exe in
-# build-Suis-Desktop_Qt_6_6_2_MSVC2019_64bit-Debug\vcpkg-dependencies\toolchain.cmake
+# build-Suis-Desktop_Qt_<ver>>_MSVC2019_64bit-Debug\vcpkg-dependencies\toolchain.cmake
 # where CMAKE_C_COMPILER, CMAKE_CXX_COMPILER, and VCPKG_TARGET_TRIPLET are set.
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
 find_package(Qt6 6.7 REQUIRED COMPONENTS Core Gui Qml Quick)
 set(CMAKE_AUTOMOC ON)
@@ -43,6 +47,13 @@ find_package(Boost 1.84.0 REQUIRED)
 # find_package(SQLite3 3.45.0 REQUIRED)
 # Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR)
 # See https://bugreports.qt.io/browse/QTBUG-92587
+# https://gitlab.kitware.com/cmake/cmake/-/merge_requests/3027
+# Check default CMAKE_FIND_LIBRARY_SUFFIXES in Modules/CMakeGenericSystem.cmake ("lib"/[".so" ".a"]) and
+# Modules/Platform/Windows.cmake (["" "lib"]/["dll.lib" ".lib" ".a"]) for MSVC
+SET(CMAKE_FIND_LIBRARY_PREFIXES "lib")
+SET(CMAKE_FIND_LIBRARY_SUFFIXES ".dll.a")
+find_package(Octave REQUIRED COMPONENTS Development Interpreter)
+add_definitions(-DCMAKE_EXPECTED_Octave_VERSION=${Octave_VERSION})
 
 include_directories(${Boost_INCLUDE_DIRS})
 
@@ -59,6 +70,32 @@ qt_add_resources(SuisApp "configuration"
 )
 
 add_subdirectory(src)
+
+include(FetchContent)
+FetchContent_Declare(
+        QXlsx
+        GIT_REPOSITORY https://github.com/QtExcel/QXlsx.git
+        GIT_TAG        v1.4.8
+        SOURCE_SUBDIR  QXlsx
+)
+FetchContent_MakeAvailable(QXlsx)
+
+target_link_libraries(SuisApp PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Qml
+        Qt6::Quick
+        QXlsx
+        Octave::Octave
+)
+
+target_include_directories(SuisApp PRIVATE ${Octave_INCLUDE_DIRS})
+
+install(TARGETS SuisApp
+        BUNDLE DESTINATION .
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 
 if (BUILD_QDS_COMPONENTS)
     include(${CMAKE_CURRENT_SOURCE_DIR}/qmlcomponents)

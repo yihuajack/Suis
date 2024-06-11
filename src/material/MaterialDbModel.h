@@ -1,13 +1,13 @@
 //
-// Created by Yihua Liu on 2024/6/3
+// Created by Yihua Liu on 2024/6/3.
 //
 
 #ifndef SUISAPP_MATERIALDBMODEL_H
 #define SUISAPP_MATERIALDBMODEL_H
 
 #include <QObject>
-#include <QVariantMap>
 
+#include "CompOpticMaterial.h"
 #include "OpticMaterial.h"
 
 class MaterialDbModel : public QObject {
@@ -19,6 +19,7 @@ public:
     Q_INVOKABLE QVariantMap readDfDb(const QString& filePath);
 
 private:
+    QMap<QString, CompOpticMaterial> m_comp_list;
     QMap<QString, OpticMaterial> m_list;
 };
 

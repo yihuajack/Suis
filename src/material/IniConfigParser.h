@@ -11,7 +11,8 @@
 class IniConfigParser {
 public:
     explicit IniConfigParser(const QString& ini_fn);
-    QVariantMap loadGroup(const QString& group_name);
+    QMap<QString, QString> loadGroup(const QString& group_name);
+    [[nodiscard]] QString loadValue(const QString& key_name) const;
 private:
     QSettings ini_settings;
 };

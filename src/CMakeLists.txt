@@ -1,8 +1,10 @@
 target_sources(SuisApp PRIVATE
         # headers
+        material/CompOpticMaterial.h
         material/IniConfigParser.h
         material/MaterialDbModel.h
         material/OpticMaterial.h
+        material/ParameterSystem.h
         optics/FixedMatrix.h
         optics/tmm.h
         utils/Approx.h
@@ -20,9 +22,11 @@ target_sources(SuisApp PRIVATE
         ProfilePrivate.h
         SettingsStorage.h
         # sources
+        material/CompOpticMaterial.cpp
         material/IniConfigParser.cpp
         material/MaterialDbModel.cpp
         material/OpticMaterial.cpp
+        material/ParameterSystem.cpp
         optics/FixedMatrix.cpp
         optics/tmm.cpp
         optics/tmm_vec.cpp
@@ -40,27 +44,4 @@ target_sources(SuisApp PRIVATE
         ProfilePrivate.cpp
         SettingsStorage.cpp
         main.cpp
-)
-
-include(FetchContent)
-FetchContent_Declare(
-        QXlsx
-        GIT_REPOSITORY https://github.com/QtExcel/QXlsx.git
-        GIT_TAG        v1.4.8
-        SOURCE_SUBDIR  QXlsx
-)
-FetchContent_MakeAvailable(QXlsx)
-
-target_link_libraries(SuisApp PRIVATE
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Qml
-        Qt6::Quick
-        QXlsx
-)
-
-install(TARGETS SuisApp
-        BUNDLE DESTINATION .
-        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )

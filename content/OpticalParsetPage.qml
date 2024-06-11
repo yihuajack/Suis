@@ -77,11 +77,12 @@ OpticalParsetPageForm {
                     text: "Import"
                     enabled: model.checked
                     onClicked: {
-                        if (model.name === "Solcore") {  // maybe better than using index
-                            folderDialog.open()
+                        if (model.name === "Solcore") {
+                            fileDialog.nameFilters = ["*.ini", "*.txt"]
                         } else if (model.name === "Df") {
-                            fileDialog.open()
+                            fileDialog.nameFilters = ["*.xlsx"]
                         }
+                        fileDialog.open()
                     }
                 }
 
@@ -94,32 +95,20 @@ OpticalParsetPageForm {
                     }
                 }
 
-                FolderDialog {
-                    id: folderDialog
-                    title: qsTr("Select Database Folder")
-                    onAccepted: {
-                        if (model.name === "Solcore") {  // folderDialogLoader.sourceComponent = folderDialogComponent;
-                            databasePath = selectedFolder
-                            let result = matDbModel.readSolcoreDb(databasePath)
-                            matList = result.matlist
-                            showButton.enabled = true
-                            statusText.text = statusInfo(result.status)
-                        }
-                    }
-                }
-
                 FileDialog {
                     id: fileDialog
                     title: qsTr("Select Database File")
-                    nameFilters: ["*.xlsx", "*.ini"]
                     onAccepted: {
-                        if (model.name === "Df") {
-                            databasePath = selectedFile
-                            let result = matDbModel.readDfDb(databasePath)
-                            matList = result.matlist
-                            showButton.enabled = true
-                            statusText.text = statusInfo(result.status)
+                        databasePath = selectedFile
+                        let result
+                        if (model.name === "Solcore") {
+                            result = matDbModel.readSolcoreDb(databasePath)
+                        } else if (model.name === "Df") {
+                            result = matDbModel.readDfDb(databasePath)
                         }
+                        matList = result.matlist
+                        showButton.enabled = true
+                        statusText.text = statusInfo(result.status)
                     }
                 }
 
@@ -159,7 +148,7 @@ OpticalParsetPageForm {
             case 1:
                 return "Cannot find the path"
             case 2:
-                return "Fail to import the n/k file"
+                return "Fail to load the n/k file"
             default:
                 return "Invalid status"
         }
