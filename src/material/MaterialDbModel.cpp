@@ -5,8 +5,13 @@
 #include <stdexcept>
 #include <QDir>
 #include <QFile>
+#include <QPointer>
+#include <QProcessEnvironment>
 #include <QRegularExpression>
+#include <QStandardPaths>
 #include <QUrl>
+#include "xlsxabstractsheet.h"
+#include "xlsxdocument.h"
 
 #include "IniConfigParser.h"
 #include "MaterialDbModel.h"
@@ -14,9 +19,51 @@
 
 MaterialDbModel::MaterialDbModel(QObject *parent) : QObject(parent) {}
 
+QString findSolcoreUserConfig() {
+    /* Let us expect P1031R2: Low level file i/o library (https://wg21.link/p1031r2)
+     * https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p1031r2.pdf (https://ned14.github.io/llfio/)
+    #ifdef _MSC_VER
+    char *user_path;
+    std::size_t len_userdata;
+    errno_t err_userdata = _dupenv_s(&user_path, &len_userdata, "SUIS_USER_DATA");
+    if (err_userdata) {
+        throw std::runtime_error("_dupenv_s fails to get user data environment variable, errno is " + std::to_string(err_userdata) + ".");
+    }
+    #else
+    char *user_path = std::getenv("SUIS_USER_DATA");
+    #endif
+    if (!user_path) {
+        throw std::runtime_error("getenv fails to get user data environment variable.");
+    }
+    free(user_path);
+     */
+    const QProcessEnvironment sysenv = QProcessEnvironment::systemEnvironment();
+    QString user_path_str = sysenv.value("SOLCORE_USER_DATA", "");
+    QDir user_path;
+    if (user_path_str.isEmpty()) {
+        // the same as QDir::homePath()
+        qDebug("SOLCORE_USER_DATA does not exist or is empty.");
+        user_path = QStandardPaths::displayName(QStandardPaths::HomeLocation);
+        user_path_str = user_path.filePath(".solcore");
+        user_path = user_path_str;
+    } else {
+        user_path = user_path_str;
+    }
+    // std::filesystem::path::format has native_format, generic_format, and auto_format.
+    // generic_format uses slashes, while native_format of Windows paths uses backslashes.
+    // We can convert std::filesystem::path to std::string by std::filesystem::path::generic_string() bu
+    // QDir() constructor accepts both QString and std::filesystem::path
+    // if (not user_path.exists()) {
+        // QDir::mkdir() is enough. Alternatively use QDir::mkpath() to create all parent directories.
+        // user_path.mkdir(user_path_str);
+    // }
+    return user_path.filePath("solcore_config.txt");
+}
+
 QVariantMap MaterialDbModel::readSolcoreDb(const QString &db_path) {
     const QUrl url(db_path);
-    QFile ini_file = url.toLocalFile();
+    const QString user_config = findSolcoreUserConfig();
+    QFile ini_file = QFile::exists(user_config) ? user_config : url.toLocalFile();
     const QFileInfo ini_finfo(ini_file);
     QVariantMap result;
     QStringList mat_list;
@@ -100,6 +147,7 @@ QVariantMap MaterialDbModel::readSolcoreDb(const QString &db_path) {
                         k_wl.emplace_back(main_fraction_str.toDouble(), frac_k_wl);
                         k_data.emplace_back(main_fraction_str.toDouble(), frac_k_data);
                     }
+
                     CompOpticMaterial opt_mat(mat_name, n_wl, n_data, k_wl, k_data);
                     m_comp_list.insert(mat_name, opt_mat);
                 }
@@ -116,10 +164,12 @@ QVariantMap MaterialDbModel::readSolcoreDb(const QString &db_path) {
     return result;
 }
 
-QVariantMap MaterialDbModel::readDfDb(const QString &filePath) {
-    QFile db_file(filePath);
-    if (not db_file.exists()) {
-        qWarning("Cannot find DriftFusion's material data file %s.", qUtf8Printable(filePath));
+QVariantMap MaterialDbModel::readDfDb(const QString &db_path) {
+    const QUrl url(db_path);
+    QXlsx::Document doc(url.toLocalFile());
+    if (not doc.load()) {
+        qWarning("Cannot load DriftFusion's material data file %s ", qUtf8Printable(db_path));
     }
+    QPointer<QXlsx::AbstractSheet> data_sheet = doc.sheet("data");
     return {};
 }

@@ -39,15 +39,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
+# Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR)
+# See https://bugreports.qt.io/browse/QTBUG-92587
+# https://gitlab.kitware.com/cmake/cmake/-/merge_requests/3027
 find_package(Qt6 6.7 REQUIRED COMPONENTS Core Gui Qml Quick)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 find_package(Boost 1.84.0 REQUIRED)
 # find_package(SQLite3 3.45.0 REQUIRED)
-# Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR)
-# See https://bugreports.qt.io/browse/QTBUG-92587
-# https://gitlab.kitware.com/cmake/cmake/-/merge_requests/3027
 # Check default CMAKE_FIND_LIBRARY_SUFFIXES in Modules/CMakeGenericSystem.cmake ("lib"/[".so" ".a"]) and
 # Modules/Platform/Windows.cmake (["" "lib"]/["dll.lib" ".lib" ".a"]) for MSVC
 SET(CMAKE_FIND_LIBRARY_PREFIXES "lib")
@@ -85,7 +85,7 @@ target_link_libraries(SuisApp PRIVATE
         Qt6::Gui
         Qt6::Qml
         Qt6::Quick
-        QXlsx
+        QXlsx::QXlsx
         Octave::Octave
 )
 

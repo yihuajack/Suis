@@ -1,4 +1,8 @@
 # Suis
+## Build
+
+To enable Octave in CMake, please make sure `octave-config` is in `PATH`.
+
 ## Instruction
 
 1. Click "Next" button at bottom left.

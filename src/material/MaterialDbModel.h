@@ -15,8 +15,8 @@ class MaterialDbModel : public QObject {
 public:
     explicit MaterialDbModel(QObject *parent = nullptr);
 
-    Q_INVOKABLE QVariantMap readSolcoreDb(const QString& folderPath);
-    Q_INVOKABLE QVariantMap readDfDb(const QString& filePath);
+    Q_INVOKABLE QVariantMap readSolcoreDb(const QString& db_path);
+    Q_INVOKABLE QVariantMap readDfDb(const QString& db_path);
 
 private:
     QMap<QString, CompOpticMaterial> m_comp_list;
