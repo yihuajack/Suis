@@ -29,7 +29,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # CMake Arguments:
 # -DCMAKE_TOOLCHAIN_FILE="D:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\vcpkg\scripts\buildsystems\vcpkg.cmake"
 # Visual Studio toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\<qtver>\msvc2019_64\lib\cmake
-# MinGW toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\<qtver>mingw_64\lib\cmake
+# MinGW toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\<qtver>\mingw_64\lib\cmake
 # MSVC 2019 ARM64: msvc2019_arm64, LLVM-MinGW: llvm-mingw_64
 # Alternatively use --toolchain instead of CMAKE_TOOLCHAIN_FILE
 # set(CMAKE_PREFIX_PATH "D:\\Qt\\<qtver>\\msvc2019_64\\lib\\cmake")
