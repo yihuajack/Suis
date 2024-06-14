@@ -11,6 +11,7 @@
 #include <QStandardPaths>
 #include <QUrl>
 #include "xlsxabstractsheet.h"
+#include "xlsxcelllocation.h"
 #include "xlsxdocument.h"
 #include "xlsxworkbook.h"
 
@@ -192,14 +193,51 @@ QVariantMap MaterialDbModel::readDfDb(const QString &db_path) {
         result["matlist"] = mat_list;
         return result;
     }
-    int maxRow = -1;  // qsizetype is long long (different from std::size_t)
-    int maxCol = -1;
+    int maxRow = wsheet->dimension().rowCount();  // qsizetype is long long (different from std::size_t)
+    int maxCol = wsheet->dimension().columnCount();
     // QVector is an alias for QList.
-    QList<QXlsx::CellLocation> clList = wsheet->getFullCells(&maxRow, &maxCol);
-    QList<double> wls(maxRow);
-    qDebug() << "Max Row = " << maxRow;
-    for (int hc = 0; hc < maxRow; hc++) {
-        wls[hc] = clList.at(hc).cell->readValue().toDouble();
+    // QMapIterator<int, QMap<int, std::shared_ptr<Cell>>> iterates by rows
+    // QList<QXlsx::CellLocation> clList = wsheet->getFullCells(&maxRow, &maxCol);
+    // This approach costs more time, less space.
+    std::vector<double> wls(maxRow - 1);  // header by default
+    for (int rc = 2; rc <= maxRow; rc++) {
+        // QXlsx::Worksheet::cellAt() uses QMap find
+        QXlsx::Cell *cell = wsheet->cellAt(rc, 1);
+        if (cell not_eq nullptr) {
+            // QXlsx::Cell::readValue() will keep formula text!
+            wls[rc - 2] = cell->value().toDouble() / 1e-9;
+        } else {
+            qDebug() << "Empty cell at Row " << rc << " Column " << 0;
+        }
     }
+    for (int cc = 2; cc <= maxCol; cc += 2) {
+        std::vector<double> n_list(maxRow - 1);
+        std::vector<double> k_list(maxRow - 1);
+        // const QString mat_name = clList.at(cc).cell->readValue().toString();
+        const QString mat_name = wsheet->cellAt(1, cc)->readValue().toString();
+        mat_list.push_back(mat_name);
+        qDebug() << "mat name = " << mat_name;
+        for (int rc = 2; rc <= maxRow; rc++) {
+            QXlsx::Cell *cell = wsheet->cellAt(rc, cc);
+            // std::shared_ptr<QXlsx::Cell> cell = clList.at(rc * maxCol + cc).cell;
+            if (cell not_eq nullptr) {
+                n_list[rc - 2] = cell->readValue().toDouble();
+            } else {
+                qDebug() << "Empty cell at Row " << rc << " Column " << cc;
+            }
+            cell = wsheet->cellAt(rc, cc + 1);
+            if (cell not_eq nullptr) {
+                k_list[rc - 2] = cell->readValue().toDouble();
+            } else {
+                qDebug() << "Empty cell at Row " << rc << " Column " << cc + 1;
+            }
+        }
+        std::vector<double> n_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(n_list.size())};
+        std::vector<double> k_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(k_list.size())};
+        OpticMaterial opt_mat(mat_name, n_wl, n_list, k_wl, k_list);
+        m_list.insert(mat_name, opt_mat);
+    }
+    result["status"] = 0;
+    result["matlist"] = mat_list;
     return result;
 }

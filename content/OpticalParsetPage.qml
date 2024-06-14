@@ -45,7 +45,7 @@ OpticalParsetPageForm {
 
                 CheckBox {
                     id: checkSolcore
-                    text: "Solcore"
+                    text: model.name
                     onCheckedChanged: {
                         model.checked = checked
                     }
