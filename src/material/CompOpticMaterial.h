@@ -6,9 +6,12 @@
 #define SUISAPP_COMPOPTICMATERIAL_H
 
 #include <vector>
+#include <QObject>
 #include <QString>
 
-class CompOpticMaterial {
+class CompOpticMaterial : QObject {
+    Q_OBJECT
+
 public:
     CompOpticMaterial(QString mat_name, std::vector<std::pair<double, std::vector<double>>>& n_wl,
                       std::vector<std::pair<double, std::vector<double>>>& n_data,

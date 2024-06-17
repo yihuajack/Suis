@@ -5,7 +5,7 @@ qt_add_library(content STATIC)
 qt6_add_qml_module(content
     URI "content"
     VERSION 1.0
-    RESOURCE_PREFIX "/qt/qml"
+    RESOURCE_PREFIX "/qt/qml"  # qt_policy(SET QTP0001 NEW)
     QML_FILES
         App.qml
         SimPage.qml
@@ -23,4 +23,7 @@ qt6_add_qml_module(content
         fonts/fonts.txt
         images/SuisLogo.svg
         images/RA_device2.png
+
+    SOURCES
+        ../src/material/DbSystemModel.h ../src/material/DbSystemModel.cpp
 )

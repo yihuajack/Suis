@@ -42,7 +42,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 # Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR)
 # See https://bugreports.qt.io/browse/QTBUG-92587
 # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/3027
-find_package(Qt6 6.7 REQUIRED COMPONENTS Core Gui Qml Quick)
+find_package(Qt6 6.7 REQUIRED COMPONENTS Charts Core Gui Qml Quick)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
@@ -56,6 +56,8 @@ find_package(Octave REQUIRED COMPONENTS Development Interpreter)
 add_definitions(-DCMAKE_EXPECTED_Octave_VERSION=${Octave_VERSION})
 
 include_directories(${Boost_INCLUDE_DIRS})
+# https://stackoverflow.com/questions/74854202/qmltyperegistration-include-path-does-not-acknowledge-subdirectories
+include_directories(src/material)
 
 if (Qt6_VERSION VERSION_GREATER_EQUAL 6.7)
     qt_standard_project_setup(REQUIRES 6.7)
@@ -81,6 +83,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(QXlsx)
 
 target_link_libraries(SuisApp PRIVATE
+        Qt6::Charts
         Qt6::Core
         Qt6::Gui
         Qt6::Qml

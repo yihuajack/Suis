@@ -1,6 +1,7 @@
 target_sources(SuisApp PRIVATE
         # headers
         material/CompOpticMaterial.h
+        material/DbSystemModel.h
         material/IniConfigParser.h
         material/MaterialDbModel.h
         material/OpticMaterial.h
@@ -23,6 +24,7 @@ target_sources(SuisApp PRIVATE
         SettingsStorage.h
         # sources
         material/CompOpticMaterial.cpp
+        material/DbSystemModel.cpp
         material/IniConfigParser.cpp
         material/MaterialDbModel.cpp
         material/OpticMaterial.cpp

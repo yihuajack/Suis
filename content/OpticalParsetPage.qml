@@ -3,41 +3,45 @@
  * SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
  */
 
-import QtQuick
-import QtQuick.Controls  // Dialog
-import QtQuick.Dialogs
 import QtCore  // StandardPaths: QtLabsPlatform is deprecated since 6.4
+import QtQuick
+import QtQuick.Controls  // non-native Dialog
+import QtQuick.Dialogs  // native dialogs
+import QtCharts
+import content
 import MaterialDbModel  // Qt.labs.folderlistmodel
 
 OpticalParsetPageForm {
     id: opticalParsetPage
 
-    MaterialDbModel {
-        id: matDbModel
-    }
+    signal elecDbCandChanged(string elecDbCand)
 
-    ListModel {
-        id: listModel
+    DbSystemModel {
+        id: dbSysModel
         ListElement {
             name: "Solcore"
-            checked: false
+            // checked: false
         }
 
         ListElement {
             name: "Df"
-            checked: false
+            // checked: false
         }
     }
 
     ListView {
         anchors.fill: parent
-        model: listModel
+        model: dbSysModel
         delegate: Item {
             width: parent.width
-            height: 200
+            height: 100
 
             property string databasePath: ""
             property var matList: []
+
+            MaterialDbModel {
+                id: matDbModel
+            }
 
             Row {
                 spacing: 10
@@ -45,6 +49,7 @@ OpticalParsetPageForm {
 
                 CheckBox {
                     id: checkSolcore
+                    width: 100
                     text: model.name
                     onCheckedChanged: {
                         model.checked = checked
@@ -52,18 +57,27 @@ OpticalParsetPageForm {
                 }
 
                 Column {
-                    width: 400
+                    width: parent.width * 0.6
                     spacing: 10
 
                     TextField {
                         id: pathTextField
-                        width: 400
+                        width: parent.width
                         enabled: model.checked
                         placeholderText: "Enter the Database Path"
                         text: databasePath
-                        onTextChanged: {
-                            model.pathText = text
+                        onEditingFinished: {  // method inherited from TextInput
+                            if (text.length > 0) {
+                                importDb(text)
+                            }
                         }
+                    }
+
+                    ProgressBar {
+                        id: importProgressBar
+                        width: parent.width
+                        to: 1.0
+                        value: matDbModel.progress
                     }
 
                     Text {
@@ -89,7 +103,7 @@ OpticalParsetPageForm {
                 Button {
                     id: showButton
                     text: "Show"
-                    enabled: model.status === 1
+                    enabled: false
                     onClicked: {
                         matListDialog.open()
                     }
@@ -99,44 +113,70 @@ OpticalParsetPageForm {
                     id: fileDialog
                     title: qsTr("Select Database File")
                     onAccepted: {
-                        databasePath = selectedFile
-                        let result
-                        if (model.name === "Solcore") {
-                            result = matDbModel.readSolcoreDb(databasePath)
-                        } else if (model.name === "Df") {
-                            result = matDbModel.readDfDb(databasePath)
-                        }
-                        matList = result.matlist
-                        showButton.enabled = true
-                        statusText.text = statusInfo(result.status)
+                        importDb(selectedFile)
                     }
                 }
 
+                // Inherit from Popup
                 Dialog {
                     id: matListDialog
                     title: "Imported Optical Materials"
+                    width: parent.width * 0.8
+                    height: parent.width * 0.6
+                    anchors.centerIn: parent
+                    modal: true  // modality: Qt.WindowModel
                     standardButtons: Dialog.Ok
 
-                    Column {
+                    // optional header
+                    // Row { Text{} Text{} }
+
+                    contentItem: Column {
                         spacing: 10
                         padding: 10
 
                         ListView {
                             width: parent.width
-                            height: parent.height - 50
+                            height: parent.height - 20  // parent.height - header.height - 50
+                            spacing: 10
                             model: matList
 
-                            delegate: Item {
-                                width: parent.width
-                                height: 30
+                            delegate: Row {
+                                spacing: 10
+                                height: 50
 
                                 Text {
                                     text: modelData
+                                    width: parent.width * 0.7
+                                }
+
+                                Button {
+                                    text: "Plot"
+                                    width: parent.width * 0.3
+                                    onClicked: {
+
+                                    }
                                 }
                             }
                         }
                     }
                 }
+            }
+            function importDb(dbPath) {
+                statusText.text = "Importing optical materials from database"
+                databasePath = dbPath
+                let result
+                if (model.name === "Solcore") {
+                    result = matDbModel.readSolcoreDb(databasePath)
+                } else if (model.name === "Df") {
+                    result = matDbModel.readDfDb(databasePath)
+                }
+                matList = result.matlist
+                if (matList.length === 0) {
+                    statusText.text = "Imported material list is empty!"
+                } else {
+                    statusText.text = statusInfo(result.status)
+                }
+                showButton.enabled = result.status === 0
             }
         }
     }

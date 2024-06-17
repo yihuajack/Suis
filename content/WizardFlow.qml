@@ -39,6 +39,10 @@ WizardFlowForm {
         anchors.fill: parent
     }
 
+    Component.onCompleted: {
+        opticalParsetPage.elecDbCandChanged.connect(electricalParsetPage.receiveElecDbCand)
+    }
+
     states: [
         State {
             name: "initial"

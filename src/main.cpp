@@ -22,6 +22,17 @@ int main(int argc, char *argv[]) {
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Suis - Solar Cell Simulator"));
     QGuiApplication::setApplicationVersion("1.0");
 
+    /*
+     * https://codereview.qt-project.org/c/qt/qtdeclarative/+/536412
+     * https://doc.qt.io/qt-6/qtquickcontrols-customize.html
+     * Avoid using qmlRegisterType and friends to expose C++ to QML
+     * Instead, promote the QML_ELEMENT macro and how to edit the build files accordingly.
+     * qmlRegisterType<DbSystemModel>("DbSystemModel", 1, 0, "DbSystemModel");
+     * [Defining QML Types from C++](https://doc.qt.io/qt-6/qtqml-cppintegration-definetypes.html)
+     * https://scythe-studio.com/en/blog/how-to-integrate-qml-and-c-expose-object-and-register-c-class-to-qml
+     * (Not recommended) [Embedding C++ Objects into QML with Context Properties]
+     * (https://doc.qt.io/qt-6/qtqml-cppintegration-contextproperties.html)
+     */
     qmlRegisterType<MaterialDbModel>("MaterialDbModel", 1, 0, "MaterialDbModel");
     qmlRegisterType<Process>("Process", 1, 0, "Process");
 

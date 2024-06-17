@@ -123,4 +123,8 @@ ElectricalParsetPageForm {
     FolderListModel {
         id: folderListModel
     }
+
+    function receiveElecDbCand(elecDbCand) {
+        databasePath = elecDbCand
+    }
 }
