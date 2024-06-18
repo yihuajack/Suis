@@ -57,7 +57,7 @@ add_definitions(-DCMAKE_EXPECTED_Octave_VERSION=${Octave_VERSION})
 
 include_directories(${Boost_INCLUDE_DIRS})
 # https://stackoverflow.com/questions/74854202/qmltyperegistration-include-path-does-not-acknowledge-subdirectories
-include_directories(src/material)
+include_directories(src)
 
 if (Qt6_VERSION VERSION_GREATER_EQUAL 6.7)
     qt_standard_project_setup(REQUIRES 6.7)

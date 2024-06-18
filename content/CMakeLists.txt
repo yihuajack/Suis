@@ -22,8 +22,7 @@ qt6_add_qml_module(content
     RESOURCES
         fonts/fonts.txt
         images/SuisLogo.svg
-        images/RA_device2.png
 
     SOURCES
-        ../src/material/DbSystemModel.h ../src/material/DbSystemModel.cpp
+        ../src/Process.h ../src/Process.cpp
 )

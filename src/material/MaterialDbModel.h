@@ -37,6 +37,9 @@ public:
 signals:
     void progressChanged(double progress);
 
+protected:
+    [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
+
 private:
     // If using QObject, the values should be a pointer
     QMap<QString, CompOpticMaterial *> m_comp_list;

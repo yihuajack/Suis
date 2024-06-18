@@ -8,7 +8,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.VirtualKeyboard
 import Suis
-import Process
+import content
 
 QtObject {
     id: root

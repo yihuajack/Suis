@@ -8,9 +8,12 @@
 #include <QProcess>
 #include <QIODevice>
 #include <QObject>
+#include <QQmlEngine>
 
 class Process : public QObject {
     Q_OBJECT
+    QML_ELEMENT
+
 public:
     enum OpenModeFlag {
         NotOpen = QIODevice::NotOpen,

@@ -11,7 +11,6 @@
 #include <QStandardPaths>
 #include <QUrl>
 #include "xlsxabstractsheet.h"
-#include "xlsxcelllocation.h"
 #include "xlsxdocument.h"
 #include "xlsxworkbook.h"
 
@@ -31,7 +30,7 @@ QVariant MaterialDbModel::data(const QModelIndex &index, int role) const {
     const OpticMaterial *mat = it.value();
     switch (role) {
         case NameRole:
-            return it.key();
+            return db_name;
         case ValueRole:
             return QVariant::fromValue(it.value()->nWl());
         default:
@@ -48,6 +47,13 @@ void MaterialDbModel::setProgress(int progress) {
         import_progress = progress;
         emit progressChanged(import_progress);
     }
+}
+
+QHash<int, QByteArray> MaterialDbModel::roleNames() const {
+    QHash<int, QByteArray> roles;
+    roles[NameRole] = "name";
+    roles[ValueRole] = "value";
+    return roles;
 }
 
 QString findSolcoreUserConfig() {

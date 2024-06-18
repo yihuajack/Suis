@@ -10,7 +10,6 @@
 
 #include "Application.h"
 #include "material/MaterialDbModel.h"
-#include "Process.h"
 
 int main(int argc, char *argv[]) {
     set_qt_environment();
@@ -34,7 +33,6 @@ int main(int argc, char *argv[]) {
      * (https://doc.qt.io/qt-6/qtqml-cppintegration-contextproperties.html)
      */
     qmlRegisterType<MaterialDbModel>("MaterialDbModel", 1, 0, "MaterialDbModel");
-    qmlRegisterType<Process>("Process", 1, 0, "Process");
 
     // qmlRegisterSingletonType<CppBackend>(
     //     "backend", 1, 0, "BackendObject",

@@ -9,23 +9,25 @@ import QtQuick.Controls  // non-native Dialog
 import QtQuick.Dialogs  // native dialogs
 import QtCharts
 import content
-import MaterialDbModel  // Qt.labs.folderlistmodel
+import MaterialDbModel
 
 OpticalParsetPageForm {
     id: opticalParsetPage
 
     signal elecDbCandChanged(string elecDbCand)
 
-    DbSystemModel {
+    ListModel {
         id: dbSysModel
         ListElement {
             name: "Solcore"
-            // checked: false
+            checked: false
+            progress: 0
         }
 
         ListElement {
             name: "Df"
-            // checked: false
+            checked: false
+            progress: 0
         }
     }
 
@@ -138,7 +140,7 @@ OpticalParsetPageForm {
                             width: parent.width
                             height: parent.height - 20  // parent.height - header.height - 50
                             spacing: 10
-                            model: matList
+                            model: matList  // Qt.labs.folderlistmodel
 
                             delegate: Row {
                                 spacing: 10
