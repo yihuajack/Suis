@@ -5,12 +5,15 @@
 #ifndef APPLICATION_H
 #define APPLICATION_H
 
-#include <QGuiApplication>
+#include <QApplication>
 #include <QSettings>
 
 #include "CommandLineParseResult.h"
 
-class Application final : public QGuiApplication {
+// Application has to be a QApplication rather than QGuiApplication because we need to use QtCharts in QML ChartView
+// Otherwise, ASSERT: "!" No style available without QApplication!"" in file
+// C:\Users\qt\work\qt\qtbase\src\widgets\qtkernel\qapplication.cpp, line 907
+class Application final : public QApplication {
     Q_OBJECT
     Q_DISABLE_COPY_MOVE(Application)
 

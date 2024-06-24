@@ -18,20 +18,19 @@
 #include "MaterialDbModel.h"
 #include "ParameterSystem.h"
 
-MaterialDbModel::MaterialDbModel(QObject *parent) : QAbstractListModel(parent) {}
+MaterialDbModel::MaterialDbModel(QObject *parent) : QAbstractListModel(parent), import_progress(0) {}
 
 int MaterialDbModel::rowCount(const QModelIndex& parent) const {
-    Q_UNUSED(parent);
-    return static_cast<int>(m_list.count());
+    Q_UNUSED(parent)
+    return static_cast<int>(m_list.size());  // count() is an overloaded function of size()
 }
 
-QVariant MaterialDbModel::data(const QModelIndex &index, int role) const {
+QVariant MaterialDbModel::data(const QModelIndex& index, int role) const {
     const QMap<QString, OpticMaterial *>::const_iterator it = m_list.begin() + index.row();
-    const OpticMaterial *mat = it.value();
     switch (role) {
         case NameRole:
-            return db_name;
-        case ValueRole:
+            return it.key();
+        case NWlRole:
             return QVariant::fromValue(it.value()->nWl());
         default:
             return {};
@@ -42,7 +41,7 @@ double MaterialDbModel::getProgress() const {
     return import_progress;
 }
 
-void MaterialDbModel::setProgress(int progress) {
+void MaterialDbModel::setProgress(double progress) {
     if (import_progress not_eq progress) {
         import_progress = progress;
         emit progressChanged(import_progress);
@@ -52,7 +51,7 @@ void MaterialDbModel::setProgress(int progress) {
 QHash<int, QByteArray> MaterialDbModel::roleNames() const {
     QHash<int, QByteArray> roles;
     roles[NameRole] = "name";
-    roles[ValueRole] = "value";
+    roles[NWlRole] = "n_wl";
     return roles;
 }
 
@@ -98,7 +97,7 @@ QString findSolcoreUserConfig() {
     return user_path.filePath("solcore_config.txt");
 }
 
-QVariantMap MaterialDbModel::readSolcoreDb(const QString& db_path) {
+int MaterialDbModel::readSolcoreDb(const QString& db_path) {
     const QUrl url(db_path);
     const QString user_config = findSolcoreUserConfig();
     QFile ini_file;
@@ -109,13 +108,9 @@ QVariantMap MaterialDbModel::readSolcoreDb(const QString& db_path) {
         ini_file.setFileName(url.toLocalFile());
     }
     const QFileInfo ini_finfo(ini_file);
-    QVariantMap result;
-    QStringList mat_list;
     if (not ini_file.open(QIODevice::ReadOnly)) {
         qWarning("Cannot open the configuration ini file %s.", qUtf8Printable(db_path));
-        result["status"] = 1;
-        result["matlist"] = mat_list;
-        return result;
+        return 1;
     }
     // db_dir.setFilter(QDir::Dirs);
     // QStringList name_filters;
@@ -138,21 +133,20 @@ QVariantMap MaterialDbModel::readSolcoreDb(const QString& db_path) {
                 }
                 const QFileInfoList n_flist = n_dir.entryInfoList();
                 const QFileInfoList k_flist = k_dir.entryInfoList();
-                std::vector<std::pair<double, std::vector<double>>> n_wl;
-                std::vector<std::pair<double, std::vector<double>>> n_data;
-                std::vector<std::pair<double, std::vector<double>>> k_wl;
-                std::vector<std::pair<double, std::vector<double>>> k_data;
+                QList<std::pair<double, QList<double>>> n_wl;
+                QList<std::pair<double, QList<double>>> n_data;
+                QList<std::pair<double, QList<double>>> k_wl;
+                QList<std::pair<double, QList<double>>> k_data;
                 for (const QFileInfo& n_info : n_flist) {
                     // not_eq "critical_points"
                     const QString main_fraction_str = n_info.baseName().split('_').front();
-                    mat_list.append(mat_name + main_fraction_str);
                     QFile n_file(n_info.fileName());
                     if (not n_file.open(QIODevice::ReadOnly)) {
                         throw std::runtime_error("Cannot open file " + n_info.fileName().toStdString());
                     }
                     QTextStream n_stream(&n_file);
-                    std::vector<double> frac_n_wl;
-                    std::vector<double> frac_n_data;
+                    QList<double> frac_n_wl;
+                    QList<double> frac_n_data;
                     while (not n_stream.atEnd()) {
                         const QString line = n_stream.readLine();
                         // Clazy: Don't create temporary QRegularExpression objects.
@@ -162,8 +156,8 @@ QVariantMap MaterialDbModel::readSolcoreDb(const QString& db_path) {
                         if (ln_data.length() not_eq 2) {
                             throw std::runtime_error("Error parsing file " + n_info.fileName().toStdString());
                         }
-                        frac_n_wl.push_back(ln_data.front().toDouble());
-                        frac_n_data.push_back(ln_data.back().toDouble());
+                        frac_n_wl.emplace_back(ln_data.front().toDouble());
+                        frac_n_data.emplace_back(ln_data.back().toDouble());
                     }
                     n_file.close();
                     n_wl.emplace_back(main_fraction_str.toDouble(), frac_n_wl);
@@ -172,14 +166,13 @@ QVariantMap MaterialDbModel::readSolcoreDb(const QString& db_path) {
                 for (const QFileInfo& k_info : k_flist) {
                     // not_eq "critical_points"
                     const QString main_fraction_str = k_info.baseName().split('_').front();
-                    mat_list.append(mat_name + main_fraction_str);
                     QFile k_file(k_info.fileName());
                     if (not k_file.open(QIODevice::ReadOnly)) {
                         throw std::runtime_error("Cannot open file " + k_info.fileName().toStdString());
                     }
                     QTextStream k_stream(&k_file);
-                    std::vector<double> frac_k_wl;
-                    std::vector<double> frac_k_data;
+                    QList<double> frac_k_wl;
+                    QList<double> frac_k_data;
                     while (not k_stream.atEnd()) {
                         const QString line = k_stream.readLine();
                         static const QRegularExpression ws_regexp("\\s+");
@@ -187,60 +180,51 @@ QVariantMap MaterialDbModel::readSolcoreDb(const QString& db_path) {
                         if (ln_data.length() not_eq 2) {
                             throw std::runtime_error("Error parsing file " + k_info.fileName().toStdString());
                         }
-                        frac_k_wl.push_back(ln_data.front().toDouble());
-                        frac_k_data.push_back(ln_data.back().toDouble());
+                        frac_k_wl.emplace_back(ln_data.front().toDouble());
+                        frac_k_data.emplace_back(ln_data.back().toDouble());
                     }
                     k_file.close();
                     k_wl.emplace_back(main_fraction_str.toDouble(), frac_k_wl);
                     k_data.emplace_back(main_fraction_str.toDouble(), frac_k_data);
                 }
-                CompOpticMaterial opt_mat(mat_name, n_wl, n_data, k_wl, k_data);
-                m_comp_list.insert(mat_name, &opt_mat);
+                auto *opt_mat = new OpticMaterial(mat_name, n_wl, n_data, k_wl, k_data);
+                beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
+                m_list.insert(mat_name, opt_mat);
+                endInsertRows();
+                emit dataChanged(index(0), index(static_cast<int>(m_list.size()) - 1));
             }
             setProgress(static_cast<int>(std::distance(mat_map.constBegin(), it) / mat_map.size()));
         } catch (std::runtime_error& e) {
             qWarning(e.what());
-            result["status"] = 2;
-            result["matlist"] = mat_list;
-            return result;
+            return 2;
         }
     }
-    result["status"] = 0;
-    result["matlist"] = mat_list;
-    return result;
+    return 0;
 }
 
-QVariantMap MaterialDbModel::readDfDb(const QString& db_path) {
+int MaterialDbModel::readDfDb(const QString& db_path) {
     const QUrl url(db_path);
     QString db_path_imported = db_path;
     if (url.isLocalFile()) {
         db_path_imported = QDir::toNativeSeparators(url.toLocalFile());
     }
     QXlsx::Document doc(db_path_imported);
-    QVariantMap result;
-    QStringList mat_list;
     if (not doc.load()) {
         qWarning("Cannot load DriftFusion's material data file %s ", qUtf8Printable(db_path));
-        result["status"] = 1;
-        result["matlist"] = mat_list;
-        return result;
+        return 1;
     }
     doc.selectSheet("data");
     // QXlsx::AbstractSheet is not a derived class of QObject
     QXlsx::AbstractSheet *data_sheet = doc.sheet("data");
     if (data_sheet == nullptr) {
         qWarning("Data sheet in data file %s does not exist!", qUtf8Printable(db_path));
-        result["status"] = 2;
-        result["matlist"] = mat_list;
-        return result;
+        return 2;
     }
     data_sheet->workbook()->setActiveSheet(0);
     auto *wsheet = (QXlsx::Worksheet *)data_sheet->workbook()->activeSheet();
     if (wsheet == nullptr) {
         qWarning("Data sheet not found");
-        result["status"] = 2;
-        result["matlist"] = mat_list;
-        return result;
+        return 2;
     }
     int maxRow = wsheet->dimension().rowCount();  // qsizetype is long long (different from std::size_t)
     int maxCol = wsheet->dimension().columnCount();
@@ -248,41 +232,73 @@ QVariantMap MaterialDbModel::readDfDb(const QString& db_path) {
     // QMapIterator<int, QMap<int, std::shared_ptr<Cell>>> iterates by rows
     // QList<QXlsx::CellLocation> clList = wsheet->getFullCells(&maxRow, &maxCol);
     // This approach costs more time, less space.
-    std::vector<double> wls(maxRow - 1);  // header by default
+    QList<std::pair<double, QList<double>>> wls{{1, QList<double>(maxRow - 1)}};  // header by default
     for (int rc = 2; rc <= maxRow; rc++) {
         // QXlsx::Worksheet::cellAt() uses QMap find
         QXlsx::Cell *cell = wsheet->cellAt(rc, 1);
         if (cell not_eq nullptr) {
             // QXlsx::Cell::readValue() will keep formula text!
-            wls[rc - 2] = cell->value().toDouble() / 1e-9;
+            wls.front().second[rc - 2] = cell->value().toDouble() * 1e-9;
         }  // qDebug() << "Empty cell at Row " << rc << " Column " << 0;
     }
-    setProgress(1 / maxCol);
+    QMap<QString, QList<std::pair<int, double>>> mat_name_indices;
+    // Scan the header first.
     for (int cc = 2; cc < maxCol; cc += 2) {
-        std::vector<double> n_list(maxRow - 1);
-        std::vector<double> k_list(maxRow - 1);
         // const QString mat_name = clList.at(cc).cell->readValue().toString();
-        const QString mat_name = wsheet->cellAt(1, cc)->readValue().toString().split('_').front();
-        mat_list.push_back(mat_name);
-        for (int rc = 2; rc <= maxRow; rc++) {
-            QXlsx::Cell *cell = wsheet->cellAt(rc, cc);
-            // std::shared_ptr<QXlsx::Cell> cell = clList.at(rc * maxCol + cc).cell;
-            if (cell not_eq nullptr) {
-                n_list[rc - 2] = cell->readValue().toDouble();
-            }  // qDebug() << "Empty cell at Row " << rc << " Column " << cc;
-            cell = wsheet->cellAt(rc, cc + 1);
-            if (cell not_eq nullptr) {
-                k_list[rc - 2] = cell->readValue().toDouble();
-            }  // qDebug() << "Empty cell at Row " << rc << " Column " << cc + 1;
+        const QStringList mat_name_list = wsheet->cellAt(1, cc)->readValue().toString().split('_');
+        const QStringList mat_name_list2 = wsheet->cellAt(1, cc + 1)->readValue().toString().split('_');
+        const std::size_t mat_name_list_sz = mat_name_list.size();
+        const QString& mat_name = mat_name_list.front();
+        if (mat_name_list.back() not_eq "n") {
+            qWarning("Header at Column %d not ended with n", cc);
+        } else if (mat_name_list2.back() not_eq "k") {
+            qWarning("Header at Column %d not ended with k", cc + 1);
+        } else if (mat_name_list_sz not_eq 2 and mat_name_list_sz not_eq 3) {
+            qWarning("Invalid header at Column %d", cc);
+        } else if (mat_name not_eq mat_name_list2.front()) {
+            qWarning("Adjacent columns %d and %d are different materials", cc, cc + 1);
         }
-        std::vector<double> n_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(n_list.size())};
-        std::vector<double> k_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(k_list.size())};
-        // In template: no matching function for call to 'construct_at'
-        OpticMaterial opt_mat(mat_name, n_wl, n_list, k_wl, k_list);
-        m_list.insert(mat_name, &opt_mat);
-        setProgress((cc + 1) / maxCol);
+        const double fraction = mat_name_list_sz == 2 ? 1 : mat_name_list.at(2).toDouble();
+        if (mat_name_indices.contains(mat_name)) {
+            if (mat_name_list_sz == 2) {
+                qWarning("Duplicate header detected as Column %d", cc);
+            }
+            mat_name_indices[mat_name].emplace_back(cc, fraction);
+        } else {
+            mat_name_indices.insert(mat_name, {{cc, fraction}});
+        }
     }
-    result["status"] = 0;
-    result["matlist"] = mat_list;
-    return result;
+    for (QMap<QString, QList<std::pair<int, double>>>::const_iterator it = mat_name_indices.constBegin(); it not_eq mat_name_indices.constEnd(); it++) {
+        QList<std::pair<double, QList<double>>> n_series;
+        QList<std::pair<double, QList<double>>> k_series;
+        for (const std::pair<int, double>& index : it.value()) {
+            QList<double> n_list(maxRow - 1);
+            QList<double> k_list(maxRow - 1);
+            for (int rc = 2; rc <= maxRow; rc++) {
+                QXlsx::Cell *cell = wsheet->cellAt(rc, index.first);
+                // std::shared_ptr<QXlsx::Cell> cell = clList.at(rc * maxCol + cc).cell;
+                if (cell not_eq nullptr) {
+                    n_list[rc - 2] = cell->readValue().toDouble();
+                }  // qDebug() << "Empty cell at Row " << rc << " Column " << cc;
+                cell = wsheet->cellAt(rc, index.first + 1);
+                if (cell not_eq nullptr) {
+                    k_list[rc - 2] = cell->readValue().toDouble();
+                }
+                n_series.emplace_back(index.second, n_list);
+                k_series.emplace_back(index.second, k_list);
+            }
+        }
+        // std::vector<double> n_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(n_list.size())};
+        // std::vector<double> k_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(k_list.size())};
+        // In template: no matching function for call to 'construct_at'
+        // Warning: must dynamically new the object! Do not insert a reference; otherwise, it will change for each loop!
+        auto *opt_mat = new OpticMaterial(it.key(), wls, n_series, wls, k_series);
+        // Critical! Without this QML cannot know the model is non-empty!
+        beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
+        m_list.insert(it.key(), opt_mat);
+        endInsertRows();
+        emit dataChanged(index(0), index(static_cast<int>(m_list.size()) - 1));
+        setProgress(static_cast<double>(std::distance(mat_name_indices.constBegin(), it + 1)) / static_cast<double>(mat_name_indices.size()));
+    }
+    return 0;
 }

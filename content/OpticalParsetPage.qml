@@ -5,9 +5,8 @@
 
 import QtCore  // StandardPaths: QtLabsPlatform is deprecated since 6.4
 import QtQuick
-import QtQuick.Controls  // non-native Dialog
+import QtQuick.Controls  // ProgressBar
 import QtQuick.Dialogs  // native dialogs
-import QtCharts
 import content
 import MaterialDbModel
 
@@ -21,13 +20,11 @@ OpticalParsetPageForm {
         ListElement {
             name: "Solcore"
             checked: false
-            progress: 0
         }
 
         ListElement {
             name: "Df"
             checked: false
-            progress: 0
         }
     }
 
@@ -39,7 +36,6 @@ OpticalParsetPageForm {
             height: 100
 
             property string databasePath: ""
-            property var matList: []
 
             MaterialDbModel {
                 id: matDbModel
@@ -118,67 +114,66 @@ OpticalParsetPageForm {
                         importDb(selectedFile)
                     }
                 }
+            }
 
-                // Inherit from Popup
-                Dialog {
-                    id: matListDialog
-                    title: "Imported Optical Materials"
-                    width: parent.width * 0.8
-                    height: parent.width * 0.6
-                    anchors.centerIn: parent
-                    modal: true  // modality: Qt.WindowModel
-                    standardButtons: Dialog.Ok
+            // Inherit from Popup
+            Dialog {
+                id: matListDialog
+                title: "Imported Optical Materials"
+                width: parent.width * 0.8
+                height: parent.width * 0.6
+                anchors.centerIn: parent
+                modal: true  // modality: Qt.WindowModel
+                standardButtons: Dialog.Ok
 
-                    // optional header
-                    // Row { Text{} Text{} }
+                contentItem: Column {
+                    spacing: 10
+                    padding: 10
 
-                    contentItem: Column {
+                    ListView {
+                        width: parent.width
+                        height: parent.height - 20  // parent.height - header.height - 50
                         spacing: 10
-                        padding: 10
+                        model: matDbModel  // Qt.labs.folderlistmodel
 
-                        ListView {
-                            width: parent.width
-                            height: parent.height - 20  // parent.height - header.height - 50
+                        delegate: Row {
                             spacing: 10
-                            model: matList  // Qt.labs.folderlistmodel
 
-                            delegate: Row {
-                                spacing: 10
-                                height: 50
+                            Text {
+                                text: model.name
+                                width: parent.width * 0.7
+                            }
 
-                                Text {
-                                    text: modelData
-                                    width: parent.width * 0.7
+                            Button {
+                                text: "Plot"
+                                width: 100
+                                onClicked: {
+                                    nkChartLoader.source = "OpticalMaterialDialog.qml"
                                 }
+                            }
 
-                                Button {
-                                    text: "Plot"
-                                    width: parent.width * 0.3
-                                    onClicked: {
+                            Loader {
+                                id: nkChartLoader
+                                asynchronous: true
 
-                                    }
-                                }
+                                onLoaded: item.open()
                             }
                         }
                     }
                 }
             }
+
             function importDb(dbPath) {
                 statusText.text = "Importing optical materials from database"
                 databasePath = dbPath
-                let result
+                let status
                 if (model.name === "Solcore") {
-                    result = matDbModel.readSolcoreDb(databasePath)
+                    status = matDbModel.readSolcoreDb(databasePath)
                 } else if (model.name === "Df") {
-                    result = matDbModel.readDfDb(databasePath)
+                    status = matDbModel.readDfDb(databasePath)
                 }
-                matList = result.matlist
-                if (matList.length === 0) {
-                    statusText.text = "Imported material list is empty!"
-                } else {
-                    statusText.text = statusInfo(result.status)
-                }
-                showButton.enabled = result.status === 0
+                statusText.text = statusInfo(status)
+                showButton.enabled = status === 0
             }
         }
     }

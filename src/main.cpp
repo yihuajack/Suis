@@ -27,6 +27,7 @@ int main(int argc, char *argv[]) {
      * Avoid using qmlRegisterType and friends to expose C++ to QML
      * Instead, promote the QML_ELEMENT macro and how to edit the build files accordingly.
      * qmlRegisterType<DbSystemModel>("DbSystemModel", 1, 0, "DbSystemModel");
+     * https://doc.qt.io/qt-6/qtqml-cppintegration-overview.html
      * [Defining QML Types from C++](https://doc.qt.io/qt-6/qtqml-cppintegration-definetypes.html)
      * https://scythe-studio.com/en/blog/how-to-integrate-qml-and-c-expose-object-and-register-c-class-to-qml
      * (Not recommended) [Embedding C++ Objects into QML with Context Properties]

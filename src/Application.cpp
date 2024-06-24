@@ -15,7 +15,7 @@ namespace {
     const std::filesystem::path DEFAULT_PORTABLE_MODE_PROFILE_DIR {u"profile"s};
 }
 
-Application::Application(int &argc, char **argv) : QGuiApplication(argc, argv) {
+Application::Application(int &argc, char **argv) : QApplication(argc, argv) {
     QCommandLineParser parser;
     m_commandLineArgs = parseCommandLine(parser, *this);
     const std::filesystem::path portableProfilePath = QCoreApplication::applicationDirPath().toStdString() / DEFAULT_PORTABLE_MODE_PROFILE_DIR;
