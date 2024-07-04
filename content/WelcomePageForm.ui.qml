@@ -11,9 +11,8 @@ import Suis
 
 Item {
     id: root
-    width: parent.width
-    height: parent.height - 100
-    anchors.top: parent.top
+    width: Constants.width
+    height: Constants.height - 100
 
     Text {
         id: label

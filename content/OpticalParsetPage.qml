@@ -11,31 +11,36 @@ import content
 import MaterialDbModel
 
 OpticalParsetPageForm {
-    id: opticalParsetPage
-
-    signal elecDbCandChanged(string elecDbCand)
+    // https://stackoverflow.com/questions/46627883/can-not-initialize-qml-property-to
+    // https://stackoverflow.com/questions/37599362/is-it-not-possible-to-create-a-map-datatype-in-qml
+    // property var optDbPaths: ({})
+    // signal dbPathsChanged(var dbPaths)
 
     ListModel {
         id: dbSysModel
         ListElement {
             name: "Solcore"
             checked: false
+            path: ""
         }
 
         ListElement {
             name: "Df"
             checked: false
+            path: ""
         }
     }
 
     ListView {
-        anchors.fill: parent
+        id: optLView
+        // Warning: be careful when you write anchors.fill: parent
+        // It will transparently cover the buttons and mislead you that buttons do not function!
+        width: 800
+        height: 600
         model: dbSysModel
         delegate: Item {
             width: parent.width
             height: 100
-
-            property string databasePath: ""
 
             MaterialDbModel {
                 id: matDbModel
@@ -46,7 +51,6 @@ OpticalParsetPageForm {
                 anchors.verticalCenter: parent.verticalCenter
 
                 CheckBox {
-                    id: checkSolcore
                     width: 100
                     text: model.name
                     onCheckedChanged: {
@@ -63,7 +67,7 @@ OpticalParsetPageForm {
                         width: parent.width
                         enabled: model.checked
                         placeholderText: "Enter the Database Path"
-                        text: databasePath
+                        text: model.path
                         onEditingFinished: {  // method inherited from TextInput
                             if (text.length > 0) {
                                 importDb(text)
@@ -152,6 +156,7 @@ OpticalParsetPageForm {
                                 }
                             }
 
+                            // https://doc.qt.io/qt-6/qtquick-performance.html
                             Loader {
                                 id: nkChartLoader
                                 asynchronous: true
@@ -165,17 +170,33 @@ OpticalParsetPageForm {
 
             function importDb(dbPath) {
                 statusText.text = "Importing optical materials from database"
-                databasePath = dbPath
+                if (dbPath !== model.path) {
+                    // It's OK to property string databasePath: "" and databasePath = dbPath
+                    // <Unknown File>: Can't assign to existing role 'path' of different type [Url -> String]
+                    model.path = dbPath.toString()
+                }
                 let status
                 if (model.name === "Solcore") {
-                    status = matDbModel.readSolcoreDb(databasePath)
+                    status = matDbModel.readSolcoreDb(model.path)
                 } else if (model.name === "Df") {
-                    status = matDbModel.readDfDb(databasePath)
+                    status = matDbModel.readDfDb(model.path)
                 }
                 statusText.text = statusInfo(status)
                 showButton.enabled = status === 0
             }
         }
+    }
+
+    // TypeError: Value is undefined and could not be converted to an object
+    function addDbPath() {
+        let optDbPaths = {}
+        for (let i = 0; i < optLView.model.count; i++) {
+            let item = optLView.model.get(i)
+            if (item.checked && item.name !== item.path) {
+                optDbPaths[item.name] = item.path
+            }
+        }
+        return optDbPaths
     }
 
     function statusInfo(status) {

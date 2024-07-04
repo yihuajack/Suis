@@ -17,7 +17,10 @@ class MaterialDbModel : public QAbstractListModel {
 public:
     enum ModelRoles {
         NameRole = Qt::UserRole + 1,
-        NWlRole
+        NWlRole,
+        NDataRole,
+        KWlRole,
+        KDataRole
     };
 
     explicit MaterialDbModel(QObject *parent = nullptr);
@@ -40,9 +43,8 @@ protected:
 
 private:
     // If using QObject, the values should be a pointer
-    QMap<QString, OpticMaterial *> m_list;
+    QMap<QString, OpticMaterial<QList<double>> *> m_list;
 
-    QString db_name;
     double import_progress;
 };
 

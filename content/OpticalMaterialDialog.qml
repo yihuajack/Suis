@@ -24,27 +24,39 @@ Dialog {
 
         ValueAxis {
             id: axisX
-            min: 0
-            max: model.n_wl.length - 1
-            titleText: "Wavelength"
+            titleText: "Wavelength (nm)"
+            min: Math.min(Math.min.apply(null, model.n_wl), Math.min.apply(null, model.k_wl)) * 1e9
+            max: Math.max(Math.max.apply(null, model.n_wl), Math.max.apply(null, model.k_wl)) * 1e9
         }
 
         ValueAxis {
             id: axisY
-            min: Math.min.apply(null, model.n_wl) - 1
-            max: Math.max.apply(null, model.n_wl) + 1
-            titleText: "Fraction"
+            min: 0
+            max: Math.max(Math.max.apply(null, model.n_data), Math.max.apply(null, model.k_data)) * 1.2
         }
 
         LineSeries {
-            id: nkseries
-            name: "n and k"
+            id: nSeries
+            name: "n"
             axisX: axisX
             axisY: axisY
 
             Component.onCompleted: {
                 for (let i = 0; i < model.n_wl.length; i++) {
-                    nkseries.append(i, model.n_wl[i]);
+                    nSeries.append(model.n_wl[i] * 1e9, model.n_data[i]);  // Wavelength unit: m -> nm
+                }
+            }
+        }
+
+        LineSeries {
+            id: kSeries
+            name: "k"
+            axisX: axisX
+            axisY: axisY
+
+            Component.onCompleted: {
+                for (let i = 0; i < model.k_wl.length; i++) {
+                    kSeries.append(model.k_wl[i] * 1e9, model.k_data[i]);
                 }
             }
         }

@@ -36,6 +36,7 @@ Rectangle {
             anchors.right: parent.right
             anchors.rightMargin: Constants.defaultMargin + 200
             checkable: true
+            enabled: root.state !== "initial"
 
             Connections {
                 target: backButton

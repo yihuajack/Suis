@@ -7,124 +7,136 @@ import QtQuick
 import QtQuick.Controls  // Dialog
 import QtQuick.Dialogs
 import QtCore  // StandardPaths: QtLabsPlatform is deprecated since 6.4
-import Qt.labs.folderlistmodel
+import content
 
 ElectricalParsetPageForm {
-    id: electricalParsetPage
+    // property var elecDbPaths: {}
 
-    property string databasePath: ""
-    property var fileList: []
+    ListModel {
+        id: devSysModel
+        ListElement {
+            name: "Df"
+            checked: false
+        }
+    }
 
-    Column {
-        spacing: 10
-        padding: 10
-        anchors.verticalCenter: parent.verticalCenter
-        anchors.verticalCenterOffset: 0
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.horizontalCenterOffset: 0
+    ListView {
+        width: 800
+        height: 600
+        model: devSysModel
+        delegate: Item {
+            width: parent.width
+            height: 100
 
-        Row {
-            spacing: 10
+            property string databasePath: ""
 
-            ComboBox {
-                id: dbTypeCombo
-                width: 150
-                model: ["Df", "Suis"]
-                onCurrentIndexChanged: {
-                    importButton.enabled = currentIndex !== -1
-                }
+            DeviceModel {
+                id: devModel
             }
 
-            TextField {
-                id: pathTextField
-                width: 400
-                placeholderText: "Database Path"
-                text: databasePath
-                onTextChanged: {
-                    databasePath = text
-                }
-            }
+            Row {
+                spacing: 10
+                anchors.verticalCenter: parent.verticalCenter
 
-            Button {
-                id: importButton
-                text: "Import"
-                enabled: false
-                onClicked: {
-                    if (dbTypeCombo.currentIndex === 0) {
-                        folderDialog.open()
-                    } else if (dbTypeCombo.currentIndex === 1) {
+                CheckBox {
+                    width: 100
+                    text: model.name
+                    onCheckedChanged: {
+                        model.checked = checked
+                        // if (elecDbPaths[model.name]) {
+                        //     databasePath = elecDbPaths[model.name]
+                        //     importDev(databasePath)
+                        // }
+                    }
+                }
+
+                Column {
+                    width: parent.width * 0.6
+                    spacing: 10
+
+                    TextField {
+                        id: pathTextField
+                        width: parent.width
+                        readOnly: !model.checked
+                        placeholderText: "Enter the Database Path"
+                        text: databasePath
+                        onEditingFinished: {  // method inherited from TextInput
+                            if (text.length > 0) {
+                                importDev(text)
+                            }
+                        }
+                    }
+
+                    ProgressBar {
+                        id: importProgressBar
+                        width: parent.width
+                        to: 1.0
+                        value: devModel.progress
+                    }
+
+                    Text {
+                        id: statusText
+                        text: ""
+                    }
+                }
+
+                Button {
+                    id: importButton
+                    text: "Import"
+                    enabled: model.checked
+                    onClicked: {
+                        if (model.name === "Df") {
+                            fileDialog.nameFilters = ["*csv"]
+                        }
                         fileDialog.open()
                     }
                 }
-            }
 
-            Button {
-                id: showButton
-                text: "Show"
-                onClicked: {
-                    if (databasePath !== "") {
-                        if (dbTypeCombo.currentIndex === 0) {
-                            getFolderFileList(databasePath)
-                        } else if (dbTypeCombo.currentIndex === 1) {
-                            getFileHeaders(databasePath)
-                        }
-                        fileListDialog.open()
+                Button {
+                    id: showButton
+                    text: "Show"
+                    enabled: false
+                    onClicked: {
+                        matListDialog.open()
+                    }
+                }
+
+                FileDialog {
+                    id: fileDialog
+                    title: qsTr("Select Database File")
+                    onAccepted: {
+                        importDev(selectedFile)
                     }
                 }
             }
-        }
-    }
 
-    FolderDialog {
-        id: folderDialog
-        title: "Select Database Folder"
-        onAccepted: {
-            databasePath = selectedFolder
-            pathTextField.text = selectedFolder
-        }
-    }
-
-    FileDialog {
-        id: fileDialog
-        title: "Select Database File"
-        nameFilters: ["*.xlsx"]
-        onAccepted: {
-            databasePath = selectedFile
-            pathTextField.text = selectedFile
-        }
-    }
-
-    Dialog {
-        id: fileListDialog
-        title: "Imported Electrical Materials"
-        standardButtons: Dialog.Ok
-
-        Column {
-            spacing: 10
-            padding: 10
-
-            ListView {
-                width: parent.width
-                height: parent.height - 50
-                model: fileList
-
-                delegate: Item {
-                    width: parent.width
-                    height: 30
-
-                    Text {
-                        text: modelData
-                    }
+            function importDev(dbPath) {
+                statusText.text = "Importing optical materials from database"
+                databasePath = dbPath
+                let status
+                if (model.name === "Df") {
+                    status = devModel.readDfDb(databasePath)
                 }
+                statusText.text = statusInfo(status)
+                showButton.enabled = status === 0
             }
         }
     }
 
-    FolderListModel {
-        id: folderListModel
+    function statusInfo(status) {
+        switch (status) {
+            case 0:
+                return "Device is successfully imported"
+            case 1:
+                return "Cannot find the path"
+            case 2:
+                return "Device file content format is invalid"
+            default:
+                return "Invalid status"
+        }
     }
 
-    function receiveElecDbCand(elecDbCand) {
-        databasePath = elecDbCand
+    function updateDbPaths(optDbPaths) {
+        elecDbPaths = optDbPaths;
     }
 }

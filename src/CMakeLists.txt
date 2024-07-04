@@ -1,4 +1,5 @@
 target_sources(SuisApp PRIVATE
+        # Do not add sources of content qml module here
         # headers
         material/IniConfigParser.h
         material/MaterialDbModel.h

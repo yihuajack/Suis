@@ -14,21 +14,4 @@ Item {
     width: Constants.width
     height: Constants.height - 100
     anchors.top: parent.top
-
-    // Button {
-    //     id: plotOptButton
-    //     text: qsTr("Plot Optical Parameters")
-    //     visible: opticalParsetPage.state === "optParImported"
-    //     y: 600
-    //     anchors.horizontalCenter: parent.horizontalCenter
-    //     anchors.horizontalCenterOffset: 0
-    //     checkable: true
-    //
-    //     Connections {
-    //         target: plotOptButton
-    //         onClicked: {
-    //             raImage.visible = true
-    //         }
-    //     }
-    // }
 }

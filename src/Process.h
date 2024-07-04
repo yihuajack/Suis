@@ -42,7 +42,7 @@ public:
     Q_INVOKABLE qint64 write(const QString& data);
 
 protected:
-    QProcess* m_Process;
+    QProcess *m_Process;
     void newProcess();
     void deleteProcess();
 };

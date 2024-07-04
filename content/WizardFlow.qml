@@ -15,32 +15,46 @@ WizardFlowForm {
     state: "initial"
 
     onNextClicked: {
-        if (root.state === "initial")
+        if (root.state === "initial") {
             root.state = "parSetOptical"
-        else if (root.state === "parSetOptical")
+            stackView.push(opticalParsetPage)
+        } else if (root.state === "parSetOptical") {
             root.state = "parSetElectrical"
+            // stackView.push(electricalParsetPage, {elecDbPaths: opticalParsetPage.addDbPath()})
+            stackView.push(electricalParsetPage)
+        }
     }
 
-    WelcomePage {
-        id: welcomePage
-        visible: root.state === "initial"
+    onBackClicked: {
+        stackView.pop()
+        if (root.state === "parSetOptical") {
+            root.state = "initial"
+        } else if (root.state === "parSetElectrical") {
+            root.state = "parSetOptical"
+        }
+    }
+
+    // StackView vs SwipeView
+    // It seems that pushing and popping stacks is even simpler than to manually set visible properties
+    // StackView provides transitions
+    // State { name: ""\n PropertyChanges { target: welcomePage\n visible: true }
+    StackView {
+        id: stackView
         anchors.fill: parent
+
+        initialItem: WelcomePage {
+            id: welcomePage
+        }
     }
 
     OpticalParsetPage {
         id: opticalParsetPage
-        visible: root.state === "parSetOptical"
-        anchors.fill: parent
+        visible: false
     }
 
     ElectricalParsetPage {
         id: electricalParsetPage
-        visible: root.state === "parSetElectrical"
-        anchors.fill: parent
-    }
-
-    Component.onCompleted: {
-        opticalParsetPage.elecDbCandChanged.connect(electricalParsetPage.receiveElecDbCand)
+        visible: false
     }
 
     states: [

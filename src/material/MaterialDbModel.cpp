@@ -26,12 +26,20 @@ int MaterialDbModel::rowCount(const QModelIndex& parent) const {
 }
 
 QVariant MaterialDbModel::data(const QModelIndex& index, int role) const {
-    const QMap<QString, OpticMaterial *>::const_iterator it = m_list.begin() + index.row();
+    // 'operator+' is deprecated (in 6.2): Use std::next; QMap iterators are not random access
+    QMap<QString, OpticMaterial<QList<double>> *>::const_iterator it = m_list.begin();
+    std::advance(it, index.row());
     switch (role) {
         case NameRole:
             return it.key();
         case NWlRole:
             return QVariant::fromValue(it.value()->nWl());
+        case NDataRole:
+            return QVariant::fromValue(it.value()->nData());
+        case KWlRole:
+            return QVariant::fromValue(it.value()->kWl());
+        case KDataRole:
+            return QVariant::fromValue(it.value()->kData());
         default:
             return {};
     }
@@ -52,6 +60,9 @@ QHash<int, QByteArray> MaterialDbModel::roleNames() const {
     QHash<int, QByteArray> roles;
     roles[NameRole] = "name";
     roles[NWlRole] = "n_wl";
+    roles[NDataRole] = "n_data";
+    roles[KWlRole] = "k_wl";
+    roles[KDataRole] = "k_data";
     return roles;
 }
 
@@ -121,7 +132,7 @@ int MaterialDbModel::readSolcoreDb(const QString& db_path) {
     IniConfigParser solcore_config(ini_file.fileName());
     const ParameterSystem par_sys(solcore_config.loadGroup("Parameters"), ini_finfo.absolutePath());
     const QMap<QString, QString> mat_map = solcore_config.loadGroup("Materials");
-    for (QMap<QString, QString>::const_iterator it = mat_map.constBegin(); it not_eq mat_map.constEnd(); it++) {
+    for (QMap<QString, QString>::const_iterator it = mat_map.cbegin(); it not_eq mat_map.cend(); it++) {
         try {
             const QString& mat_name = it.key();
             const QDir mat_dir = it.value();
@@ -187,13 +198,13 @@ int MaterialDbModel::readSolcoreDb(const QString& db_path) {
                     k_wl.emplace_back(main_fraction_str.toDouble(), frac_k_wl);
                     k_data.emplace_back(main_fraction_str.toDouble(), frac_k_data);
                 }
-                auto *opt_mat = new OpticMaterial(mat_name, n_wl, n_data, k_wl, k_data);
+                auto *opt_mat = new OpticMaterial<QList<double>>(mat_name, n_wl, n_data, k_wl, k_data);
                 beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
                 m_list.insert(mat_name, opt_mat);
                 endInsertRows();
                 emit dataChanged(index(0), index(static_cast<int>(m_list.size()) - 1));
             }
-            setProgress(static_cast<int>(std::distance(mat_map.constBegin(), it) / mat_map.size()));
+            setProgress(static_cast<int>(std::distance(mat_map.cbegin(), it) / mat_map.size()));
         } catch (std::runtime_error& e) {
             qWarning(e.what());
             return 2;
@@ -268,7 +279,8 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
             mat_name_indices.insert(mat_name, {{cc, fraction}});
         }
     }
-    for (QMap<QString, QList<std::pair<int, double>>>::const_iterator it = mat_name_indices.constBegin(); it not_eq mat_name_indices.constEnd(); it++) {
+    for (QMap<QString, QList<std::pair<int, double>>>::const_iterator it = mat_name_indices.cbegin();
+         it not_eq mat_name_indices.cend(); it++) {
         QList<std::pair<double, QList<double>>> n_series;
         QList<std::pair<double, QList<double>>> k_series;
         for (const std::pair<int, double>& index : it.value()) {
@@ -284,21 +296,22 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
                 if (cell not_eq nullptr) {
                     k_list[rc - 2] = cell->readValue().toDouble();
                 }
-                n_series.emplace_back(index.second, n_list);
-                k_series.emplace_back(index.second, k_list);
             }
+            n_series.emplace_back(index.second, n_list);
+            k_series.emplace_back(index.second, k_list);
         }
         // std::vector<double> n_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(n_list.size())};
         // std::vector<double> k_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(k_list.size())};
-        // In template: no matching function for call to 'construct_at'
         // Warning: must dynamically new the object! Do not insert a reference; otherwise, it will change for each loop!
-        auto *opt_mat = new OpticMaterial(it.key(), wls, n_series, wls, k_series);
-        // Critical! Without this QML cannot know the model is non-empty!
+        // You are using wls multiple times! Do not try to move wls to k_wl!
+        // Otherwise, qlist.h inline T& last() { Q_ASSERT(!isEmpty()); return *(end()-1); } assertion will fail.
+        auto *opt_mat = new OpticMaterial<QList<double>>(it.key(), wls, std::move(n_series), wls, std::move(k_series));
+        // Critical! Without this QML cannot know the model is changed!
         beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
         m_list.insert(it.key(), opt_mat);
         endInsertRows();
         emit dataChanged(index(0), index(static_cast<int>(m_list.size()) - 1));
-        setProgress(static_cast<double>(std::distance(mat_name_indices.constBegin(), it + 1)) / static_cast<double>(mat_name_indices.size()));
+        setProgress(static_cast<double>(std::distance(mat_name_indices.cbegin(), it) + 1) / static_cast<double>(mat_name_indices.size()));
     }
     return 0;
 }

@@ -6,8 +6,7 @@
 // https://forum.qt.io/topic/117436/run-a-sh-shell-while-clicking-button-in-qml-with-qt5-15-0/21
 #include "Process.h"
 
-Process::Process(QObject* parent) : QObject(parent), m_Process(nullptr) {
-}
+Process::Process(QObject* parent) : QObject(parent), m_Process(nullptr) {}
 
 Process::~Process() {
     deleteProcess();
