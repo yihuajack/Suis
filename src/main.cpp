@@ -9,7 +9,7 @@
 #include "import_qml_plugins.h"
 
 #include "Application.h"
-#include "material/MaterialDbModel.h"
+#include "material/DbSysModel.h"
 
 int main(int argc, char *argv[]) {
     set_qt_environment();
@@ -33,7 +33,15 @@ int main(int argc, char *argv[]) {
      * (Not recommended) [Embedding C++ Objects into QML with Context Properties]
      * (https://doc.qt.io/qt-6/qtqml-cppintegration-contextproperties.html)
      */
-    qmlRegisterType<MaterialDbModel>("MaterialDbModel", 1, 0, "MaterialDbModel");
+    qmlRegisterSingletonType<DbSysModel>("DbSysModel", 1, 0, "DbSysModel",
+                                         [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
+        // qobject_singletontype_provider
+        Q_UNUSED(engine)
+        Q_UNUSED(scriptEngine)
+
+        auto *example = new DbSysModel();
+        return example;
+    });
 
     // qmlRegisterSingletonType<CppBackend>(
     //     "backend", 1, 0, "BackendObject",

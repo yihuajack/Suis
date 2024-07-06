@@ -1,11 +1,13 @@
 target_sources(SuisApp PRIVATE
         # Do not add sources of content qml module here
         # headers
+        material/DbSysModel.h
         material/IniConfigParser.h
         material/MaterialDbModel.h
         material/OpticMaterial.h
         material/ParameterSystem.h
         optics/FixedMatrix.h
+        optics/OpticStack.h
         optics/tmm.h
         utils/Approx.h
         utils/Fs.h
@@ -21,13 +23,16 @@ target_sources(SuisApp PRIVATE
         ProfilePrivate.h
         SettingsStorage.h
         # sources
+        material/DbSysModel.cpp
         material/IniConfigParser.cpp
         material/MaterialDbModel.cpp
         material/OpticMaterial.cpp
         material/ParameterSystem.cpp
         optics/FixedMatrix.cpp
+        optics/OpticStack.h
         optics/tmm.cpp
         optics/tmm_vec.cpp
+        optics/TransferMatrix.cpp
         utils/Approx.cpp
         utils/Fs.cpp
         utils/Log.cpp

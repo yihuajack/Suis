@@ -10,6 +10,7 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QUrl>
+#include <utility>
 #include "xlsxabstractsheet.h"
 #include "xlsxdocument.h"
 #include "xlsxworkbook.h"
@@ -18,7 +19,8 @@
 #include "MaterialDbModel.h"
 #include "ParameterSystem.h"
 
-MaterialDbModel::MaterialDbModel(QObject *parent) : QAbstractListModel(parent), import_progress(0) {}
+MaterialDbModel::MaterialDbModel(QObject *parent, QString name) : QAbstractListModel(parent), m_progress(0),
+                                                                  m_name(std::move(name)), m_checked(false) {}
 
 int MaterialDbModel::rowCount(const QModelIndex& parent) const {
     Q_UNUSED(parent)
@@ -45,14 +47,40 @@ QVariant MaterialDbModel::data(const QModelIndex& index, int role) const {
     }
 }
 
-double MaterialDbModel::getProgress() const {
-    return import_progress;
+double MaterialDbModel::progress() const {
+    return m_progress;
 }
 
-void MaterialDbModel::setProgress(double progress) {
-    if (import_progress not_eq progress) {
-        import_progress = progress;
-        emit progressChanged(import_progress);
+void MaterialDbModel::setProgress(const double progress) {
+    if (m_progress not_eq progress) {
+        m_progress = progress;
+        emit progressChanged();
+    }
+}
+
+QString MaterialDbModel::name() const {
+    return m_name;
+}
+
+bool MaterialDbModel::checked() const {
+    return m_checked;
+}
+
+void MaterialDbModel::setChecked(const bool checked) {
+    if (m_checked not_eq checked) {
+        m_checked = checked;
+        emit checkedChanged();
+    }
+}
+
+QString MaterialDbModel::path() const {
+    return m_path;
+}
+
+void MaterialDbModel::setPath(const QString &path) {
+    if (m_path not_eq path) {
+        m_path = path;
+        emit pathChanged();
     }
 }
 

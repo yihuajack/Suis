@@ -7,29 +7,15 @@ import QtCore  // StandardPaths: QtLabsPlatform is deprecated since 6.4
 import QtQuick
 import QtQuick.Controls  // ProgressBar
 import QtQuick.Dialogs  // native dialogs
-import content
-import MaterialDbModel
+import DbSysModel
 
 OpticalParsetPageForm {
     // https://stackoverflow.com/questions/46627883/can-not-initialize-qml-property-to
     // https://stackoverflow.com/questions/37599362/is-it-not-possible-to-create-a-map-datatype-in-qml
     // property var optDbPaths: ({})
     // signal dbPathsChanged(var dbPaths)
-
-    ListModel {
-        id: dbSysModel
-        ListElement {
-            name: "Solcore"
-            checked: false
-            path: ""
-        }
-
-        ListElement {
-            name: "Df"
-            checked: false
-            path: ""
-        }
-    }
+    // It is not a good idea to initialize ListElement in a QML ListModel and put matDbModel in optLView delegates
+    // because matDbModel will not persist data.
 
     ListView {
         id: optLView
@@ -37,14 +23,10 @@ OpticalParsetPageForm {
         // It will transparently cover the buttons and mislead you that buttons do not function!
         width: 800
         height: 600
-        model: dbSysModel
+        model: DbSysModel
         delegate: Item {
             width: parent.width
             height: 100
-
-            MaterialDbModel {
-                id: matDbModel
-            }
 
             Row {
                 spacing: 10
@@ -79,7 +61,7 @@ OpticalParsetPageForm {
                         id: importProgressBar
                         width: parent.width
                         to: 1.0
-                        value: matDbModel.progress
+                        value: model.progress
                     }
 
                     Text {
@@ -130,39 +112,37 @@ OpticalParsetPageForm {
                 modal: true  // modality: Qt.WindowModel
                 standardButtons: Dialog.Ok
 
-                contentItem: Column {
+                contentItem: ListView {
+                    id: matLView
+                    width: parent.width
+                    height: parent.height - 20  // parent.height - header.height - 50
                     spacing: 10
-                    padding: 10
+                    // Do not use mode.db_model or others! See
+                    // https://stackoverflow.com/questions/44747723/qt-qml-model-within-a-model-and-accesible-via-qml
+                    model: db_model
 
-                    ListView {
-                        width: parent.width
-                        height: parent.height - 20  // parent.height - header.height - 50
+                    delegate: Row {
                         spacing: 10
-                        model: matDbModel  // Qt.labs.folderlistmodel
 
-                        delegate: Row {
-                            spacing: 10
+                        Text {
+                            text: model.name
+                            width: parent.width * 0.7
+                        }
 
-                            Text {
-                                text: model.name
-                                width: parent.width * 0.7
+                        Button {
+                            text: "Plot"
+                            width: 100
+                            onClicked: {
+                                nkChartLoader.source = "OpticalMaterialDialog.qml"
                             }
+                        }
 
-                            Button {
-                                text: "Plot"
-                                width: 100
-                                onClicked: {
-                                    nkChartLoader.source = "OpticalMaterialDialog.qml"
-                                }
-                            }
+                        // https://doc.qt.io/qt-6/qtquick-performance.html
+                        Loader {
+                            id: nkChartLoader
+                            asynchronous: true
 
-                            // https://doc.qt.io/qt-6/qtquick-performance.html
-                            Loader {
-                                id: nkChartLoader
-                                asynchronous: true
-
-                                onLoaded: item.open()
-                            }
+                            onLoaded: item.open()
                         }
                     }
                 }
@@ -177,9 +157,9 @@ OpticalParsetPageForm {
                 }
                 let status
                 if (model.name === "Solcore") {
-                    status = matDbModel.readSolcoreDb(model.path)
+                    status = model.db_model.readSolcoreDb(model.path)
                 } else if (model.name === "Df") {
-                    status = matDbModel.readDfDb(model.path)
+                    status = model.db_model.readDfDb(model.path)
                 }
                 statusText.text = statusInfo(status)
                 showButton.enabled = status === 0
@@ -188,15 +168,23 @@ OpticalParsetPageForm {
     }
 
     // TypeError: Value is undefined and could not be converted to an object
-    function addDbPath() {
-        let optDbPaths = {}
-        for (let i = 0; i < optLView.model.count; i++) {
-            let item = optLView.model.get(i)
-            if (item.checked && item.name !== item.path) {
-                optDbPaths[item.name] = item.path
+    function getOptMat(mat_name) {
+        for (let i = 0; i < optLView.model.count; i++) {  // count is different from size!
+            // itemAtIndex(int index) is different from itemAt(real x, real y)!
+            // Warning: The returned value of itemAtIndex() should not be stored since it can turn to null as soon as
+            // control goes out of the calling scope, if the view releases that item.
+            // https://stackoverflow.com/questions/65945283/qml-listview-acess-to-an-item-of-the-delegate
+            let item = optLView.itemAtIndex(i)
+            let matLView = item.matListDialog.contentItem.children.find(child => child.id === "matLView")
+            for (let j = 0; j < matLView.model.count; j++) {
+                console.log("j=" + j)
+                let mat_item = matLView.model.get(j)
+                if (mat_item.name === mat_name) {
+                    console.log("item.n_wl[0]=" + item.n_wl[0])
+                    break;
+                }
             }
         }
-        return optDbPaths
     }
 
     function statusInfo(status) {
