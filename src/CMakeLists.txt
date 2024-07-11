@@ -9,6 +9,7 @@ target_sources(SuisApp PRIVATE
         optics/FixedMatrix.h
         optics/OpticStack.h
         optics/tmm.h
+        optics/TransferMatrix.h
         utils/Approx.h
         utils/Fs.h
         utils/Log.h
@@ -29,7 +30,7 @@ target_sources(SuisApp PRIVATE
         material/OpticMaterial.cpp
         material/ParameterSystem.cpp
         optics/FixedMatrix.cpp
-        optics/OpticStack.h
+        optics/OpticStack.cpp
         optics/tmm.cpp
         optics/tmm_vec.cpp
         optics/TransferMatrix.cpp

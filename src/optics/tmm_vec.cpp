@@ -918,6 +918,10 @@ auto coh_tmm(const char pol, const std::vector<std::valarray<std::complex<T>>> &
             {"lam_vac", lam_vac}};
 }
 
+template auto coh_tmm(char pol, const std::vector<std::valarray<std::complex<double>>> &n_list,
+                      const std::vector<double> &d_list, const std::complex<double> &th_0,
+                      const std::valarray<double> &lam_vac) -> coh_tmm_vecn_dict<double>;
+
 template<std::floating_point T>
 auto coh_tmm_reverse(const char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
                      const std::complex<T> th_0, const std::valarray<T> &lam_vac) -> coh_tmm_vec_dict<T> {
@@ -1445,6 +1449,8 @@ auto absorp_in_each_layer(const coh_tmm_vecn_dict<T> &coh_tmm_data) -> std::vala
     }
     return final_answer;
 }
+
+template auto absorp_in_each_layer(const coh_tmm_vecn_dict<double> &coh_tmm_data) -> std::valarray<std::valarray<double>>;
 
 template<typename T>
 auto inc_group_layers(const std::vector<std::valarray<std::complex<T>>> &n_list, const std::valarray<T> &d_list,

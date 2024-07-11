@@ -45,7 +45,7 @@ OpticalParsetPageForm {
                     spacing: 10
 
                     TextField {
-                        id: pathTextField
+                        id: dbPathTextField
                         width: parent.width
                         enabled: model.checked
                         placeholderText: "Enter the Database Path"
@@ -71,16 +71,16 @@ OpticalParsetPageForm {
                 }
 
                 Button {
-                    id: importButton
+                    id: dbImportButton
                     text: "Import"
                     enabled: model.checked
                     onClicked: {
                         if (model.name === "Solcore") {
-                            fileDialog.nameFilters = ["*.ini", "*.txt"]
+                            dbFileDialog.nameFilters = ["*.ini", "*.txt"]
                         } else if (model.name === "Df") {
-                            fileDialog.nameFilters = ["*.xlsx"]
+                            dbFileDialog.nameFilters = ["*.xlsx"]
                         }
-                        fileDialog.open()
+                        dbFileDialog.open()
                     }
                 }
 
@@ -92,13 +92,13 @@ OpticalParsetPageForm {
                         matListDialog.open()
                     }
                 }
+            }
 
-                FileDialog {
-                    id: fileDialog
-                    title: qsTr("Select Database File")
-                    onAccepted: {
-                        importDb(selectedFile)
-                    }
+            FileDialog {
+                id: dbFileDialog
+                title: qsTr("Select Device File")
+                onAccepted: {
+                    importDb(selectedFile)
                 }
             }
 
@@ -163,26 +163,6 @@ OpticalParsetPageForm {
                 }
                 statusText.text = statusInfo(status)
                 showButton.enabled = status === 0
-            }
-        }
-    }
-
-    // TypeError: Value is undefined and could not be converted to an object
-    function getOptMat(mat_name) {
-        for (let i = 0; i < optLView.model.count; i++) {  // count is different from size!
-            // itemAtIndex(int index) is different from itemAt(real x, real y)!
-            // Warning: The returned value of itemAtIndex() should not be stored since it can turn to null as soon as
-            // control goes out of the calling scope, if the view releases that item.
-            // https://stackoverflow.com/questions/65945283/qml-listview-acess-to-an-item-of-the-delegate
-            let item = optLView.itemAtIndex(i)
-            let matLView = item.matListDialog.contentItem.children.find(child => child.id === "matLView")
-            for (let j = 0; j < matLView.model.count; j++) {
-                console.log("j=" + j)
-                let mat_item = matLView.model.get(j)
-                if (mat_item.name === mat_name) {
-                    console.log("item.n_wl[0]=" + item.n_wl[0])
-                    break;
-                }
             }
         }
     }

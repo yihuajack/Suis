@@ -20,7 +20,7 @@ WizardFlowForm {
             stackView.push(opticalParsetPage)
         } else if (root.state === "parSetOptical") {
             root.state = "parSetElectrical"
-            opticalParsetPage.getOptMat("Ag")
+            // opticalParsetPage.getOptMat("Ag")
             // stackView.push(electricalParsetPage, {elecDbPaths: opticalParsetPage.addDbPath()})
             stackView.push(electricalParsetPage)
         }

@@ -343,3 +343,13 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
     }
     return 0;
 }
+
+OpticMaterial<QList<double>> *MaterialDbModel::getMatByName(const QString &mat_name) const {
+    if (m_list.find(mat_name) not_eq m_list.cend()) {
+        OpticMaterial<QList<double>> *opt_mat = m_list[mat_name];
+        return opt_mat;
+    } else {
+        qInfo() << mat_name << " not found in MaterialDbModel";
+        return nullptr;
+    }
+}

@@ -39,8 +39,8 @@ int main(int argc, char *argv[]) {
         Q_UNUSED(engine)
         Q_UNUSED(scriptEngine)
 
-        auto *example = new DbSysModel();
-        return example;
+        auto *db_system = new DbSysModel();
+        return db_system;
     });
 
     // qmlRegisterSingletonType<CppBackend>(

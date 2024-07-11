@@ -43,6 +43,8 @@ public:
     Q_INVOKABLE int readSolcoreDb(const QString& db_path);
     Q_INVOKABLE int readDfDb(const QString& db_path);
 
+    [[nodiscard]] OpticMaterial<QList<double>> *getMatByName(const QString &mat_name) const;
+
 signals:
     void progressChanged();
     void checkedChanged();

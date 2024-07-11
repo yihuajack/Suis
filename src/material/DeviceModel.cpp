@@ -4,48 +4,60 @@
 
 #include <set>
 #include <QDir>
+#include <QQmlEngine>
 #include <QUrl>
 
+#include "DbSysModel.h"
 #include "DeviceModel.h"
+#include "optics/TransferMatrix.h"
 
 DeviceModel::DeviceModel(QObject *parent) : QAbstractTableModel(parent) {}
 
 int DeviceModel::rowCount(const QModelIndex &parent) const {
-    Q_UNUSED(parent);
+    Q_UNUSED(parent)
     return static_cast<int>(m_data.size());
 }
 
 int DeviceModel::columnCount(const QModelIndex &parent) const {
-    Q_UNUSED(parent);
-    return m_data.empty() ? 0 : static_cast<int>(m_data["layer_type"].size());
+    Q_UNUSED(parent)
+    return m_data.empty() ? 0 : static_cast<int>(m_data["d"].size());
 }
 
 QVariant DeviceModel::data(const QModelIndex &index, int role) const {
-    QMap<QString, QList<QVariant>>::const_iterator it = m_data.cbegin();
+    if (not index.isValid() or index.row() >= m_data.count()) {
+        qWarning("QModelIndex of DeviceModel is invalid.");
+        return {};
+    }
+    QMap<QString, QList<double>>::const_iterator it = m_data.cbegin();
     std::advance(it, index.row());
     switch (role) {
         case NameRole:
             return it.key();
+        case WlRole:
+            return QVariant::fromValue(wavelengths);
+        case RRole:
+            return QVariant::fromValue(R);
+        case ARole:
+            return QVariant::fromValue(A);
+        case TRole:
+            return QVariant::fromValue(T);
         default:
             return {};
-    }
-}
-
-double DeviceModel::getProgress() const {
-    return import_progress;
-}
-
-void DeviceModel::setProgress(double progress) {
-    if (import_progress not_eq progress) {
-        import_progress = progress;
-        emit progressChanged(import_progress);
     }
 }
 
 QHash<int, QByteArray> DeviceModel::roleNames() const {
     QHash<int, QByteArray> roles;
     roles[NameRole] = "name";
+    roles[WlRole] = "wavelength";
+    roles[RRole] = "R";
+    roles[ARole] = "A";
+    roles[TRole] = "T";
     return roles;
+}
+
+QString DeviceModel::name() const {
+    return m_name;
 }
 
 template<typename T>
@@ -77,7 +89,7 @@ QList<T> import_single_property(const QList<QStringList> &data,
                             ", using default in PC.");
 }
 
-int DeviceModel::readDfDb(const QString &db_path) {
+bool DeviceModel::readDfDev(const QString &db_path) {
     const QUrl url(db_path);
     QString db_path_imported = db_path;
     if (url.isLocalFile()) {
@@ -86,7 +98,7 @@ int DeviceModel::readDfDb(const QString &db_path) {
     QFile doc(db_path_imported);
     if (not doc.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning("Cannot load DriftFusion's device data file %s ", qUtf8Printable(db_path));
-        return 1;
+        return false;
     }
     QList<QStringList> csv_data;
     QTextStream csv_in(&doc);
@@ -121,14 +133,44 @@ int DeviceModel::readDfDb(const QString &db_path) {
     } catch (std::out_of_range &e) {
         qWarning("No layer type (layer_type) defined in .csv."
                  "layer_type must be defined when using .csv input file");
-        return 2;
+        return false;
     }
     try {
         QList<QString> material = import_single_property<QString>(csv_data, properties, {"material", "stack"}, start_row, end_row);
+        // Access DbSysModel singleton
+        QQmlEngine *engine = qmlEngine(this);
+        auto *db_system = engine->singletonInstance<DbSysModel*>("DbSysModel", "DbSysModel");
+        if (not db_system) {
+            qWarning("QML singleton instance DbSysModel does not exist.");
+            return false;
+        }
+        const qsizetype sz_mat = material.size();
+        std::vector<std::pair<OpticMaterial<QList<double>> *, double>> structure(sz_mat);
         QList<double> d = import_single_property<double>(csv_data, properties, {"dcell", "d", "thickness"}, start_row, end_row);
+        if (d.size() not_eq sz_mat) {
+            qWarning("Size of thickness does not match size of material!");
+            return false;
+        }
+        for (qsizetype i = 0; i < sz_mat - 1; i++) {
+            structure.emplace_back(db_system->getMatByName(material.at(i)), d.at(i));
+        }
+        auto *stack = (start_row == 2) ? new OpticStack<QList<double>>(std::move(structure), false, db_system->getMatByName(material.back())) : new OpticStack<QList<double>>(std::move(structure));
+        wavelengths = structure.front().first->nWl();
+        const rat_dict<double> rat_out = calculate_rat<QList<double>>(stack, std::forward<QList<double>>(wavelengths), 0, 's', false);
+        const std::valarray<double> R_va = std::get<std::valarray<double>>(rat_out.at("R"));
+        R = {std::begin(R_va), std::end(R_va)};
+        const std::valarray<double> A_va = std::get<std::valarray<double>>(rat_out.at("A"));
+        A = {std::begin(A_va), std::end(A_va)};
+        const std::valarray<double> T_va = std::get<std::valarray<double>>(rat_out.at("T"));
+        T = {std::begin(T_va), std::end(T_va)};
+        delete stack;
+        m_data["d"] = d;
     } catch (std::out_of_range &e) {
         qWarning(e.what());
-        return 2;
+        return false;
+    } catch (std::runtime_error &e) {
+        qWarning(e.what());
+        return false;
     }
-    return 0;
+    return true;
 }

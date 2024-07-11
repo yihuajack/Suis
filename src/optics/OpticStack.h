@@ -5,7 +5,9 @@
 #ifndef SUISAPP_OPTICSTACK_H
 #define SUISAPP_OPTICSTACK_H
 
+#include <complex>
 #include <string>
+#include <valarray>
 #include <vector>
 
 #include "material/MaterialDbModel.h"
@@ -58,17 +60,45 @@ Extra layers such as he semi-infinite, air-like first and last medium, and a bac
 highly absorbing layer are included at runtime to fulfill the requirements of the
 TMM solver or to solve some of its limitations.
  */
-template<typename T>
+template<FloatingList T>
 class OpticStack {
 public:
-    OpticStack(const std::vector<std::pair<std::string, double>> &structure, bool no_back_reflection = false,
-               const std::string &substrate = "", const std::string &incidence = "");
+    // suppress clang-tidy bugprone-forwarding-reference-overload
+    // Constructor accepting a forwarding reference can hide the copy and move constructors
+    // template<typename U>
+    // requires std::same_as<U, std::vector<std::pair<OpticMaterial<T> *, double>>>
+    explicit OpticStack(std::vector<std::pair<OpticMaterial<T> *, double>> &&structure,  // r-value reference
+                        bool no_back_reflection = false,
+                        OpticMaterial<T> *substrate = nullptr,
+                        OpticMaterial<T> *incidence = nullptr) : structure(std::move(structure)),
+                                                                 no_back_reflection(no_back_reflection),
+                                                                 substrate(substrate),
+                                                                 incidence(incidence),
+                                                                 num_mat_layers(structure.size() + (substrate not_eq nullptr) +
+                                                                                (incidence not_eq nullptr)) {}
+
+    bool no_back_reflection;
+    std::size_t num_mat_layers;  // include non-null substrate and incidence
+
+    template<typename U>
+    requires std::same_as<U, std::valarray<std::complex<typename T::value_type>>>
+    U get_indices(T &&wavelength);  // r-value reference
+
+    template<typename U>
+    requires std::same_as<U, std::vector<std::valarray<std::complex<typename T::value_type>>>>
+    U get_indices(T &&wavelength);
+
+    template<FloatingList U>
+    requires std::same_as<typename U::value_type, typename T::value_type>
+    U get_widths();
 
 private:
-    std::vector<std::pair<OpticMaterial<T>, double>> structure;
-    OpticMaterial<T> substrate;
-    OpticMaterial<T> incidence;
+    // electrodes, layer, active, layer, electrode; no interface
+    std::vector<std::pair<OpticMaterial<T> *, double>> structure;
+    OpticMaterial<T> *substrate;
+    OpticMaterial<T> *incidence;
+
+    T k_absorbing(T &&wavelength);
 };
 
-
-#endif  //SUISAPP_OPTICSTACK_H
+#endif  // SUISAPP_OPTICSTACK_H

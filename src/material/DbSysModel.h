@@ -29,6 +29,8 @@ public:
     bool setData(const QModelIndex &index, const QVariant &value, int role) override;
     void addModel(MaterialDbModel *db_model);
 
+    [[nodiscard]] OpticMaterial<QList<double>> *getMatByName(const QString &mat_name) const;
+
 protected:
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
 

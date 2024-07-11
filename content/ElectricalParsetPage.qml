@@ -10,133 +10,119 @@ import QtCore  // StandardPaths: QtLabsPlatform is deprecated since 6.4
 import content
 
 ElectricalParsetPageForm {
-    // property var elecDbPaths: {}
-
-    ListModel {
-        id: devSysModel
-        ListElement {
-            name: "Df"
-            checked: false
-        }
-    }
-
     ListView {
         width: 800
         height: 600
-        model: devSysModel
+        model: DevSysModel
         delegate: Item {
             width: parent.width
             height: 100
 
             property string databasePath: ""
 
-            DeviceModel {
-                id: devModel
-            }
-
             Row {
                 spacing: 10
                 anchors.verticalCenter: parent.verticalCenter
 
-                CheckBox {
-                    width: 100
-                    text: model.name
-                    onCheckedChanged: {
-                        model.checked = checked
-                        // if (elecDbPaths[model.name]) {
-                        //     databasePath = elecDbPaths[model.name]
-                        //     importDev(databasePath)
-                        // }
-                    }
-                }
-
-                Column {
-                    width: parent.width * 0.6
-                    spacing: 10
-
-                    TextField {
-                        id: pathTextField
-                        width: parent.width
-                        readOnly: !model.checked
-                        placeholderText: "Enter the Database Path"
-                        text: databasePath
-                        onEditingFinished: {  // method inherited from TextInput
-                            if (text.length > 0) {
-                                importDev(text)
-                            }
+                TextField {
+                    id: devPathTextField
+                    // Do not add width: parent.width! Otherwise,
+                    // QML Row: possible QQuickItem::polish() loop
+                    // QML Row: Row called polish() inside updatePolish() of Row
+                    placeholderText: "Enter the Device Path"
+                    text: ""
+                    onEditingFinished: {
+                        if (text.length > 0) {
+                            importDev(text)
                         }
-                    }
-
-                    ProgressBar {
-                        id: importProgressBar
-                        width: parent.width
-                        to: 1.0
-                        value: devModel.progress
-                    }
-
-                    Text {
-                        id: statusText
-                        text: ""
                     }
                 }
 
                 Button {
-                    id: importButton
+                    id: devImportButton
                     text: "Import"
-                    enabled: model.checked
                     onClicked: {
-                        if (model.name === "Df") {
-                            fileDialog.nameFilters = ["*csv"]
-                        }
-                        fileDialog.open()
+                        devFileDialog.nameFilters = ["*csv"]
+                        devFileDialog.open()
                     }
                 }
 
                 Button {
-                    id: showButton
-                    text: "Show"
+                    id: editTableButton
+                    text: "Edit Table"
                     enabled: false
                     onClicked: {
-                        matListDialog.open()
+                        devTableDialog.open()
                     }
                 }
 
-                FileDialog {
-                    id: fileDialog
-                    title: qsTr("Select Database File")
-                    onAccepted: {
-                        importDev(selectedFile)
+                Button {
+                    id: showRATButton
+                    text: "Show RAT"
+                    enabled: false
+                    onClicked: {
+                        ratChartLoader.source = "OpticalDeviceDialog.qml"
                     }
                 }
+
+                Button {
+                    id: removeButton
+                    text: "Remove"
+                    enabled: false
+                    onClicked: {
+                        model.removeDevice(index)
+                    }
+                }
+            }
+
+            FileDialog {
+                id: devFileDialog
+                title: qsTr("Select Database File")
+                onAccepted: {
+                    importDev(selectedFile)
+                }
+            }
+
+            // Dialog {
+            //     id: devTableDialog
+            //     title: "Imported Electrical Materials"
+            //     width: parent.width * 0.8
+            //     height: parent.width * 0.6
+            //     anchors.centerIn: parent
+            //     modal: true
+            //     standardButtons: Dialog.Ok
+            //
+            //     contentItem: TableView {
+            //         id: devTView
+            //         width: parent.width
+            //         height: parent.height - 20
+            //     }
+            // }
+
+            Loader {
+                id: ratChartLoader
+                asynchronous: true
+
+                onLoaded: item.open()
             }
 
             function importDev(dbPath) {
-                statusText.text = "Importing optical materials from database"
-                databasePath = dbPath
-                let status
-                if (model.name === "Df") {
-                    status = devModel.readDfDb(databasePath)
+                if (dbPath !== databasePath) {
+                    databasePath = dbPath.toString()
                 }
-                statusText.text = statusInfo(status)
-                showButton.enabled = status === 0
+                let status = devModel.readDfDev(databasePath)
+                editTableButton.enabled = status === true
             }
         }
     }
 
-    function statusInfo(status) {
-        switch (status) {
-            case 0:
-                return "Device is successfully imported"
-            case 1:
-                return "Cannot find the path"
-            case 2:
-                return "Device file content format is invalid"
-            default:
-                return "Invalid status"
+    Row {
+        Button {
+            id: addButton
+            text: "Add Device"
+            onClicked: {
+                DevSysModel.addDevice();
+            }
         }
-    }
-
-    function updateDbPaths(optDbPaths) {
-        elecDbPaths = optDbPaths;
     }
 }

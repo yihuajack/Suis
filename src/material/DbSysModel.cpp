@@ -5,15 +5,15 @@
 #include "DbSysModel.h"
 
 DbSysModel::DbSysModel(QObject *parent) : QAbstractListModel(parent) {
-    MaterialDbModel *solcore_model = new MaterialDbModel(parent, "Solcore");
-    MaterialDbModel *df_model = new MaterialDbModel(parent, "Df");
+    auto *solcore_model = new MaterialDbModel(parent, "Solcore");
+    auto *df_model = new MaterialDbModel(parent, "Df");
     addModel(solcore_model);
     addModel(df_model);
 }
 
-int DbSysModel::rowCount(const QModelIndex &parent = QModelIndex()) const {
-    Q_UNUSED(parent);
-    return m_db.count();
+int DbSysModel::rowCount(const QModelIndex &parent) const {
+    Q_UNUSED(parent)
+    return static_cast<int>(m_db.count());
 }
 
 QVariant DbSysModel::data(const QModelIndex &index, int role) const {
@@ -63,9 +63,22 @@ bool DbSysModel::setData(const QModelIndex &index, const QVariant &value, int ro
 void DbSysModel::addModel(MaterialDbModel *db_model) {
     connect(db_model, &MaterialDbModel::progressChanged, this, &DbSysModel::onProgressChanged);
 
-    beginInsertRows(QModelIndex(), rowCount(), rowCount());
+    // rowCount()
+    beginInsertRows(QModelIndex(), static_cast<int>(m_db.size()), static_cast<int>(m_db.size()));
     m_db.append(db_model);
     endInsertRows();
+    emit dataChanged(index(0), index(static_cast<int>(m_db.size() - 1)));
+}
+
+OpticMaterial<QList<double>> *DbSysModel::getMatByName(const QString &mat_name) const {
+    for (const MaterialDbModel *mat_db : m_db) {
+        OpticMaterial<QList<double>> *opt_mat = mat_db->getMatByName(mat_name);
+        if (opt_mat) {
+            return opt_mat;
+        }
+    }
+    qWarning() << mat_name << " not found in DbSysModel";
+    return nullptr;
 }
 
 QHash<int, QByteArray> DbSysModel::roleNames() const {
@@ -79,9 +92,9 @@ QHash<int, QByteArray> DbSysModel::roleNames() const {
 }
 
 void DbSysModel::onProgressChanged() {
-    MaterialDbModel *db_model = qobject_cast<MaterialDbModel *>(sender());
+    auto *db_model = qobject_cast<MaterialDbModel *>(sender());
     if (db_model) {
-        int row = m_db.indexOf(db_model);
+        int row = static_cast<int>(m_db.indexOf(db_model));
         if (row >= 0) {
             QModelIndex index = createIndex(row, 0);
             emit dataChanged(index, index, {ProgressRole});

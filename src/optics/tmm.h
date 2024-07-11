@@ -302,6 +302,11 @@ requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<
 auto coh_tmm(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
              const TH_T &th_0, const std::valarray<T> &lam_vac) -> coh_tmm_vec_dict<T>;
 
+template<typename T, typename TH_T>
+requires std::is_same_v<TH_T, std::valarray<std::complex<T>>> || std::is_same_v<TH_T, std::complex<T>>
+auto coh_tmm(char pol, const std::vector<std::valarray<std::complex<T>>> &n_list, const std::vector<T> &d_list,
+             const TH_T &th_0, const std::valarray<T> &lam_vac) -> coh_tmm_vecn_dict<T>;
+
 template<std::floating_point T>
 auto coh_tmm_reverse(char pol, const std::valarray<std::complex<T>> &n_list, const std::valarray<T> &d_list,
                      std::complex<T> th_0, const std::valarray<T> &lam_vac) -> coh_tmm_vec_dict<T>;
@@ -347,6 +352,9 @@ auto absorp_in_each_layer(const coh_tmm_dict<T> &coh_tmm_data) -> std::valarray<
 
 template<typename T>
 auto absorp_in_each_layer(const coh_tmm_vec_dict<T> &coh_tmm_data) -> std::valarray<std::valarray<T>>;
+
+template<typename T>
+auto absorp_in_each_layer(const coh_tmm_vecn_dict<T> &coh_tmm_data) -> std::valarray<std::valarray<T>>;
 
 template<typename T>
 auto inc_group_layers(const std::vector<std::valarray<std::complex<T>>> &n_list, const std::valarray<T> &d_list,

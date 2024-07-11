@@ -22,9 +22,17 @@ concept Vector = requires(T1 a) {
     { Pair<decltype(a.back()), T2> };
 };
 
+template<typename T>
+concept FloatingList = requires(T t) {
+    // { t.size() } -> std::same_as<std::size_t>;
+    // { t.empty() } -> std::same_as<bool>;
+    { t[0] } -> std::convertible_to<typename T::value_type>;
+    // { t.push_back(typename T::value_type{}) };
+} && std::floating_point<typename T::value_type>;
+
 // It seems that there is no need to make it a QObject
 // See https://doc.qt.io/qt-6/qtquick-modelviewsdata-cppmodels.html
-template<typename T>
+template<FloatingList T>
 class OpticMaterial {
 public:
     // It seems that it is hard to put the definition of the constructor in the source file,
