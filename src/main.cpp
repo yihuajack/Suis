@@ -33,7 +33,8 @@ int main(int argc, char *argv[]) {
      * (Not recommended) [Embedding C++ Objects into QML with Context Properties]
      * (https://doc.qt.io/qt-6/qtqml-cppintegration-contextproperties.html)
      */
-    qmlRegisterSingletonType<DbSysModel>("DbSysModel", 1, 0, "DbSysModel",
+    qmlRegisterSingletonType<DbSysModel>("com.github.yihuajack.DbSysModel", 1, 0,
+                                         "DbSysModel",
                                          [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
         // qobject_singletontype_provider
         Q_UNUSED(engine)

@@ -8,7 +8,6 @@
 #include <QAbstractTableModel>
 #include <QQmlEngine>
 
-//#include "core/ParameterClass.h"
 #include "optics/OpticStack.h"
 
 class DeviceModel : public QAbstractTableModel {

@@ -23,8 +23,8 @@ Dialog {
         ValueAxis {
             id: axisX
             titleText: "Wavelength (nm)"
-            min: Math.min.apply(null, model.wavelength) * 1e9
-            max: Math.max.apply(null, model.wavelength) * 1e9
+            min: Math.min.apply(null, device.wavelength) * 1e9
+            max: Math.max.apply(null, device.wavelength) * 1e9
         }
 
         ValueAxis {
@@ -40,8 +40,8 @@ Dialog {
             axisY: axisY
 
             Component.onCompleted: {
-                for (let i = 0; i < model.wavelength.length; i++) {
-                    nSeries.append(model.wavelength[i] * 1e9, model.R[i]);
+                for (let i = 0; i < device.wavelength.length; i++) {
+                    nSeries.append(device.wavelength[i] * 1e9, device.R[i]);
                 }
             }
         }
@@ -53,8 +53,8 @@ Dialog {
             axisY: axisY
 
             Component.onCompleted: {
-                for (let i = 0; i < model.wavelength.length; i++) {
-                    nSeries.append(model.wavelength[i] * 1e9, model.A[i]);
+                for (let i = 0; i < device.wavelength.length; i++) {
+                    nSeries.append(device.wavelength[i] * 1e9, device.A[i]);
                 }
             }
         }
@@ -66,8 +66,8 @@ Dialog {
             axisY: axisY
 
             Component.onCompleted: {
-                for (let i = 0; i < model.wavelength.length; i++) {
-                    nSeries.append(model.wavelength[i] * 1e9, model.T[i]);
+                for (let i = 0; i < device.wavelength.length; i++) {
+                    nSeries.append(device.wavelength[i] * 1e9, device.T[i]);
                 }
             }
         }

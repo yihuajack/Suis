@@ -118,7 +118,7 @@ bool DeviceModel::readDfDev(const QString &db_path) {
     qsizetype end_row;
     try {  // ELECTRODE, LAYER, INTERFACE, ACTIVE
         qsizetype layer_type_index = properties.at("layer_type");
-        if (csv_data.at(2).at(layer_type_index) == "electrode") {
+        if (csv_data.at(1).at(layer_type_index) == "electrode") {
             start_row = 2;
             end_row = maxRow - 2;
         } else {  // no electrode
@@ -139,7 +139,11 @@ bool DeviceModel::readDfDev(const QString &db_path) {
         QList<QString> material = import_single_property<QString>(csv_data, properties, {"material", "stack"}, start_row, end_row);
         // Access DbSysModel singleton
         QQmlEngine *engine = qmlEngine(this);
-        auto *db_system = engine->singletonInstance<DbSysModel*>("DbSysModel", "DbSysModel");
+        if (not engine) {
+            qWarning("QML Engine not found!");
+            return false;
+        }
+        auto *db_system = engine->singletonInstance<DbSysModel*>("com.github.yihuajack.DbSysModel", "DbSysModel");
         if (not db_system) {
             qWarning("QML singleton instance DbSysModel does not exist.");
             return false;

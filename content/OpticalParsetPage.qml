@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
  */
 
-import QtCore  // StandardPaths: QtLabsPlatform is deprecated since 6.4
+// import QtCore  // StandardPaths: QtLabsPlatform is deprecated since 6.4
 import QtQuick
 import QtQuick.Controls  // ProgressBar
 import QtQuick.Dialogs  // native dialogs
-import DbSysModel
+import com.github.yihuajack.DbSysModel
 
 OpticalParsetPageForm {
     // https://stackoverflow.com/questions/46627883/can-not-initialize-qml-property-to

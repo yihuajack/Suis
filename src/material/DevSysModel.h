@@ -19,7 +19,8 @@ class DevSysModel : public QAbstractListModel {
 
 public:
     enum DevSysRoles {
-        NameRole = Qt::UserRole + 1
+        NameRole = Qt::UserRole + 1,
+        DeviceRole
     };
 
     explicit DevSysModel(QObject *parent = nullptr);

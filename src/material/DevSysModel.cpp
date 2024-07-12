@@ -20,6 +20,8 @@ QVariant DevSysModel::data(const QModelIndex &index, int role) const {
     switch (role) {
         case NameRole:
             return dev->name();
+        case DeviceRole:
+            return QVariant::fromValue(dev);
         default:
             return {};
     }
@@ -28,6 +30,7 @@ QVariant DevSysModel::data(const QModelIndex &index, int role) const {
 QHash<int, QByteArray> DevSysModel::roleNames() const {
     QHash<int, QByteArray> roles;
     roles[NameRole] = "name";
+    roles[DeviceRole] = "device";
     return roles;
 }
 
@@ -38,7 +41,7 @@ void DevSysModel::addDevice() {
     beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
     m_list.emplace_back(new DeviceModel());
     endInsertRows();
-    emit dataChanged(index(0), index(static_cast<int>(m_list.size() - 1)));
+    // emit dataChanged(index(0), index(static_cast<int>(m_list.size() - 1)));
 }
 
 void DevSysModel::removeDevice(const int &row) {
@@ -48,5 +51,5 @@ void DevSysModel::removeDevice(const int &row) {
     beginRemoveRows(QModelIndex(), row, row);
     m_list.erase(m_list.cbegin() + row);
     endRemoveRows();
-    emit dataChanged(index(0), index(static_cast<int>(m_list.size() - 1)));
+    // emit dataChanged(index(0), index(static_cast<int>(m_list.size() - 1)));
 }

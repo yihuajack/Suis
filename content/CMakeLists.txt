@@ -27,4 +27,5 @@ qt6_add_qml_module(content
     SOURCES
         ../src/Process.h ../src/Process.cpp
         ../src/material/DeviceModel.h ../src/material/DeviceModel.cpp
+        ../src/material/DevSysModel.h ../src/material/DevSysModel.cpp
 )
