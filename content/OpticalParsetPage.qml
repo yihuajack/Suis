@@ -76,7 +76,7 @@ OpticalParsetPageForm {
                     enabled: model.checked
                     onClicked: {
                         if (model.name === "Solcore") {
-                            dbFileDialog.nameFilters = ["*.ini", "*.txt"]
+                            dbFileDialog.nameFilters = ["*.txt", "*.ini"]
                         } else if (model.name === "Df") {
                             dbFileDialog.nameFilters = ["*.xlsx"]
                         }
@@ -133,7 +133,12 @@ OpticalParsetPageForm {
                             text: "Plot"
                             width: 100
                             onClicked: {
+                                // https://forum.qt.io/topic/102523/reload-a-loader-on-button-click
+                                // https://stackoverflow.com/questions/58716153/how-to-force-loader-to-reload-reset-or-delete-the-cache-of-preloaded-qml-page
+                                // https://qml.guide/live-reloading-hot-reloading-qml/
+                                nkChartLoader.active = false
                                 nkChartLoader.source = "OpticalMaterialDialog.qml"
+                                nkChartLoader.active = true
                             }
                         }
 

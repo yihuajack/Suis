@@ -32,6 +32,11 @@ int main(int argc, char *argv[]) {
      * https://scythe-studio.com/en/blog/how-to-integrate-qml-and-c-expose-object-and-register-c-class-to-qml
      * (Not recommended) [Embedding C++ Objects into QML with Context Properties]
      * (https://doc.qt.io/qt-6/qtqml-cppintegration-contextproperties.html)
+     * qmlRegisterSingletonType vs qmlRegisterSingletonInstance:
+     * It seems that unless separating singleton instances for multiple engines is needed,
+     * just use qmlRegisterSingletonInstance. Note: cppObject must outlive the QML engine in which it is used.
+     * QScopedPointer<DbSysModel> db_system(new DbSysModel);
+     *  mlRegisterSingletonInstance("com.github.yihuajack.DbSysModel", 1, 0, "DbSysModel", db_system.get());
      */
     qmlRegisterSingletonType<DbSysModel>("com.github.yihuajack.DbSysModel", 1, 0,
                                          "DbSysModel",
@@ -40,13 +45,9 @@ int main(int argc, char *argv[]) {
         Q_UNUSED(engine)
         Q_UNUSED(scriptEngine)
 
-        auto *db_system = new DbSysModel();
-        return db_system;
+        return DbSysModel::instance();  // auto *db_system = new DbSysModel();
     });
 
-    // qmlRegisterSingletonType<CppBackend>(
-    //     "backend", 1, 0, "BackendObject",
-    //     [](QQmlEngine *, QJSEngine *) { return new CppBackend; });
     // qApp and qGuiApp are predefined macros in qguiapplication.h!
     std::unique_ptr<Application> app;
     app = std::make_unique<Application>(argc, argv);
@@ -58,7 +59,7 @@ int main(int argc, char *argv[]) {
     // [cmake]   for QML modules.  Check https://doc.qt.io/qt-6/qt-cmake-policy-qtp0001.html
     // [cmake]   for policy details.  Use the qt_policy command to set the policy and
     // [cmake]   suppress this warning.
-    // Use this Qurl instead of "qrc:Main/main.qml"
+    // Use this QUrl instead of "qrc:Main/main.qml"
     using namespace Qt::Literals::StringLiterals;
     // QString operator""_qs introduced since 6.2 deprecated since 6.8, use QString operator""_s instead.
     // See https://github.com/qbittorrent/qBittorrent/issues/19184.

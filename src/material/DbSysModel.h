@@ -23,6 +23,9 @@ public:
     };
 
     explicit DbSysModel(QObject *parent = nullptr);
+    // https://stackoverflow.com/questions/50073626/reference-to-qml-singleton-class-instance
+    static DbSysModel *instance();
+    // static DbSysModel *qmlInstance(QQmlEngine *engine, QJSEngine *scriptEngine);
 
     [[nodiscard]] int rowCount(const QModelIndex &parent) const override;
     [[nodiscard]] QVariant data(const QModelIndex &index, int role) const override;
@@ -39,6 +42,8 @@ public slots:
 
 private:
     QList<MaterialDbModel *> m_db;
+
+    static DbSysModel *m_instance;
 };
 
 #endif  // SUISAPP_DBSYSMODEL_H

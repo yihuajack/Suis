@@ -118,7 +118,9 @@ QString findSolcoreUserConfig() {
     if (user_path_str.isEmpty()) {
         qDebug("SOLCORE_USER_DATA does not exist or is empty.");
         // the same as QDir::homePath()
-        user_path = QStandardPaths::displayName(QStandardPaths::HomeLocation);
+        // writableLocation is just the highest priority path in the list of standardLocations
+        // Do not use displayName()! It will return something like "主文件夹"
+        user_path = QStandardPaths::writableLocation(QStandardPaths::HomeLocation);  // C:/Users/<username>
         user_path_str = user_path.filePath(".solcore");
         user_path = user_path_str;
     } else {
@@ -138,15 +140,19 @@ QString findSolcoreUserConfig() {
 
 int MaterialDbModel::readSolcoreDb(const QString& db_path) {
     const QUrl url(db_path);
+    QString db_path_imported = db_path;
+    if (url.isLocalFile()) {
+        db_path_imported = QDir::toNativeSeparators(url.toLocalFile());
+    }
     const QString user_config = findSolcoreUserConfig();
     QFile ini_file;
     if (QFile::exists(user_config)) {
         qDebug() << "Using user configuration file " << user_config;
         ini_file.setFileName(user_config);
     } else {
-        ini_file.setFileName(url.toLocalFile());
+        ini_file.setFileName(db_path_imported);
     }
-    const QFileInfo ini_finfo(ini_file);
+    const QFileInfo ini_finfo(db_path_imported);  // for later get the parent directory as the root path
     if (not ini_file.open(QIODevice::ReadOnly)) {
         qWarning("Cannot open the configuration ini file %s.", qUtf8Printable(db_path));
         return 1;
@@ -158,81 +164,128 @@ int MaterialDbModel::readSolcoreDb(const QString& db_path) {
     // for (const QFileInfo& subdir_info : subdir_list) {
     //     const QString mat_name = subdir_info.fileName().split('-').front();
     IniConfigParser solcore_config(ini_file.fileName());
+    // The problem is, even though you can automatically read solcore_config.txt from the home location,
+    // you have to manually set the SOLCORE_ROOT for parameter system, etc., so the import step cannot be omitted.
     const ParameterSystem par_sys(solcore_config.loadGroup("Parameters"), ini_finfo.absolutePath());
     const QMap<QString, QString> mat_map = solcore_config.loadGroup("Materials");
     for (QMap<QString, QString>::const_iterator it = mat_map.cbegin(); it not_eq mat_map.cend(); it++) {
         try {
             const QString& mat_name = it.key();
-            const QDir mat_dir = it.value();
+            QString mat_path = it.value();
+            mat_path.replace("SOLCORE_ROOT", ini_finfo.absolutePath());
+            const QDir mat_dir(mat_path);
+            QList<std::pair<double, QList<double>>> n_wl;
+            QList<std::pair<double, QList<double>>> n_data;
+            QList<std::pair<double, QList<double>>> k_wl;
+            QList<std::pair<double, QList<double>>> k_data;
+            static const QRegularExpression ws_regexp("\\s+");
+            QString line;
+            QStringList ln_data;
             if (par_sys.isComposition(mat_name, "x")) {
                 const QDir n_dir = mat_dir.filePath("n");
                 const QDir k_dir = mat_dir.filePath("k");
                 if (not n_dir.exists() or not k_dir.exists()) {
                     throw std::runtime_error("Cannot find n and k folder for composition material " + mat_name.toStdString());
                 }
-                const QFileInfoList n_flist = n_dir.entryInfoList();
-                const QFileInfoList k_flist = k_dir.entryInfoList();
-                QList<std::pair<double, QList<double>>> n_wl;
-                QList<std::pair<double, QList<double>>> n_data;
-                QList<std::pair<double, QList<double>>> k_wl;
-                QList<std::pair<double, QList<double>>> k_data;
+                const QFileInfoList n_flist = n_dir.entryInfoList(QDir::Files);
+                const QFileInfoList k_flist = k_dir.entryInfoList(QDir::Files);
                 for (const QFileInfo& n_info : n_flist) {
-                    // not_eq "critical_points"
-                    const QString main_fraction_str = n_info.baseName().split('_').front();
-                    QFile n_file(n_info.fileName());
-                    if (not n_file.open(QIODevice::ReadOnly)) {
-                        throw std::runtime_error("Cannot open file " + n_info.fileName().toStdString());
-                    }
-                    QTextStream n_stream(&n_file);
-                    QList<double> frac_n_wl;
-                    QList<double> frac_n_data;
-                    while (not n_stream.atEnd()) {
-                        const QString line = n_stream.readLine();
-                        // Clazy: Don't create temporary QRegularExpression objects.
-                        // Use a static QRegularExpression object instead
-                        static const QRegularExpression ws_regexp("\\s+");
-                        const QStringList ln_data = line.split(ws_regexp);
-                        if (ln_data.length() not_eq 2) {
-                            throw std::runtime_error("Error parsing file " + n_info.fileName().toStdString());
+                    if (n_info.fileName() not_eq "critical_points.txt") {
+                        // Warning: use completeBaseName() instead of baseName() to leave out all before the last dot!
+                        const QString main_fraction_str = n_info.completeBaseName().split('_').front();
+                        QFile n_file(n_info.filePath());  // use filePath() rather than fileName()!
+                        if (not n_file.open(QIODevice::ReadOnly)) {
+                            throw std::runtime_error("Cannot open file " + n_info.filePath().toStdString());
                         }
-                        frac_n_wl.emplace_back(ln_data.front().toDouble());
-                        frac_n_data.emplace_back(ln_data.back().toDouble());
+                        QTextStream n_stream(&n_file);
+                        QList<double> frac_n_wl;
+                        QList<double> frac_n_data;
+                        while (not n_stream.atEnd()) {
+                            line = n_stream.readLine();
+                            // Clazy: Don't create temporary QRegularExpression objects.
+                            // Use a static QRegularExpression object instead
+                            ln_data = line.split(ws_regexp);
+                            if (ln_data.length() not_eq 2) {
+                                throw std::runtime_error("Error parsing file " + n_info.filePath().toStdString());
+                            }
+                            frac_n_wl.emplace_back(ln_data.front().toDouble());
+                            frac_n_data.emplace_back(ln_data.back().toDouble());
+                        }
+                        n_file.close();
+                        n_wl.emplace_back(main_fraction_str.toDouble(), frac_n_wl);
+                        n_data.emplace_back(main_fraction_str.toDouble(), frac_n_data);
                     }
-                    n_file.close();
-                    n_wl.emplace_back(main_fraction_str.toDouble(), frac_n_wl);
-                    n_data.emplace_back(main_fraction_str.toDouble(), frac_n_data);
                 }
                 for (const QFileInfo& k_info : k_flist) {
-                    // not_eq "critical_points"
-                    const QString main_fraction_str = k_info.baseName().split('_').front();
-                    QFile k_file(k_info.fileName());
-                    if (not k_file.open(QIODevice::ReadOnly)) {
-                        throw std::runtime_error("Cannot open file " + k_info.fileName().toStdString());
-                    }
-                    QTextStream k_stream(&k_file);
-                    QList<double> frac_k_wl;
-                    QList<double> frac_k_data;
-                    while (not k_stream.atEnd()) {
-                        const QString line = k_stream.readLine();
-                        static const QRegularExpression ws_regexp("\\s+");
-                        const QStringList ln_data = line.split(ws_regexp);
-                        if (ln_data.length() not_eq 2) {
-                            throw std::runtime_error("Error parsing file " + k_info.fileName().toStdString());
+                    if (k_info.fileName() not_eq "critical_points.txt") {
+                        const QString main_fraction_str = k_info.completeBaseName().split('_').front();
+                        QFile k_file(k_info.filePath());
+                        if (not k_file.open(QIODevice::ReadOnly)) {
+                            throw std::runtime_error("Cannot open file " + k_info.filePath().toStdString());
                         }
-                        frac_k_wl.emplace_back(ln_data.front().toDouble());
-                        frac_k_data.emplace_back(ln_data.back().toDouble());
+                        QTextStream k_stream(&k_file);
+                        QList<double> frac_k_wl;
+                        QList<double> frac_k_data;
+                        while (not k_stream.atEnd()) {
+                            line = k_stream.readLine();
+                            ln_data = line.split(ws_regexp);
+                            if (ln_data.length() not_eq 2) {
+                                throw std::runtime_error("Error parsing file " + k_info.filePath().toStdString());
+                            }
+                            frac_k_wl.emplace_back(ln_data.front().toDouble());
+                            frac_k_data.emplace_back(ln_data.back().toDouble());
+                        }
+                        k_file.close();
+                        k_wl.emplace_back(main_fraction_str.toDouble(), frac_k_wl);
+                        k_data.emplace_back(main_fraction_str.toDouble(), frac_k_data);
                     }
-                    k_file.close();
-                    k_wl.emplace_back(main_fraction_str.toDouble(), frac_k_wl);
-                    k_data.emplace_back(main_fraction_str.toDouble(), frac_k_data);
                 }
-                auto *opt_mat = new OpticMaterial<QList<double>>(mat_name, n_wl, n_data, k_wl, k_data);
-                beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
-                m_list.insert(mat_name, opt_mat);
-                endInsertRows();
-                emit dataChanged(index(0), index(static_cast<int>(m_list.size()) - 1));
+            } else {
+                QFile n_file = mat_dir.filePath("n.txt");
+                QFile k_file = mat_dir.filePath("k.txt");
+                if (not n_file.open(QIODevice::ReadOnly)) {
+                    throw std::runtime_error("Cannot open file " + n_file.fileName().toStdString());
+                }
+                if (not k_file.open(QIODevice::ReadOnly)) {
+                    throw std::runtime_error("Cannot open file " + k_file.fileName().toStdString());
+                }
+                QTextStream n_stream(&n_file);
+                QTextStream k_stream(&k_file);
+                QList<double> frac_n_wl;
+                QList<double> frac_n_data;
+                QList<double> frac_k_wl;
+                QList<double> frac_k_data;
+                while (not n_stream.atEnd()) {
+                    line = n_stream.readLine();
+                    ln_data = line.split(ws_regexp);
+                    if (ln_data.length() not_eq 2) {
+                        throw std::runtime_error("Error parsing file " + n_file.fileName().toStdString());
+                    }
+                    frac_n_wl.emplace_back(ln_data.front().toDouble());
+                    frac_n_data.emplace_back(ln_data.back().toDouble());
+                }
+                while (not k_stream.atEnd()) {
+                    line = k_stream.readLine();
+                    ln_data = line.split(ws_regexp);
+                    if (ln_data.length() not_eq 2) {
+                        throw std::runtime_error("Error parsing file " + k_file.fileName().toStdString());
+                    }
+                    frac_k_wl.emplace_back(ln_data.front().toDouble());
+                    frac_k_data.emplace_back(ln_data.back().toDouble());
+                }
+                n_file.close();
+                k_file.close();
+                n_wl.emplace_back(1, frac_n_wl);
+                n_data.emplace_back(1, frac_n_data);
+                k_wl.emplace_back(1, frac_k_wl);
+                k_data.emplace_back(1, frac_k_data);
             }
-            setProgress(static_cast<int>(std::distance(mat_map.cbegin(), it) / mat_map.size()));
+            auto *opt_mat = new OpticMaterial<QList<double>>(mat_name, n_wl, n_data, k_wl, k_data);
+            beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
+            m_list.insert(mat_name, opt_mat);
+            endInsertRows();
+            // emit dataChanged(index(0), index(static_cast<int>(m_list.size()) - 1));
+            setProgress(static_cast<double>(std::distance(mat_map.cbegin(), it) + 1) / static_cast<double>(mat_map.size()));
         } catch (std::runtime_error& e) {
             qWarning(e.what());
             return 2;
@@ -338,7 +391,7 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
         beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
         m_list.insert(it.key(), opt_mat);
         endInsertRows();
-        emit dataChanged(index(0), index(static_cast<int>(m_list.size()) - 1));
+        // emit dataChanged(index(0), index(static_cast<int>(m_list.size()) - 1));
         setProgress(static_cast<double>(std::distance(mat_name_indices.cbegin(), it) + 1) / static_cast<double>(mat_name_indices.size()));
     }
     return 0;

@@ -12,7 +12,7 @@ qt6_add_qml_module(content
         Splash.qml
         WelcomePage.qml
         WelcomePageForm.ui.qml
-        OpticalMaterialDialog.qml
+        OpticalMaterialDialog.qml  # cannot be omitted
         OpticalParsetPage.qml
         OpticalParsetPageForm.ui.qml
         ElectricalParsetPage.qml

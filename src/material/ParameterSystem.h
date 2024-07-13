@@ -10,7 +10,7 @@
 class ParameterSystem {
 public:
     ParameterSystem(const QMap<QString, QString>& par_map, const QString& root_path);
-    bool isComposition(const QString& mat_name, const QString& key) const;
+    [[nodiscard]] bool isComposition(const QString& mat_name, const QString& key) const;
 
 private:
     QSettings par_settings;

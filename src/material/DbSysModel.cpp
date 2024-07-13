@@ -4,6 +4,8 @@
 
 #include "DbSysModel.h"
 
+DbSysModel* DbSysModel::m_instance = nullptr;
+
 DbSysModel::DbSysModel(QObject *parent) : QAbstractListModel(parent) {
     auto *solcore_model = new MaterialDbModel(parent, "Solcore");
     auto *df_model = new MaterialDbModel(parent, "Df");
@@ -72,9 +74,11 @@ void DbSysModel::addModel(MaterialDbModel *db_model) {
 
 OpticMaterial<QList<double>> *DbSysModel::getMatByName(const QString &mat_name) const {
     for (const MaterialDbModel *mat_db : m_db) {
-        OpticMaterial<QList<double>> *opt_mat = mat_db->getMatByName(mat_name);
-        if (opt_mat) {
-            return opt_mat;
+        if (mat_db->checked()) {
+            OpticMaterial<QList<double>> *opt_mat = mat_db->getMatByName(mat_name);
+            if (opt_mat) {
+                return opt_mat;
+            }
         }
     }
     qWarning() << mat_name << " not found in DbSysModel";
@@ -89,6 +93,13 @@ QHash<int, QByteArray> DbSysModel::roleNames() const {
     roles[ProgressRole] = "progress";
     roles[ModelRole] = "db_model";
     return roles;
+}
+
+DbSysModel *DbSysModel::instance() {
+    if (not m_instance) {
+        m_instance = new DbSysModel();
+    }
+    return m_instance;
 }
 
 void DbSysModel::onProgressChanged() {

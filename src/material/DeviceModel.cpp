@@ -2,9 +2,10 @@
 // Created by Yihua Liu on 2024-7-1.
 //
 
+#include <numeric>
+#include <ranges>
 #include <set>
 #include <QDir>
-#include <QQmlEngine>
 #include <QUrl>
 
 #include "DbSysModel.h"
@@ -61,6 +62,7 @@ QString DeviceModel::name() const {
 }
 
 template<typename T>
+requires std::same_as<T, QString> || std::same_as<T, double>
 QList<T> import_single_property(const QList<QStringList> &data,
                                 const std::map<QString, qsizetype> &property_in,
                                 const std::set<QString> &possible_headers,
@@ -75,11 +77,8 @@ QList<T> import_single_property(const QList<QStringList> &data,
             for (qsizetype rc = start_row; rc <= end_row; rc++) {
                 if constexpr (std::same_as<T, QString>) {
                     property[i++] = data.at(rc).at(index);
-                } else if constexpr (std::same_as<T, double>) {
+                } else {  // std::same_as<T, double>
                     property[i++] = data.at(rc).at(index).toDouble();
-                } else {
-                    static_assert(std::is_same_v<T, void>,
-                            "Function import_single_property does not accept types other than QString and double.");
                 }
             }
             return property;
@@ -116,58 +115,96 @@ bool DeviceModel::readDfDev(const QString &db_path) {
     }
     qsizetype start_row;
     qsizetype end_row;
-    try {  // ELECTRODE, LAYER, INTERFACE, ACTIVE
-        qsizetype layer_type_index = properties.at("layer_type");
-        if (csv_data.at(1).at(layer_type_index) == "electrode") {
-            start_row = 2;
-            end_row = maxRow - 2;
-        } else {  // no electrode
-            start_row = 1;
-            end_row = maxRow - 1;
-        }
-        QList<QString> layer_type(start_row + end_row - 1);
-        int i = 0;
-        for (qsizetype rc = start_row; rc <= end_row; rc++) {
-            layer_type[i++] = csv_data.at(rc).at(layer_type_index);
-        }
-    } catch (std::out_of_range &e) {
+    if (properties.find("layer_type") == properties.cend()) {
         qWarning("No layer type (layer_type) defined in .csv."
                  "layer_type must be defined when using .csv input file");
         return false;
     }
+    qsizetype layer_type_index = properties.at("layer_type");  // ELECTRODE, LAYER, INTERFACE, ACTIVE
+    if (csv_data.at(1).at(layer_type_index) == "electrode") {
+        start_row = 2;
+    } else {  // no front surface electrode
+        start_row = 1;
+        qWarning("Missing front surface electrode; RAT calculation is disabled.");
+    }
+    if (csv_data.at(maxRow - 1).at(layer_type_index) == "electrode") {
+        end_row = maxRow - 2;
+    } else {  // no back surface electrode
+        end_row = maxRow - 1;
+        qWarning("Missing back surface electrode; RAT calculation is disabled.");
+    }
+    QList<QString> layer_type(end_row - start_row + 1);
+    for (const auto [i, rc] : std::views::enumerate(std::views::iota(start_row, end_row))) {
+        layer_type[static_cast<qsizetype>(i)] = csv_data.at(rc).at(layer_type_index);
+    }
     try {
+        // This material list contains both layers and interfaces (typical structure has a size of 5).
         QList<QString> material = import_single_property<QString>(csv_data, properties, {"material", "stack"}, start_row, end_row);
-        // Access DbSysModel singleton
-        QQmlEngine *engine = qmlEngine(this);
-        if (not engine) {
-            qWarning("QML Engine not found!");
-            return false;
-        }
-        auto *db_system = engine->singletonInstance<DbSysModel*>("com.github.yihuajack.DbSysModel", "DbSysModel");
-        if (not db_system) {
-            qWarning("QML singleton instance DbSysModel does not exist.");
-            return false;
-        }
-        const qsizetype sz_mat = material.size();
-        std::vector<std::pair<OpticMaterial<QList<double>> *, double>> structure(sz_mat);
         QList<double> d = import_single_property<double>(csv_data, properties, {"dcell", "d", "thickness"}, start_row, end_row);
+        const qsizetype sz_mat = material.size();
         if (d.size() not_eq sz_mat) {
             qWarning("Size of thickness does not match size of material!");
             return false;
         }
-        for (qsizetype i = 0; i < sz_mat - 1; i++) {
-            structure.emplace_back(db_system->getMatByName(material.at(i)), d.at(i));
+        QString side_str = csv_data.at(properties.at("side")).at(1);
+        bool side = false;  // left
+        if (side_str == "right" or side_str == "2") {
+            side = true;
+        } else if (side_str not_eq "left" and side_str not_eq "1") {
+            qWarning("Side property is not correctly specified.");
+            return false;
         }
-        auto *stack = (start_row == 2) ? new OpticStack<QList<double>>(std::move(structure), false, db_system->getMatByName(material.back())) : new OpticStack<QList<double>>(std::move(structure));
-        wavelengths = structure.front().first->nWl();
-        const rat_dict<double> rat_out = calculate_rat<QList<double>>(stack, std::forward<QList<double>>(wavelengths), 0, 's', false);
-        const std::valarray<double> R_va = std::get<std::valarray<double>>(rat_out.at("R"));
-        R = {std::begin(R_va), std::end(R_va)};
-        const std::valarray<double> A_va = std::get<std::valarray<double>>(rat_out.at("A"));
-        A = {std::begin(A_va), std::end(A_va)};
-        const std::valarray<double> T_va = std::get<std::valarray<double>>(rat_out.at("T"));
-        T = {std::begin(T_va), std::end(T_va)};
-        delete stack;
+        if (start_row == 2 and end_row == maxRow - 1) {  // wl & RAT for this case only
+            QList<QString> opt_material = import_single_property<QString>(csv_data, properties, {"material", "stack"}, 1, maxRow - 1);  // include electrodes
+            // Access DbSysModel singleton
+            // QQmlEngine *engine = QQmlEngine::contextForObject(this)->engine();
+            // if (not engine) {
+            //     qWarning("QML Engine not found!");
+            //     return false;
+            // }
+            // auto *db_system = engine->singletonInstance<DbSysModel*>("com.github.yihuajack.DbSysModel", "DbSysModel");
+            // https://stackoverflow.com/questions/25403363/how-to-implement-a-singleton-provider-for-qmlregistersingletontype
+            // https://stackoverflow.com/questions/50073626/reference-to-qml-singleton-class-instance
+            DbSysModel *db_system = DbSysModel::instance();
+            if (not db_system) {
+                qWarning("QML singleton instance DbSysModel does not exist.");
+                return false;
+            }
+            QList<double> opt_d = import_single_property<double>(csv_data, properties, {"dcell", "d", "thickness"}, 1, maxRow - 1);  // include front surface electrode
+            std::vector<std::pair<OpticMaterial<QList<double>> *, double>> structure;
+            if (opt_material.front().isEmpty()) {  // Default front surface
+                opt_material.front() = "ITO";
+            }
+            if (opt_material.end()->isEmpty()) {  // Default back surface
+                opt_material.back() = "Ag";
+            }
+            if (opt_d.front() == 0) {  // Default front surface thickness
+                opt_d.front() = 5e-8;
+            }
+            if (side) {  // right; need to reverse
+                for (qsizetype i = maxRow - 2; i >= 0; i--) {  // does not include the substrate
+                    if (layer_type.at(i) not_eq "interface") {
+                        structure.emplace_back(db_system->getMatByName(opt_material.at(i)), d.at(i));
+                    }
+                }
+            } else {
+                for (qsizetype i = 0; i < maxRow - 1; i++) {
+                    if (layer_type.at(i) not_eq "interface") {
+                        structure.emplace_back(db_system->getMatByName(opt_material.at(i)), d.at(i));
+                    }
+                }
+            }
+            wavelengths = structure.front().first->nWl();  // Warning: structure will be "moved" next!
+            auto *stack = new OpticStack<QList<double>>(std::move(structure), false, db_system->getMatByName(material.back()));
+            const rat_dict<double> rat_out = calculate_rat<QList<double>>(stack, std::forward<QList<double>>(wavelengths), 0, 's');
+            const std::valarray<double> R_va = std::get<std::valarray<double>>(rat_out.at("R"));
+            R = {std::begin(R_va), std::end(R_va)};
+            const std::valarray<double> A_va = std::get<std::valarray<double>>(rat_out.at("A"));
+            A = {std::begin(A_va), std::end(A_va)};
+            const std::valarray<double> T_va = std::get<std::valarray<double>>(rat_out.at("T"));
+            T = {std::begin(T_va), std::end(T_va)};
+            delete stack;
+        }
         m_data["d"] = d;
     } catch (std::out_of_range &e) {
         qWarning(e.what());
