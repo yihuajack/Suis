@@ -153,6 +153,10 @@ int MaterialDbModel::readSolcoreDb(const QString& db_path) {
         ini_file.setFileName(db_path_imported);
     }
     const QFileInfo ini_finfo(db_path_imported);  // for later get the parent directory as the root path
+    if (not ini_finfo.exists() or not ini_finfo.isFile()) {
+        qWarning("Database path is not an existing file!");
+        return 1;
+    }
     if (not ini_file.open(QIODevice::ReadOnly)) {
         qWarning("Cannot open the configuration ini file %s.", qUtf8Printable(db_path));
         return 1;

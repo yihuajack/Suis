@@ -146,11 +146,11 @@ bool DeviceModel::readDfDev(const QString &db_path) {
             qWarning("Size of thickness does not match size of material!");
             return false;
         }
-        QString side_str = csv_data.at(properties.at("side")).at(1);
+        QString side_str = csv_data.at(1).at(properties.at("side"));  // Row first!
         bool side = false;  // left
-        if (side_str == "right" or side_str == "2") {
+        if (side_str == "right" or side_str.toUInt() == 2) {
             side = true;
-        } else if (side_str not_eq "left" and side_str not_eq "1") {
+        } else if (side_str not_eq "left" and side_str.toUInt() == 1) {
             qWarning("Side property is not correctly specified.");
             return false;
         }
@@ -194,23 +194,35 @@ bool DeviceModel::readDfDev(const QString &db_path) {
                     }
                 }
             }
-            wavelengths = structure.front().first->nWl();  // Warning: structure will be "moved" next!
-            auto *stack = new OpticStack<QList<double>>(std::move(structure), false, db_system->getMatByName(material.back()));
-            const rat_dict<double> rat_out = calculate_rat<QList<double>>(stack, std::forward<QList<double>>(wavelengths), 0, 's');
+            // For convenience, the wavelengths are expected to be sorted already, but still minmax here.
+            // Since Ubuntu 24.04 has gcc libstdc++ 14, we are able to use std::ranges::to here for supported compilers.
+            // https://en.cppreference.com/w/cpp/compiler_support
+            const std::vector<std::pair<double, double>> minmax_wls = structure | std::views::transform([](const std::pair<OpticMaterial<QList<double>> *, double> &pair) -> std::pair<double, double> {
+                const QList<double> q_wls = pair.first->nWl();
+                const auto [min, max] = std::ranges::minmax_element(q_wls);
+                return {*min, *max};  // Warning: do not return dangling or (const) iterators
+            }) | std::ranges::to<std::vector<std::pair<double, double>>>();
+            const auto [min_minmax_wl, max_min_max_wl] = std::ranges::minmax_element(minmax_wls);
+            const double min_wl = min_minmax_wl->first;
+            const double max_wl = max_min_max_wl->second;
+            std::vector<double> wls_vec = Utils::Math::linspace(min_wl, max_wl, static_cast<std::size_t>((max_wl - min_wl) / 1e-9 + 1));
+            wavelengths = {wls_vec.cbegin(), wls_vec.cend()};
+            auto stack = std::make_unique<OpticStack<QList<double>>>(std::move(structure), false, db_system->getMatByName(material.back()));
+            // calculate_rat<QList<double>&>
+            const rat_dict<double> rat_out = calculate_rat(std::move(stack), wavelengths, 0, 's');
             const std::valarray<double> R_va = std::get<std::valarray<double>>(rat_out.at("R"));
             R = {std::begin(R_va), std::end(R_va)};
             const std::valarray<double> A_va = std::get<std::valarray<double>>(rat_out.at("A"));
             A = {std::begin(A_va), std::end(A_va)};
             const std::valarray<double> T_va = std::get<std::valarray<double>>(rat_out.at("T"));
             T = {std::begin(T_va), std::end(T_va)};
-            delete stack;
         }
         m_data["d"] = d;
     } catch (std::out_of_range &e) {
-        qWarning(e.what());
+        qWarning() << "Out of range in readDfDev " << e.what();
         return false;
     } catch (std::runtime_error &e) {
-        qWarning(e.what());
+        qWarning() << "Runtime error in readDfDev " << e.what();
         return false;
     }
     return true;

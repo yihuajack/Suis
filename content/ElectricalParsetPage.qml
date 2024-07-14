@@ -91,7 +91,9 @@ ElectricalParsetPageForm {
                                 text: "Show RAT"
                                 enabled: false
                                 onClicked: {
+                                    ratChartLoader.active = false
                                     ratChartLoader.source = "OpticalDeviceDialog.qml"
+                                    ratChartLoader.active = true
                                 }
                             }
 
@@ -114,21 +116,21 @@ ElectricalParsetPageForm {
                         }
                     }
 
-                    // Dialog {
-                    //     id: devTableDialog
-                    //     title: "Imported Electrical Materials"
-                    //     width: parent.width * 0.8
-                    //     height: parent.width * 0.6
-                    //     anchors.centerIn: parent
-                    //     modal: true
-                    //     standardButtons: Dialog.Ok
-                    //
-                    //     contentItem: TableView {
-                    //         id: devTView
-                    //         width: parent.width
-                    //         height: parent.height - 20
-                    //     }
-                    // }
+                    Dialog {
+                        id: devTableDialog
+                        title: "Imported Electrical Materials"
+                        width: parent.width * 0.8
+                        height: parent.width * 0.6
+                        anchors.centerIn: parent
+                        modal: true
+                        standardButtons: Dialog.Ok
+
+                        contentItem: TableView {
+                            id: devTView
+                            width: parent.width
+                            height: parent.height - 20
+                        }
+                    }
 
                     Loader {
                         id: ratChartLoader
@@ -143,6 +145,8 @@ ElectricalParsetPageForm {
                         }
                         let status = device.readDfDev(databasePath)
                         editTableButton.enabled = status === true
+                        showRATButton.enabled = status === true
+                        removeButton.enabled = status === true
                         statusIcon.text = status ? "√" : "×"
                     }
                 }

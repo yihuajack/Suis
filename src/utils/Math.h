@@ -11,6 +11,8 @@
 #include <variant>
 #include <vector>
 
+#include "Global.h"
+
 namespace Utils::Math {
     constexpr float TOL = 100;
 
@@ -33,6 +35,34 @@ namespace Utils::Math {
 
     template<typename T>
     auto linspace_va(T start, T stop, std::size_t num) -> std::valarray<T>;
+
+    // If you do not want to import a heap of headers of instances list QList, put the definition here.
+    // Note that the parameter order is different from numpy.interp!
+    template<FloatingList U, FloatingList V>
+    auto interp1_linear(U &&x, U &&y, V &&xi) -> std::remove_reference_t<U> {
+        if (x.size() not_eq y.size()) {
+            throw std::invalid_argument("x and y must have the same length");
+        }
+        if (x.size() < 2) {
+            throw std::invalid_argument("x and y must have at least two elements");
+        }
+        std::remove_reference_t<U> yi(static_cast<typename std::remove_reference_t<U>::value_type>(xi.size()));
+        for (const typename std::remove_reference_t<V>::value_type xi_val : xi) {
+            if (xi_val <= x.front()) {
+                yi.push_back(y.front());
+            } else if (xi_val >= x.back()) {
+                yi.push_back(y.back());
+            } else {
+                for (size_t i = 0; i < x.size() - 1; ++i) {
+                    if (xi_val >= x[i] && xi_val <= x[i+1]) {
+                        yi.push_back(std::lerp(y[i], y[i+1], (xi_val - x[i]) / (x[i+1] - x[i])));
+                        break;
+                    }
+                }
+            }
+        }
+        return yi;
+    }
 }
 
 #endif  // UTILS_MATH_H

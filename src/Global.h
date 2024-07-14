@@ -45,3 +45,10 @@ void asConst(const T &&) = delete;
 template<typename T>
 concept IsComplex = std::is_same_v<T, std::complex<typename T::value_type>>;
 
+template<typename T>
+concept FloatingList = requires(T t) {
+    // { t.size() } -> std::same_as<std::size_t>;
+    // { t.empty() } -> std::same_as<bool>;
+    { t[0] } -> std::convertible_to<typename std::remove_reference_t<T>::value_type>;
+    // { t.push_back(typename T::value_type{}) };
+} && std::floating_point<typename std::remove_reference_t<T>::value_type>;

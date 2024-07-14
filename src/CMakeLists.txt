@@ -33,7 +33,6 @@ target_sources(SuisApp PRIVATE
         optics/OpticStack.cpp
         optics/tmm.cpp
         optics/tmm_vec.cpp
-        optics/TransferMatrix.cpp
         utils/Approx.cpp
         utils/Fs.cpp
         utils/Log.cpp

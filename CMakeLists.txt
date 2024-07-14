@@ -50,9 +50,9 @@ find_package(Boost 1.84.0 REQUIRED)
 # find_package(SQLite3 3.45.0 REQUIRED)
 # Check default CMAKE_FIND_LIBRARY_SUFFIXES in Modules/CMakeGenericSystem.cmake ("lib"/[".so" ".a"]) and
 # Modules/Platform/Windows.cmake (["" "lib"]/["dll.lib" ".lib" ".a"]) for MSVC
-SET(CMAKE_FIND_LIBRARY_PREFIXES "lib")
-SET(CMAKE_FIND_LIBRARY_SUFFIXES ".dll.a")
-find_package(Octave REQUIRED COMPONENTS Development Interpreter)
+# SET(CMAKE_FIND_LIBRARY_PREFIXES "lib")
+# SET(CMAKE_FIND_LIBRARY_SUFFIXES ".dll.a")
+# find_package(Octave REQUIRED COMPONENTS Development Interpreter)
 add_definitions(-DCMAKE_EXPECTED_Octave_VERSION=${Octave_VERSION})
 
 include_directories(${Boost_INCLUDE_DIRS})
@@ -90,10 +90,10 @@ target_link_libraries(SuisApp PRIVATE
         Qt6::Qml
         Qt6::Quick
         QXlsx::QXlsx
-        Octave::Octave
+        # Octave::Octave
 )
 
-target_include_directories(SuisApp PRIVATE ${Octave_INCLUDE_DIRS})
+# target_include_directories(SuisApp PRIVATE ${Octave_INCLUDE_DIRS})
 
 install(TARGETS SuisApp
         BUNDLE DESTINATION .
