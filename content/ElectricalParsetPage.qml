@@ -91,6 +91,7 @@ ElectricalParsetPageForm {
                                 text: "Show RAT"
                                 enabled: false
                                 onClicked: {
+                                    device.calcRAT()
                                     ratChartLoader.active = false
                                     ratChartLoader.source = "OpticalDeviceDialog.qml"
                                     ratChartLoader.active = true
@@ -110,7 +111,7 @@ ElectricalParsetPageForm {
 
                     FileDialog {
                         id: devFileDialog
-                        title: qsTr("Select Database File")
+                        title: qsTr("Select Device File")
                         onAccepted: {
                             importDev(selectedFile)
                         }

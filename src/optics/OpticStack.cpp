@@ -22,7 +22,7 @@ U OpticStack<T>::get_widths() {
         U widths(sz_struct + 3);
         widths[0] = INFINITY;
         for (std::size_t i = 1; i <= sz_struct; i++) {
-            widths[i] = structure.at(i).second;
+            widths[i] = structure.at(i - 1).second;
         }
         widths[sz_struct + 1] = 1e-3;
         widths[sz_struct + 2] = INFINITY;
@@ -31,7 +31,7 @@ U OpticStack<T>::get_widths() {
         U widths(sz_struct + 2);
         widths[0] = INFINITY;
         for (std::size_t i = 1; i <= sz_struct; i++) {
-            widths[i] = structure.at(i).second;
+            widths[i] = structure.at(i - 1).second;
         }
         widths[sz_struct + 1] = INFINITY;
         return widths;

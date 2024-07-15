@@ -93,7 +93,7 @@ public:
     requires std::same_as<U, std::valarray<std::complex<typename T::value_type>>>
     U get_indices(T_WL &&wavelength) {
         const std::size_t sz_wl = wavelength.size();
-        U indices(1, sz_wl * num_mat_layers);
+        U indices(1, sz_wl * (num_mat_layers + 1));
         if (incidence) {
             const QList<double> n_data = incidence->n_interpolated(wavelength);
             const QList<double> k_data = incidence->k_interpolated(wavelength);

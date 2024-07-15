@@ -8,6 +8,7 @@
 #include <QAbstractTableModel>
 #include <QQmlEngine>
 
+#include "core/ParameterClass.h"
 #include "optics/OpticStack.h"
 
 class DeviceModel : public QAbstractTableModel {
@@ -33,18 +34,24 @@ public:
     [[nodiscard]] QString name() const;
 
     Q_INVOKABLE bool readDfDev(const QString &db_path);
+    Q_INVOKABLE void calcRAT();
 
 protected:
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
 
 private:
-    QMap<QString, QList<double>> m_data;
-
+    ParameterClass par;  // by column
     QString m_name;
+
+    // for calcRAT()
+    QList<QString> opt_material;
+    QList<double> opt_d;
     QList<double> wavelengths;
     QList<double> R;
     QList<double> A;
     QList<double> T;
+
+    bool import_properties(const QList<QStringList> &data, const std::map<QString, qsizetype> &properties);
 };
 
 #endif  // SUISAPP_DEVICEMODEL_H

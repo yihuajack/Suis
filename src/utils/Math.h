@@ -7,6 +7,7 @@
 
 #include <complex>
 #include <limits>
+#include <ranges>
 #include <valarray>
 #include <variant>
 #include <vector>
@@ -47,15 +48,16 @@ namespace Utils::Math {
             throw std::invalid_argument("x and y must have at least two elements");
         }
         std::remove_reference_t<U> yi(static_cast<typename std::remove_reference_t<U>::value_type>(xi.size()));
-        for (const typename std::remove_reference_t<V>::value_type xi_val : xi) {
+        // const typename std::remove_reference_t<V>::value_type xi_val
+        for (const auto [i, xi_val] : std::views::enumerate(xi)) {
             if (xi_val <= x.front()) {
-                yi.push_back(y.front());
+                yi[i] = y.front();
             } else if (xi_val >= x.back()) {
-                yi.push_back(y.back());
+                yi[i] = y.back();
             } else {
-                for (size_t i = 0; i < x.size() - 1; ++i) {
-                    if (xi_val >= x[i] && xi_val <= x[i+1]) {
-                        yi.push_back(std::lerp(y[i], y[i+1], (xi_val - x[i]) / (x[i+1] - x[i])));
+                for (size_t j = 0; j < x.size() - 1; ++j) {
+                    if (xi_val >= x[j] && xi_val <= x[j + 1]) {
+                        yi[i] = std::lerp(y[j], y[j + 1], (xi_val - x[j]) / (x[j + 1] - x[j]));
                         break;
                     }
                 }
