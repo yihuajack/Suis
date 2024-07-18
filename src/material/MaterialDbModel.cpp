@@ -406,7 +406,7 @@ OpticMaterial<QList<double>> *MaterialDbModel::getMatByName(const QString &mat_n
         OpticMaterial<QList<double>> *opt_mat = m_list[mat_name];
         return opt_mat;
     } else {
-        qInfo() << mat_name << " not found in MaterialDbModel";
+        qDebug() << mat_name << "not found in MaterialDbModel" << m_name;
         return nullptr;
     }
 }

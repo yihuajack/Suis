@@ -7,6 +7,7 @@
 #include <set>
 #include <QDir>
 #include <QUrl>
+#include <QtGui/QGuiApplication>
 
 #include "DbSysModel.h"
 #include "DeviceModel.h"
@@ -16,51 +17,76 @@ DeviceModel::DeviceModel(QObject *parent) : QAbstractTableModel(parent) {}
 
 int DeviceModel::rowCount(const QModelIndex &parent) const {
     Q_UNUSED(parent)
-    return static_cast<int>(m_data.size());
+    return static_cast<int>(ParameterClass<QList, double, QString, QVariant>::size);
 }
 
 int DeviceModel::columnCount(const QModelIndex &parent) const {
     Q_UNUSED(parent)
-    return m_data.empty() ? 0 : static_cast<int>(m_data["d"].size());
+    return static_cast<int>(par.layer_type.size());
 }
 
 QVariant DeviceModel::data(const QModelIndex &index, int role) const {
-    if (not index.isValid() or index.row() >= m_data.count()) {
+    if (not index.isValid() or index.row() >= ParameterClass<QList, double, QString, QVariant>::size) {
         qWarning("QModelIndex of DeviceModel is invalid.");
         return {};
     }
-    QMap<QString, QList<double>>::const_iterator it = m_data.cbegin();
-    std::advance(it, index.row());
-    switch (role) {
-        case Qt::DisplayRole:
-            return m_data[index.row()][index.column()];
-        case NameRole:
-            return it.key();
-        case WlRole:
-            return QVariant::fromValue(wavelengths);
-        case RRole:
-            return QVariant::fromValue(R);
-        case ARole:
-            return QVariant::fromValue(A);
-        case TRole:
-            return QVariant::fromValue(T);
-        default:
-            return {};
+    if (role == Qt::DisplayRole) {
+        return par.get(index.row()).toList().at(index.column());
+    } else {
+        return {};
     }
 }
 
-QHash<int, QByteArray> DeviceModel::roleNames() const {
-    QHash<int, QByteArray> roles;
-    roles[NameRole] = "name";
-    roles[WlRole] = "wavelength";
-    roles[RRole] = "R";
-    roles[ARole] = "A";
-    roles[TRole] = "T";
-    return roles;
+bool DeviceModel::setData(const QModelIndex &index, const QVariant &value, int role) {
+    // if (not index.isValid() or index.row() >= ParameterClass<QList, double, QString, QVariant>::size or role not_eq Qt::EditRole) {
+    //     return false;
+    // }
+    if (role == Qt::DisplayRole) {
+        QVariant cellData = par.get(index.row()).toList().at(index.column());
+        if (value == cellData) {
+            return false;
+        }
+        par.set(value, index.row(), index.column());
+    }
+    emit dataChanged(index, index, {role});
+    qInfo("setData of DeviceModel");
+    return true;
+}
+
+Qt::ItemFlags DeviceModel::flags(const QModelIndex &index) const {
+    // if (not index.isValid()) {
+    //     return Qt::NoItemFlags;
+    // }
+    // return QAbstractTableModel::flags(index) | Qt::ItemIsEditable;
+    Q_UNUSED(index)
+    return Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsEditable;
 }
 
 QString DeviceModel::name() const {
     return m_name;
+}
+
+QList<double> DeviceModel::wavelength() const {
+    return wavelengths;
+}
+
+QList<double> DeviceModel::readR() const {
+    return R;
+}
+
+QList<double> DeviceModel::readA() const {
+    return A;
+}
+
+QList<double> DeviceModel::readT() const {
+    return T;
+}
+
+Q_INVOKABLE QVariant DeviceModel::headerData(int section, Qt::Orientation orientation, int role) const {
+    if (role not_eq Qt::DisplayRole) {
+        return {};
+    }
+    return orientation == Qt::Horizontal ? par.layer_type.at(section) : par.headers.at(section);
 }
 
 template<typename T>
@@ -79,7 +105,8 @@ QList<T> import_single_property(const QList<QStringList> &data,
                 if constexpr (std::same_as<T, QString>) {
                     property[i++] = data.at(rc).at(index);
                 } else if constexpr (std::same_as<T, double>) {
-                    property[i++] = data.at(rc).at(index).toDouble();
+                    QString double_str = data.at(rc).at(index);
+                    property[i++] = double_str.isEmpty() ? NAN : double_str.toDouble();
                 } else if constexpr (std::same_as<T, qsizetype>) {
                     property[i++] = data.at(rc).at(index).toLongLong();
                 } else {
@@ -93,7 +120,7 @@ QList<T> import_single_property(const QList<QStringList> &data,
                             ", using default in PC.");
 }
 
-bool DeviceModel::readDfDev(const QString &db_path) {
+Q_INVOKABLE bool DeviceModel::readDfDev(const QString &db_path) {
     const QUrl url(db_path);
     QString db_path_imported = db_path;
     if (url.isLocalFile()) {
@@ -104,6 +131,7 @@ bool DeviceModel::readDfDev(const QString &db_path) {
         qWarning("Cannot load DriftFusion's device data file %s ", qUtf8Printable(db_path));
         return false;
     }
+    m_name = QFileInfo(doc).baseName();
     QList<QStringList> csv_data;
     QTextStream csv_in(&doc);
     while (not csv_in.atEnd()) {
@@ -130,6 +158,7 @@ bool DeviceModel::import_properties(const QList<QStringList> &csv_data, const st
         return false;
     }
     qsizetype layer_type_index = properties.at("layer_type");  // ELECTRODE, LAYER, INTERFACE, ACTIVE
+    bool has_electrodes = false;
     if (csv_data.at(1).at(layer_type_index) == "electrode") {
         start_row = 2;
     } else {  // no front surface electrode
@@ -138,6 +167,7 @@ bool DeviceModel::import_properties(const QList<QStringList> &csv_data, const st
     }
     if (csv_data.at(maxRow - 1).at(layer_type_index) == "electrode") {
         end_row = maxRow - 2;
+        has_electrodes = start_row == 2;
     } else {  // no back surface electrode
         end_row = maxRow - 1;
         qWarning("Missing back surface electrode; RAT calculation is disabled.");
@@ -157,7 +187,7 @@ bool DeviceModel::import_properties(const QList<QStringList> &csv_data, const st
             qWarning("Size of thickness does not match size of material!");
             return false;
         }
-        if (start_row == 2 and end_row == maxRow - 2) {  // wl & RAT for this case only
+        if (has_electrodes) {  // wl & RAT for this case only
             opt_material = import_single_property<QString>(csv_data, properties, {"material", "stack"}, 1, maxRow - 1);  // include electrodes
             opt_d = import_single_property<double>(csv_data, properties, {"dcell", "d", "thickness"}, 1, maxRow - 1);  // include front surface electrode
         }
@@ -167,6 +197,74 @@ bool DeviceModel::import_properties(const QList<QStringList> &csv_data, const st
         par.xmesh_coeff = import_single_property<double>(csv_data, properties, {"xmesh_coeff"}, start_row, end_row);
         // Electron affinity array
         par.Phi_EA = import_single_property<double>(csv_data, properties, {"Phi_EA", "EA"}, start_row, end_row);
+        // Ionization potential array
+        par.Phi_IP = import_single_property<double>(csv_data, properties, {"Phi_IP", "IP"}, start_row, end_row);
+        // SRH Trap Energy
+        par.Et = import_single_property<double>(csv_data, properties, {"Et", "Et_bulk"}, start_row, end_row);
+        // Equilibrium Fermi energy array
+        QList<double> EF0 = import_single_property<double>(csv_data, properties, {"EF0", "E0"}, 1, maxRow - 1);
+        par.EF0 = EF0.mid(start_row, end_row - start_row + 1);
+        par.Phi_left = EF0.front();
+        par.Phi_right = EF0.back();
+        // Conduction band effective density of states
+        par.Nc = import_single_property<double>(csv_data, properties, {"Nc", "Ncb", "NC", "NCB"}, start_row, end_row);
+        // Valence band effective density of states
+        par.Nv = import_single_property<double>(csv_data, properties, {"Nv", "Ncb", "NV", "NVB"}, start_row, end_row);
+        // Intrinsic anion density
+        par.Nani = import_single_property<double>(csv_data, properties, {"Nani"}, start_row, end_row);
+        // Intrinsic cation density
+        par.Ncat = import_single_property<double>(csv_data, properties, {"Ncat", "Nion"}, start_row, end_row);
+        // Limiting density of anion states
+        par.a_max = import_single_property<double>(csv_data, properties, {"a_max", "amax", "DOSani"}, start_row, end_row);
+        // Limiting density of cation states
+        par.c_max = import_single_property<double>(csv_data, properties, {"c_max", "cmax", "DOScat"}, start_row, end_row);
+        // Electron mobility
+        par.mu_n = import_single_property<double>(csv_data, properties, {"mu_n", "mun", "mue", "mu_e"}, start_row, end_row);
+        // Hole mobility
+        par.mu_p = import_single_property<double>(csv_data, properties, {"mu_p", "mup", "muh", "mu_h"}, start_row, end_row);
+        // Anion mobility
+        par.mu_a = import_single_property<double>(csv_data, properties, {"mu_a", "mua", "mu_ani", "muani"}, start_row, end_row);
+        // Cation mobility
+        par.mu_c = import_single_property<double>(csv_data, properties, {"mu_c", "muc", "mu_cat", "mucat"}, start_row, end_row);
+        // Relative dielectric constant
+        par.epp = import_single_property<double>(csv_data, properties, {"epp", "eppr"}, start_row, end_row);
+        // Uniform volumetric generation rate
+        par.g0 = import_single_property<double>(csv_data, properties, {"g0", "G0"}, start_row, end_row);
+        // Band-to-band recombination coefficient
+        par.B = import_single_property<double>(csv_data, properties, {"B", "krad", "kbtb"}, start_row, end_row);
+        // Electron SRH time constant
+        par.taun = import_single_property<double>(csv_data, properties, {"taun", "taun_SRH"}, start_row, end_row);
+        // Hole SRH time constant
+        par.taup = import_single_property<double>(csv_data, properties, {"taup", "taup_SRH"}, start_row, end_row);
+        // Electron and hole surface recombination velocities
+        if (has_electrodes) {
+            QList<double> sn = import_single_property<double>(csv_data, properties, {"sn"}, 1, maxRow - 1);
+            par.sn = sn.mid(start_row, end_row - start_row + 1);
+            par.sn_l = sn.front();
+            par.sn_r = sn.back();
+            QList<double> sp = import_single_property<double>(csv_data, properties, {"sp"}, 1, maxRow - 1);
+            par.sp = sp.mid(start_row, end_row - start_row + 1);
+            par.sp_l = sp.front();
+            par.sp_r = sp.back();
+        } else {
+            par.sn = import_single_property<double>(csv_data, properties, {"sn"}, start_row, end_row);
+            par.sp = import_single_property<double>(csv_data, properties, {"sp"}, start_row, end_row);
+        }
+        QString optical_model_str;
+        std::map<QString, qsizetype>::const_iterator pit = properties.find("optical_model");
+        if (pit not_eq properties.cend()) {
+            optical_model_str = csv_data.at(1).at(pit->second);
+        } else if (pit = properties.find("OM"); pit not_eq properties.cend()) {
+            optical_model_str = csv_data.at(1).at(pit->second);
+        }
+        if (optical_model_str == "uniform" or optical_model_str.toDouble() == 0) {
+            par.optical_model = false;
+        } else if (optical_model_str == "Beer-Lambert" or optical_model_str.toDouble() == 1) {
+            par.optical_model = true;
+        } else {
+            qWarning("optical_model not recognized - defaulting to 'Beer-Lambert'");
+        }
+        // Illumination side
         QString side_str = csv_data.at(1).at(properties.at("side"));  // Row first!
         if (side_str == "right" or side_str.toDouble() == 2) {  // not toInt() or toUInt()!
             par.side = true;
@@ -184,7 +282,7 @@ bool DeviceModel::import_properties(const QList<QStringList> &csv_data, const st
     return true;
 }
 
-void DeviceModel::calcRAT() {
+Q_INVOKABLE void DeviceModel::calcRAT() {
     // Access DbSysModel singleton
     // QQmlEngine *engine = QQmlEngine::contextForObject(this)->engine();
     // if (not engine) {
@@ -207,7 +305,7 @@ void DeviceModel::calcRAT() {
         if (opt_material.front().isEmpty()) {
             opt_material.front() = "Ag";
         }
-        if (opt_d.back() == 0) {
+        if (std::isnan(opt_d.back())) {
             opt_d.back() = 5e-8;
         }
         structure.emplace_back(db_system->getMatByName(opt_material.back()), opt_d.back());
@@ -248,7 +346,8 @@ void DeviceModel::calcRAT() {
     std::vector<double> wls_vec = Utils::Math::linspace(min_wl, max_wl, static_cast<std::size_t>((max_wl - min_wl) / 1e-9 + 1));
     wavelengths = {wls_vec.cbegin(), wls_vec.cend()};
     try {
-        auto stack = par.side ? std::make_unique<OpticStack<QList<double>>>(std::move(structure), false, db_system->getMatByName(opt_material.back())) : std::make_unique<OpticStack<QList<double>>>(std::move(structure), false, db_system->getMatByName(material.front()));
+        auto stack = par.side ? std::make_unique<OpticStack<QList<double>>>(std::move(structure), false, db_system->getMatByName(opt_material.back())) :
+                std::make_unique<OpticStack<QList<double>>>(std::move(structure), false, db_system->getMatByName(opt_material.front()));
         // calculate_rat<QList<double>&>
         const rat_dict<double> rat_out = calculate_rat(std::move(stack), wavelengths, 0, 's');
         const std::valarray<double> R_va = std::get<std::valarray<double>>(rat_out.at("R"));

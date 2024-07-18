@@ -51,6 +51,8 @@ OpticalParsetPageForm {
                         placeholderText: "Enter the Database Path"
                         text: model.path
                         onEditingFinished: {  // method inherited from TextInput
+                            // cannot merge this condition to importDb()!
+                            // selectedFile will always mismatch this condition
                             if (text.length > 0) {
                                 importDb(text)
                             }
@@ -154,12 +156,13 @@ OpticalParsetPageForm {
             }
 
             function importDb(dbPath) {
-                statusText.text = "Importing optical materials from database"
                 if (dbPath !== model.path) {
+                    statusText.text = "Importing optical materials from database"
                     // It's OK to property string databasePath: "" and databasePath = dbPath
                     // <Unknown File>: Can't assign to existing role 'path' of different type [Url -> String]
                     model.path = dbPath.toString()
                 }
+                // Even for the same path, we should allow re-importing because the same file may change.
                 let status
                 if (model.name === "Solcore") {
                     status = model.db_model.readSolcoreDb(model.path)

@@ -8,16 +8,17 @@ qt6_add_qml_module(content
     RESOURCE_PREFIX "/qt/qml"  # qt_policy(SET QTP0001 NEW)
     QML_FILES
         App.qml
-        SimPage.qml
-        Splash.qml
-        WelcomePage.qml
-        WelcomePageForm.ui.qml
+        DeviceTableDialog.qml
+        ElectricalParsetPage.qml
+        ElectricalParsetPageForm.ui.qml
         OpticalDeviceDialog.qml
         OpticalMaterialDialog.qml  # loader qml files cannot be omitted
         OpticalParsetPage.qml
         OpticalParsetPageForm.ui.qml
-        ElectricalParsetPage.qml
-        ElectricalParsetPageForm.ui.qml
+        SimPage.qml
+        Splash.qml
+        WelcomePage.qml
+        WelcomePageForm.ui.qml
         WizardFlow.qml
         WizardFlowForm.ui.qml
 

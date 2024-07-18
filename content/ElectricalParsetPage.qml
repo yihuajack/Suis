@@ -32,10 +32,11 @@ ElectricalParsetPageForm {
                 model: DevSysModel
 
                 delegate: Item {
-                    width: parent.width
+                    width: devLView.width
                     height: 150
 
                     property string databasePath: ""
+                    // Warning: it is a one-way binding rather than two-way binding!
                     property var device: model.device
 
                     Column {
@@ -53,6 +54,7 @@ ElectricalParsetPageForm {
                                 // QML Row: possible QQuickItem::polish() loop
                                 // QML Row: Row called polish() inside updatePolish() of Row
                                 placeholderText: "Enter the Device Path"
+                                text: databasePath
                                 onEditingFinished: {
                                     if (text.length > 0) {
                                         importDev(text)
@@ -61,7 +63,8 @@ ElectricalParsetPageForm {
                             }
 
                             Text {
-                                id: statusIcon
+                                id: devName
+                                text: ""
                             }
                         }
 
@@ -82,7 +85,9 @@ ElectricalParsetPageForm {
                                 text: "Edit Table"
                                 enabled: false
                                 onClicked: {
-                                    devTableDialog.open()
+                                    ratChartLoader.active = false
+                                    ratChartLoader.source = "DeviceTableDialog.qml"
+                                    ratChartLoader.active = true
                                 }
                             }
 
@@ -101,9 +106,8 @@ ElectricalParsetPageForm {
                             Button {
                                 id: removeButton
                                 text: "Remove"
-                                enabled: false
                                 onClicked: {
-                                    model.removeDevice(index)
+                                    DevSysModel.removeDevice(index)
                                 }
                             }
                         }
@@ -117,20 +121,11 @@ ElectricalParsetPageForm {
                         }
                     }
 
-                    Dialog {
-                        id: devTableDialog
-                        title: "Imported Electrical Materials"
-                        width: parent.width * 0.8
-                        height: parent.width * 0.6
-                        anchors.centerIn: parent
-                        modal: true
-                        standardButtons: Dialog.Ok
+                    Loader {
+                        id: devDialogLoader
+                        asynchronous: true
 
-                        contentItem: TableView {
-                            id: devTView
-                            width: parent.width
-                            height: parent.height - 20
-                        }
+                        onLoaded: item.open()
                     }
 
                     Loader {
@@ -147,8 +142,9 @@ ElectricalParsetPageForm {
                         let status = device.readDfDev(databasePath)
                         editTableButton.enabled = status === true
                         showRATButton.enabled = status === true
-                        removeButton.enabled = status === true
-                        statusIcon.text = status ? "√" : "×"
+                        if (status) {
+                            devName.text = device.name
+                        }
                     }
                 }
             }

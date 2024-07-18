@@ -40,7 +40,7 @@ QVariant DbSysModel::data(const QModelIndex &index, int role) const {
 }
 
 bool DbSysModel::setData(const QModelIndex &index, const QVariant &value, int role) {
-    if (index.row() < 0 or index.row() >= m_db.count()) {
+    if (not index.isValid() or index.row() >= m_db.count()) {
         return false;
     }
     MaterialDbModel *db = m_db[index.row()];
