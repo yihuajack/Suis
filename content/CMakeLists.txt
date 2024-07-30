@@ -8,6 +8,7 @@ qt6_add_qml_module(content
     RESOURCE_PREFIX "/qt/qml"  # qt_policy(SET QTP0001 NEW)
     QML_FILES
         App.qml
+        DbLoginDialog.qml
         DeviceTableDialog.qml
         ElectricalParsetPage.qml
         ElectricalParsetPageForm.ui.qml

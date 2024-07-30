@@ -47,7 +47,7 @@ OpticalParsetPageForm {
                     TextField {
                         id: dbPathTextField
                         width: parent.width
-                        enabled: model.checked
+                        enabled: model.checked && model.name !== "GCL"
                         placeholderText: "Enter the Database Path"
                         text: model.path
                         onEditingFinished: {  // method inherited from TextInput
@@ -77,12 +77,17 @@ OpticalParsetPageForm {
                     text: "Import"
                     enabled: model.checked
                     onClicked: {
-                        if (model.name === "Solcore") {
-                            dbFileDialog.nameFilters = ["*.txt", "*.ini"]
-                        } else if (model.name === "Df") {
+                        if (model.name === "GCL") {
                             dbFileDialog.nameFilters = ["*.xlsx"]
+                            dbLoginDialog.open();
+                        } else {
+                            if (model.name === "Solcore") {
+                                dbFileDialog.nameFilters = ["*.txt", "*.ini"]
+                            } else if (model.name === "Df") {
+                                dbFileDialog.nameFilters = ["*.xlsx"]
+                            }
+                            dbFileDialog.open()
                         }
-                        dbFileDialog.open()
                     }
                 }
 
@@ -102,6 +107,10 @@ OpticalParsetPageForm {
                 onAccepted: {
                     importDb(selectedFile)
                 }
+            }
+
+            DbLoginDialog {
+                id: dbLoginDialog
             }
 
             // Inherit from Popup
@@ -182,7 +191,7 @@ OpticalParsetPageForm {
             case 1:
                 return "Cannot find the path"
             case 2:
-                return "Fail to load the n/k file"
+                return "Fail to load the n/k data"
             default:
                 return "Invalid status"
         }

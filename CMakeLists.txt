@@ -46,14 +46,15 @@ find_package(Qt6 6.7 REQUIRED COMPONENTS Charts Core Gui Qml Quick)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
-find_package(Boost 1.84.0 REQUIRED)
+find_package(Boost 1.85.0 REQUIRED)
+# find_package(Soci 4.0.3 CONFIG REQUIRED)
 # find_package(SQLite3 3.45.0 REQUIRED)
 # Check default CMAKE_FIND_LIBRARY_SUFFIXES in Modules/CMakeGenericSystem.cmake ("lib"/[".so" ".a"]) and
 # Modules/Platform/Windows.cmake (["" "lib"]/["dll.lib" ".lib" ".a"]) for MSVC
 # SET(CMAKE_FIND_LIBRARY_PREFIXES "lib")
 # SET(CMAKE_FIND_LIBRARY_SUFFIXES ".dll.a")
 # find_package(Octave REQUIRED COMPONENTS Development Interpreter)
-add_definitions(-DCMAKE_EXPECTED_Octave_VERSION=${Octave_VERSION})
+# add_definitions(-DCMAKE_EXPECTED_Octave_VERSION=${Octave_VERSION})
 
 include_directories(${Boost_INCLUDE_DIRS})
 # https://stackoverflow.com/questions/74854202/qmltyperegistration-include-path-does-not-acknowledge-subdirectories
@@ -73,6 +74,8 @@ qt_add_resources(SuisApp "configuration"
 )
 
 add_subdirectory(src)
+add_subdirectory(thirdparty)
+include_directories(${ORACLE_INCLUDE_DIR})
 
 include(FetchContent)
 FetchContent_Declare(
@@ -91,12 +94,29 @@ target_link_libraries(SuisApp PRIVATE
         Qt6::Quick
         QXlsx::QXlsx
         # Octave::Octave
+        # https://stackoverflow.com/questions/77140854/how-to-install-soci-db-library-with-vcpkg-on-linux
+        # Using core (loading backends at runtime)
+        # $<IF:$<TARGET_EXISTS:SOCI::soci_core>,SOCI::soci_core,SOCI::soci_core_static>
+        # $<IF:$<TARGET_EXISTS:SOCI::soci_oracle>,SOCI::soci_oracle,SOCI::soci_oracle_static>
+        # https://github.com/SOCI/soci/issues/762
+        # Both Conan and vcpkg only support sqlite3, odbc, mysql, and postgresql backends but not oracle backend.
+        # include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+        # conan_basic_setup(TARGETS)
+        # conan_target_link_libraries(${PROJECT_NAME} ${CONAN_LIBS})
+        # See https://github.com/microsoft/vcpkg/issues/40146
+        # examples/subdir-include/CMakeLists.txt of SOCI/soci
+        Soci::core
+        Soci::oracle
 )
 
 # target_include_directories(SuisApp PRIVATE ${Octave_INCLUDE_DIRS})
 
+include(GNUInstallDirs)
+
 install(TARGETS SuisApp
         BUNDLE DESTINATION .
+        # https://stackoverflow.com/questions/10671916/how-to-copy-dll-files-into-the-same-folder-as-the-executable-using-cmake
+        # avoid soci_core_4_1.dll not found
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
@@ -110,8 +130,6 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/qmlmodules)
 if (LINK_INSIGHT)
     include(${CMAKE_CURRENT_SOURCE_DIR}/insight)
 endif ()
-
-include(GNUInstallDirs)
 
 # make IDEs aware of the QML import path
 set(QML_IMPORT_PATH ${PROJECT_BINARY_DIR}/qml CACHE PATH

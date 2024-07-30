@@ -49,7 +49,7 @@ public:
     Q_INVOKABLE void calcRAT();
 
 private:
-    ParameterClass<QList, double, QString, QVariant> par;  // by column
+    std::unique_ptr<ParameterClass<QList, double, QString>> par;  // by column
     QString m_name;
 
     // for calcRAT()
@@ -59,8 +59,6 @@ private:
     QList<double> R;
     QList<double> A;
     QList<double> T;
-
-    bool import_properties(const QList<QStringList> &data, const std::map<QString, qsizetype> &properties);
 };
 
 #endif  // SUISAPP_DEVICEMODEL_H

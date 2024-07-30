@@ -1,6 +1,7 @@
 target_sources(SuisApp PRIVATE
         # Do not add sources of content qml module here
         # headers
+        core/DistroFun.h
         core/ParameterClass.h
         material/DbSysModel.h
         material/IniConfigParser.h
@@ -25,7 +26,6 @@ target_sources(SuisApp PRIVATE
         ProfilePrivate.h
         SettingsStorage.h
         # sources
-        core/ParameterClass.cpp
         material/DbSysModel.cpp
         material/IniConfigParser.cpp
         material/MaterialDbModel.cpp

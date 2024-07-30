@@ -3,6 +3,7 @@
 //
 
 #include <stdexcept>
+#include <utility>
 #include <QDir>
 #include <QFile>
 #include <QPointer>
@@ -10,7 +11,8 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QUrl>
-#include <utility>
+#include <soci/soci.h>
+#include <soci/oracle/soci-oracle.h>
 #include "xlsxabstractsheet.h"
 #include "xlsxdocument.h"
 #include "xlsxworkbook.h"
@@ -399,6 +401,27 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
         setProgress(static_cast<double>(std::distance(mat_name_indices.cbegin(), it) + 1) / static_cast<double>(mat_name_indices.size()));
     }
     return 0;
+}
+
+int MaterialDbModel::readGCLDb(const QString &user_name, const QString &pw, const QString &db_path) {
+    const std::string connectString = "service=" + db_path.toStdString() + " user=" + user_name.toStdString() +
+                                      " password=" + pw.toStdString();
+    try {
+        soci::session sql("oracle", connectString);
+
+        std::cout << "Successfully connected to \"" << connectString << "\", " << "using \"" << sql.get_backend_name() << "\" backend.\n";
+
+        return 0;
+    } catch (soci::soci_error const& e) {
+        std::cerr << "Connection to \"" << connectString << "\" failed: "
+                  << e.what() << "\n";
+    } catch (std::runtime_error const& e) {
+        std::cerr << "Unexpected standard exception occurred: "
+                  << e.what() << "\n";
+    } catch (...) {
+        std::cerr << "Unexpected unknown exception occurred.\n";
+    }
+    return 1;
 }
 
 OpticMaterial<QList<double>> *MaterialDbModel::getMatByName(const QString &mat_name) const {

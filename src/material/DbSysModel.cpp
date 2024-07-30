@@ -9,8 +9,10 @@ DbSysModel* DbSysModel::m_instance = nullptr;
 DbSysModel::DbSysModel(QObject *parent) : QAbstractListModel(parent) {
     auto *solcore_model = new MaterialDbModel(parent, "Solcore");
     auto *df_model = new MaterialDbModel(parent, "Df");
+    auto *gcl_model = new MaterialDbModel(parent, "GCL");
     addModel(solcore_model);
     addModel(df_model);
+    addModel(gcl_model);
 }
 
 int DbSysModel::rowCount(const QModelIndex &parent) const {
