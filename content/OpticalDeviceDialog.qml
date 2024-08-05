@@ -41,7 +41,7 @@ Dialog {
 
             Component.onCompleted: {
                 for (let i = 0; i < device.wavelength.length; i++) {
-                    rSeries.append(device.wavelength[i] * 1e9, device.R[i]);
+                    rSeries.append(device.wavelength[i] * 1e9, device.R[i])
                 }
             }
         }
@@ -54,7 +54,7 @@ Dialog {
 
             Component.onCompleted: {
                 for (let i = 0; i < device.wavelength.length; i++) {
-                    aSeries.append(device.wavelength[i] * 1e9, device.A[i]);
+                    aSeries.append(device.wavelength[i] * 1e9, device.A[i])
                 }
             }
         }
@@ -67,7 +67,7 @@ Dialog {
 
             Component.onCompleted: {
                 for (let i = 0; i < device.wavelength.length; i++) {
-                    lSeries.append(device.wavelength[i] * 1e9, device.T[i]);
+                    lSeries.append(device.wavelength[i] * 1e9, device.T[i])
                 }
             }
         }

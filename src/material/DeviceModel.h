@@ -16,10 +16,15 @@ class DeviceModel : public QAbstractTableModel {
     QML_ELEMENT
     Q_PROPERTY(QString name READ name)
     // Use properties for wl & RAT because they are not expected to be accessed by model.R/A/T but device.R/A/T!
-    Q_PROPERTY(QList<double> wavelength READ wavelength)
-    Q_PROPERTY(QList<double> R READ readR)
-    Q_PROPERTY(QList<double> A READ readA)
-    Q_PROPERTY(QList<double> T READ readT)
+    Q_PROPERTY(QList<double> wavelength READ wavelength CONSTANT)
+    Q_PROPERTY(QList<double> R READ readR CONSTANT)
+    Q_PROPERTY(QList<double> A READ readA CONSTANT)
+    Q_PROPERTY(QList<double> T READ readT CONSTANT)
+    // QQmlExpression: Expression qrc:/qt/qml/content/BandDiagramDialog.qml: depends on non-NOTIFYable properties
+    Q_PROPERTY(qsizetype col_size READ readColSize CONSTANT);
+    Q_PROPERTY(QList<double> d READ readD CONSTANT)
+    Q_PROPERTY(QList<double> CBM READ readCBM CONSTANT)
+    Q_PROPERTY(QList<double> VBM READ readVBM CONSTANT)
 
 public:
     explicit DeviceModel(QObject *parent = nullptr);
@@ -39,6 +44,10 @@ public:
     [[nodiscard]] QList<double> readR() const;
     [[nodiscard]] QList<double> readA() const;
     [[nodiscard]] QList<double> readT() const;
+    [[nodiscard]] qsizetype readColSize() const;
+    [[nodiscard]] QList<double> readD() const;
+    [[nodiscard]] QList<double> readCBM() const;
+    [[nodiscard]] QList<double> readVBM() const;
 
     // We do not allow editing headers
     Q_INVOKABLE [[nodiscard]] QVariant headerData(int section, Qt::Orientation orientation, int role) const override;

@@ -407,21 +407,20 @@ int MaterialDbModel::readGCLDb(const QString &user_name, const QString &pw, cons
     const std::string connectString = "service=" + db_path.toStdString() + " user=" + user_name.toStdString() +
                                       " password=" + pw.toStdString();
     try {
-        soci::session sql("oracle", connectString);
+        soci::session sql("oracle", connectString);  // soci::oracle
 
-        std::cout << "Successfully connected to \"" << connectString << "\", " << "using \"" << sql.get_backend_name() << "\" backend.\n";
-
-        return 0;
+        qDebug() << "Successfully connected to \"" << connectString << "\", " << "using \"" << sql.get_backend_name() << "\" backend.\n";
     } catch (soci::soci_error const& e) {
-        std::cerr << "Connection to \"" << connectString << "\" failed: "
-                  << e.what() << "\n";
+        qWarning() << "Connection to \"" << connectString << "\" failed: " << e.what();
+        return 1;
     } catch (std::runtime_error const& e) {
-        std::cerr << "Unexpected standard exception occurred: "
-                  << e.what() << "\n";
+        qWarning() << "Unexpected standard exception occurred: " << e.what();
+        return 1;
     } catch (...) {
-        std::cerr << "Unexpected unknown exception occurred.\n";
+        qWarning() << "Unexpected unknown exception occurred.";
+        return 1;
     }
-    return 1;
+    return 0;
 }
 
 OpticMaterial<QList<double>> *MaterialDbModel::getMatByName(const QString &mat_name) const {

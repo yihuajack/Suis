@@ -5,11 +5,12 @@
 #ifndef SUISAPP_PARAMETERCLASS_H
 #define SUISAPP_PARAMETERCLASS_H
 
+#include <print>
 #include <ranges>
 #include <set>
 #include <utility>
 
-#include "DistroFun.h"
+#include "DistFun.h"
 
 enum class SpatialCoordinate {
     CARTESIAN, CYLINDRICAL_POLAR, SPHERICAL_POLAR
@@ -100,7 +101,7 @@ public:
     bool SRHset = true;  // Switch on/off SRH recombination - recommend setting to zero for initial solution
     bool radset = true;  // Switch on/off band-to-band recombination
     SZ_T N_max_variables = 5;  // Total number of allowable variables
-    PROB_DISTRO prob_distro_function = PROB_DISTRO::BLAKEMORE;  // 'Fermi' = Fermi-Dirac, 'Blakemore' = Blakemore approximation, 'Boltzmann' = Boltzmann statistics
+    PROB_DIST prob_dist_function = PROB_DIST::BLAKEMORE;  // 'Fermi' = Fermi-Dirac, 'Blakemore' = Blakemore approximation, 'Boltzmann' = Boltzmann statistics
     F_T gamma_Blakemore = 0.27;  // Blakemore coefficient
     F_T Fermi_limit = 0.2;  // Max allowable limit for Fermi levels beyond the bands [eV]
     SZ_T Fermi_Dn_points = 400;  // No. of points in the Fermi-Dirac look-up table
@@ -236,33 +237,138 @@ public:
     F_T AbsTol = 1e-6;
 
     // Impedance parameters
+    // J_E_func, J_E_func_tilted, and E2_func
 
-    SZ_T col_size = layer_type.size();
+    SZ_T col_size() const {
+        return layer_type.size();
+    }
+
+    /* Getters */
+    F_T gamma() const {
+        switch (prob_dist_function) {
+            case PROB_DIST::BOLTZMANN:
+                return 0;
+            case PROB_DIST::BLAKEMORE:
+                return gamma_Blakemore;
+            default:
+                throw std::runtime_error("prob_dist_function is neither Boltzmann not Blakemore");
+        }
+    }
+    // Get active layer indexes from layer_type
+    SZ_T active_layer() const {
+        auto val_it = std::ranges::find(layer_type, "active");
+        if (val_it == layer_type.cend()) {
+            // If no flag is give assume active layer is middle
+            std::println("No designated 'active' layer - assigning middle layer to be active");
+            return std::round(col_size() / 2);
+        }
+        return std::distance(layer_type.cbegin(), val_it);
+    }
+
+    // Active layer thickness
+    // d_active/d_midactive: active_layer is not a list
+
     // Band gap energies    [eV]
-    L<F_T> Eg() {
-        L<F_T> value;
-        for (SZ_T i = 0; i < Phi_EA.size(); i++) {
-            value.emplace_back(Phi_EA.at(i) - Phi_IP.at(i));
+    L<F_T> Eg() const {
+        L<F_T> value(col_size());
+        for (SZ_T i = 0; i < col_size(); i++) {
+            value[i] = Phi_EA.at(i) - Phi_IP.at(i);
         }
         return value;
     };
+
     // Built-in voltage Vbi based on difference in boundary work functions
-    L<F_T> Vbi() {
-        L<F_T> value;
-        for (SZ_T i = 0; i < Phi_right.size(); i++) {
-            value.emplace_back(Phi_right.at(i) - Phi_left.at(i));
+    L<F_T> Vbi() const {
+        L<F_T> value(col_size());
+        for (SZ_T i = 0; i < col_size(); i++) {
+            value[i] = Phi_right.at(i) - Phi_left.at(i);
         }
         return value;
     };
+
     // Intrinsic Fermi Energies
     // Currently uses Boltzmann stats as approximation should always be
-    L<F_T> Efi() {
-        L<F_T> value;
-        for (SZ_T i = 0; i < Phi_EA.size(); i++) {
-            value.emplace_back(0.5 * (Phi_EA.at(i) - Phi_IP.at(i)) + kB * T);
+    L<F_T> Efi() const {
+        L<F_T> value(col_size());
+        for (SZ_T i = 0; i < col_size(); i++) {
+            value[i] = 0.5 * (Phi_EA.at(i) - Phi_IP.at(i)) + kB * T;
         }
         return value;
     };
+
+    // Donor densities
+    L<F_T> ND() const {
+        return DistFun<L, F_T, STR_T>::nfun(Nc, Phi_EA, EF0, prob_dist_function, T, gamma());
+    }
+
+    // Acceptor densities
+    L<F_T> NA() const {
+        return DistFun<L, F_T, STR_T>::pfun(Nv, Phi_IP, EF0, prob_dist_function, T, gamma());
+    }
+
+    // Intrinsic carrier densities (Boltzmann)
+    L<F_T> ni() const {
+        L<F_T> value(col_size());
+        for (SZ_T i = 0; i < col_size(); i++) {
+            value[i] = std::sqrt(Nc.at(i), Nv.at(i)) * std::exp(-Eg() / (2 * kB * T));
+        }
+        return value;
+    }
+
+    // Equilibrium electron densities
+    L<F_T> n0() const {  // identical to ND(), no internal support for in-class function aliases, copy to avoid potential overhead
+        return DistFun<L, F_T, STR_T>::nfun(Nc, Phi_EA, EF0, prob_dist_function, T, gamma());
+    }
+
+    // Equilibrium hole densities
+    L<F_T> p0() const {  // identical to NA()
+        return DistFun<L, F_T, STR_T>::pfun(Nv, Phi_IP, EF0, prob_dist_function, T, gamma());
+    }
+
+    // Boundary electron and hole densities
+    // Uses metal Fermi energies to calculate boundary densities
+    // Electrons left boundary
+    F_T n0_l() const {
+        return DistFun<L, F_T, STR_T>::nfun(Nc.front(), Phi_EA.front(), Phi_left, prob_dist_function, T, gamma());
+    }
+
+    // Electrons right boundary
+    F_T n0_r() const {
+        return DistFun<L, F_T, STR_T>::nfun(Nc.back(), Phi_EA.back(), Phi_right, prob_dist_function, T, gamma());
+    }
+
+    // Holes left boundary
+    F_T p0_l() const {
+        return DistFun<L, F_T, STR_T>::pfun(Nv.front(), Phi_IP.front(), Phi_left, prob_dist_function, T, gamma());
+    }
+
+    // Holes right boundary
+    F_T p0_r() const {
+        return DistFun<L, F_T, STR_T>::pfun(Nv.back(), Phi_IP.back(), Phi_right, prob_dist_function, T, gamma());
+    }
+
+    // SRH trap energy coefficients
+    L<F_T> nt() {
+        return DistFun<L, F_T, STR_T>::nfun(Nc, Phi_EA, Et, prob_dist_function, T, gamma());
+    }
+
+    L<F_T> pt() {
+        return DistFun<L, F_T, STR_T>::nfun(Nv, Phi_IP, Et, prob_dist_function, T, gamma());
+    }
+
+    // Thickness and point arrays
+    F_T dcum() const {
+        return std::accumulate(d.begin(), d.end(), 0);
+    }
+
+    SZ_T pcum() const {
+        return std::accumulate(layer_points.begin(), layer_points.end(), 0);
+    }
+
+    // pcum0 = {1, pcum}; dcum0 = {0, dcum};
+
+    // interface switch for zeroing field in interfaces
+    // int_switch all ones
 
     L<STR_T> headers = {
             "layer_type",
@@ -611,13 +717,14 @@ private:
     L<char> locate_vsr_zone() {
         // A function to locate the recombination zone within the interfacial regions based on the minority carrier
         // densities at equilibrium intelligent location
-        // QList<bool> int_logical(par.col_size);
-        QList<qsizetype> loc;  // interface layer locations
-        for (qsizetype i = 0; i < col_size; i++) {
+        // QList<bool> int_logical(par.col_size());
+        L<qsizetype> loc;  // interface layer locations
+        for (SZ_T i = 0; i < col_size(); i++) {
             if (layer_type.at(i) == "interface") {
                 loc.emplace_back(i);
             }
         }
+        L<char> vsr_zone_loc(col_size());
         for (qsizetype i : loc) {
             // Gradient coefficients for surface recombination equivalence
             double alpha0 = ((Phi_EA.at(i - 1) - Phi_EA.at(i + 1)) / kB * T + (std::log(Nc.at(i + 1)) - std::log(Nc.at(i - 1)))) / d.at(i);

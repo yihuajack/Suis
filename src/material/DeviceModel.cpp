@@ -4,7 +4,6 @@
 
 #include <numeric>
 #include <ranges>
-#include <set>
 #include <QDir>
 #include <QUrl>
 #include <QtGui/QGuiApplication>
@@ -22,7 +21,7 @@ int DeviceModel::rowCount(const QModelIndex &parent) const {
 
 int DeviceModel::columnCount(const QModelIndex &parent) const {
     Q_UNUSED(parent)
-    return static_cast<int>(par->col_size);
+    return static_cast<int>(par->col_size());
 }
 
 QVariant DeviceModel::data(const QModelIndex &index, int role) const {
@@ -80,6 +79,22 @@ QList<double> DeviceModel::readA() const {
 
 QList<double> DeviceModel::readT() const {
     return T;
+}
+
+qsizetype DeviceModel::readColSize() const {
+    return par->col_size();
+}
+
+QList<double> DeviceModel::readD() const {
+    return par->d;
+}
+
+QList<double> DeviceModel::readCBM() const {
+    return par->Phi_EA;
+}
+
+QList<double> DeviceModel::readVBM() const {
+    return par->Phi_IP;
 }
 
 Q_INVOKABLE QVariant DeviceModel::headerData(int section, Qt::Orientation orientation, int role) const {

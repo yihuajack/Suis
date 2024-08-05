@@ -85,21 +85,32 @@ ElectricalParsetPageForm {
                                 text: "Edit Table"
                                 enabled: false
                                 onClicked: {
-                                    ratChartLoader.active = false
-                                    ratChartLoader.source = "DeviceTableDialog.qml"
-                                    ratChartLoader.active = true
+                                    loader.active = false
+                                    loader.source = "DeviceTableDialog.qml"
+                                    loader.active = true
+                                }
+                            }
+
+                            Button {
+                                id: showBDButton
+                                text: "Show Band Diagram"
+                                enabled: editTableButton.enabled
+                                onClicked: {
+                                    loader.active = false
+                                    loader.source = "BandDiagramDialog.qml"
+                                    loader.active = true
                                 }
                             }
 
                             Button {
                                 id: showRATButton
                                 text: "Show RAT"
-                                enabled: false
+                                enabled: editTableButton.enabled
                                 onClicked: {
                                     device.calcRAT()
-                                    ratChartLoader.active = false
-                                    ratChartLoader.source = "OpticalDeviceDialog.qml"
-                                    ratChartLoader.active = true
+                                    loader.active = false
+                                    loader.source = "OpticalDeviceDialog.qml"
+                                    loader.active = true
                                 }
                             }
 
@@ -121,15 +132,8 @@ ElectricalParsetPageForm {
                         }
                     }
 
-                    Loader {
-                        id: devDialogLoader
-                        asynchronous: true
-
-                        onLoaded: item.open()
-                    }
-
-                    Loader {
-                        id: ratChartLoader
+                    Loader {  // three buttons share this loader because they are modal
+                        id: loader
                         asynchronous: true
 
                         onLoaded: item.open()
@@ -141,7 +145,6 @@ ElectricalParsetPageForm {
                         }
                         let status = device.readDfDev(databasePath)
                         editTableButton.enabled = status === true
-                        showRATButton.enabled = status === true
                         if (status) {
                             devName.text = device.name
                         }
