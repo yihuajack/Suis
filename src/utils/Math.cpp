@@ -126,3 +126,18 @@ auto Utils::Math::linspace_va(const T start, const T stop, const std::size_t num
 }
 
 template auto Utils::Math::linspace_va(double start, double stop, std::size_t num) -> std::valarray<double>;
+
+template<typename T>
+auto Utils::Math::linspace(const T start, const T stop, const T step) -> std::vector<T> {
+    if (step == 0) {
+        throw std::invalid_argument("Step size must be non-zero.");
+    }
+    const std::size_t num_steps = static_cast<std::size_t>((stop - start) / step) + 1;
+    std::vector<T> result(num_steps);
+    for (std::size_t i = 0; i < num_steps; ++i) {
+        result.emplace_back(start + i * step);
+    }
+    return result;
+}
+
+template auto Utils::Math::linspace(double start, double stop, double step) -> std::vector<double>;

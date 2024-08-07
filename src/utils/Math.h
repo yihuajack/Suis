@@ -37,6 +37,9 @@ namespace Utils::Math {
     template<typename T>
     auto linspace_va(T start, T stop, std::size_t num) -> std::valarray<T>;
 
+    template<typename T>
+    auto linspace(T start, T stop, T step) -> std::vector<T>;
+
     // If you do not want to import a heap of headers of instances list QList, put the definition here.
     // Note that the parameter order is different from numpy.interp!
     template<FloatingList U, FloatingList V>

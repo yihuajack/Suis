@@ -6,6 +6,7 @@
 #define SUISAPP_DISTFUN_H
 
 #include <numbers>
+#include <stdexcept>
 #include <boost/math/quadrature/gauss.hpp>
 
 enum class PROB_DIST {
@@ -35,7 +36,7 @@ public:
                 // T = temperature
                 // See Schubert 2015, pp. 130
                 for (SZ_T i = 0; i < Nc.size(); i++) {
-                    auto fn = [&Efn, &Ec, i](T E) -> T {
+                    auto fn = [&Efn, &Ec, i, kT](T E) -> T {
                         return std::sqrt(E / kT) / (1 + std::exp((E - Efn.at(i) + Ec.at(i)) / kT));;
                     };
                     if (not std::isnan(Nc.at(i))) {  // ignores interfaces
@@ -58,7 +59,7 @@ public:
                 return n;
             }
             default:
-                throw std::runtime_error("Invalid probability distribution function");
+                throw std::invalid_argument("Invalid probability distribution function");
         }
     }
 
@@ -67,7 +68,7 @@ public:
         const T kT = ParameterClass<L, T, STR_T>::kB * temperature;
         switch (prob_dist_function) {
             case PROB_DIST::FERMI: {
-                auto fn = [&Efn, &Ec](T E) -> T {
+                auto fn = [&Efn, &Ec, kT](T E) -> T {
                     return std::sqrt(E / kT) / (1 + std::exp((E - Efn + Ec) / kT));;
                 };
                 return std::real(2 * Nc / (kT * std::sqrt(std::numbers::pi_v<T>)) * boost::math::quadrature::gauss<T, 15>::integrate(fn, 0, uplimit));
@@ -80,7 +81,7 @@ public:
                 return Nc * std::exp((Efn - Ec) / kT);
             }
             default:
-                throw std::runtime_error("Invalid probability distribution function");
+                throw std::invalid_argument("Invalid probability distribution function");
         }
     }
 
@@ -100,7 +101,7 @@ public:
                 // reason - doesn't seem to like integrating from negative
                 // infinity...
                 for (SZ_T i = 0; i < Nv.size(); i++) {
-                    auto fp = [&Efp, &Ev, i](T E) -> T {
+                    auto fp = [&Efp, &Ev, i, kT](T E) -> T {
                         return std::sqrt(E / kT) / (1 + std::exp((E + Efp.at(i) - Ev.at(i)) / kT));;
                     };
                     if (not std::isnan(Nv.at(i))) {  // ignores interfaces
@@ -123,7 +124,7 @@ public:
                 return p;
             }
             default:
-                return p;
+                throw std::invalid_argument("Invalid probability distribution function");
         }
     }
 
@@ -132,7 +133,7 @@ public:
         const T kT = ParameterClass<L, T, STR_T>::kB * temperature;
         switch (prob_dist_function) {
             case PROB_DIST::FERMI: {
-                auto fp = [&Efp, &Ev](T E) -> T {
+                auto fp = [&Efp, &Ev, kT](T E) -> T {
                     return std::sqrt(E / kT) / (1 + std::exp((E + Efp - Ev) / kT));;
                 };
                 return std::real(2 * Nv / (kT * std::sqrt(std::numbers::pi_v<T>)) * boost::math::quadrature::gauss<T, 15>::integrate(fp, 0, uplimit));
@@ -145,7 +146,7 @@ public:
                 return Nv * std::exp((Ev - Efp) / kT);
             }
             default:
-                throw std::runtime_error("Invalid probability distribution function");
+                throw std::invalid_argument("Invalid probability distribution function");
         }
     }
 };

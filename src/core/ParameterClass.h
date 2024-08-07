@@ -5,12 +5,14 @@
 #ifndef SUISAPP_PARAMETERCLASS_H
 #define SUISAPP_PARAMETERCLASS_H
 
+#include <iostream>
 #include <print>
 #include <ranges>
 #include <set>
 #include <utility>
 
 #include "DistFun.h"
+#include "utils/Math.h"
 
 enum class SpatialCoordinate {
     CARTESIAN, CYLINDRICAL_POLAR, SPHERICAL_POLAR
@@ -24,18 +26,156 @@ enum class FUN_TYPE {
     CONSTANT, SWEEP_AND_STILL, SIN, SWEEP
 };
 
-enum class VSR_ZONE_LOC {
-    L, C, R, AUTO
-};
-
 template<template <typename...> class L, typename F_T, typename STR_T>
 class ParameterClass {
     using SZ_T = L<F_T>::size_type;
+    // using CHAR_T = STR_T::value_type;
 public:
     ParameterClass(const L<L<STR_T>> &csv_data, const std::map<STR_T, typename L<F_T>::size_type> &properties) {
         import_properties(csv_data, properties);
 
-        // Warn if doping density exceeds eDOS
+        const SZ_T c_sz = col_size();
+        const L<F_T> N_D = ND();
+        const L<F_T> N_A = NA();
+        for (SZ_T i = 0; i < c_sz; i++) {
+            // Warn if doping density exceeds eDOS
+            if (N_D.at(i) > Nc.at(i) or N_A.at(i) > Nc.at(i)) {
+                throw std::runtime_error("Doping density must be less than eDOS. For consistent values ensure "
+                                         "electrode work functions are within the band gap and check expressions for "
+                                         "doping density in Dependent variables.");
+            }
+            // Warn if trap energies are outside of band gap energies
+            if (Et.at(i) >= Phi_EA.at(i) or Et.at(i) <= Phi_IP.at(i)) {
+                throw std::runtime_error("Trap energies must exist within layer band gap.");
+            }
+            if (a_max.at(i) <= 0) {
+                throw std::runtime_error("Maximum anion density (a_max) cannot have zero or negative entries - "
+                                         "choose a low value rather than zero e.g. 1");
+            }
+            // Warn if c_max is set to zero in any layers - leads to infinite diffusion rate
+            if (c_max.at(i) <= 0) {
+                throw std::runtime_error("Maximum cation density (c_max) cannot have zero or negative entries "
+                                         "- choose a low value rather than zero e.g. 1");
+            }
+            // Warn if electrode work functions are outside of boundary layer bandgap
+            if (Phi_left < Phi_IP.front() or Phi_left > Phi_EA.front()) {
+                throw std::out_of_range("Left-hand work function (Phi_left) out of range: value must exist "
+                                        "within left-hand layer band gap");
+            }
+            if (Phi_right < Phi_IP.back() or Phi_right > Phi_EA.back()) {
+                throw std::out_of_range("Right-hand work function (Phi_right) out of range: value must exist "
+                                        "within right-hand layer band gap");
+            }
+        }
+        // Warn if property array do not have the correct number of layers.
+        // The layer thickness array is used to define the number of layers
+        if (Phi_EA.size() not_eq c_sz) {
+            throw std::length_error("Electron Affinity array (Phi_EA) does not have the correct number of "
+                                    "elements. Property arrays must have the same number of elements as the "
+                                    "thickness array (d), except SRH properties for interfaces which should have "
+                                    "length(d)-1 elements.");
+        } else if (Phi_IP.size() not_eq c_sz) {
+            throw std::length_error("Ionization Potential array (Phi_IP) does not have the correct number of "
+                                    "elements. Property arrays must have the same number of elements as the "
+                                    "thickness array (d), except SRH properties for interfaces which should have "
+                                    "length(d)-1 elements.");
+        } else if (mu_n.size() not_eq c_sz) {
+            throw std::length_error("Electron mobility array (mu_n) does not have the correct number of "
+                                    "elements. Property arrays must have the same number of elements as the "
+                                    "thickness array (d), except SRH properties for interfaces which should have "
+                                    "length(d)-1 elements.");
+        } else if (mu_p.size() not_eq c_sz) {
+            throw std::length_error("Hole mobility array (mu_p) does not have the correct number of elements. "
+                                    "Property arrays must have the same number of elements as the thickness array (d), "
+                                    "except SRH properties for interfaces which should have length(d)-1 elements.");
+        } else if (mu_a.size() not_eq c_sz) {
+            throw std::length_error("Anion mobility array (mu_a) does not have the correct number of elements. "
+                                    "Property arrays must have the same number of elements as the thickness array (d), "
+                                    "except SRH properties for interfaces which should have length(d)-1 elements.");
+        } else if (mu_c.size() not_eq c_sz) {
+            throw std::length_error("Cation mobility array (mu_c) does not have the correct number of elements."
+                                    " Property arrays must have the same number of elements as the thickness array (d),"
+                                    " except SRH properties for interfaces which should have length(d)-1 elements.");
+        } else if (N_A.size() not_eq c_sz) {
+            throw std::length_error("Acceptor density array (NA) does not have the correct number of elements. "
+                                    "Property arrays must have the same number of elements as the thickness array (d), "
+                                    "except SRH properties for interfaces which should have length(d)-1 elements.");
+        } else if (N_D.size() not_eq c_sz) {
+            throw std::length_error("Donor density array (ND) does not have the correct number of elements. "
+                                    "Property arrays must have the same number of elements as the thickness array (d), "
+                                    "except SRH properties for interfaces which should have length(d)-1 elements.");
+        } else if (Nc.size() not_eq c_sz) {
+            throw std::length_error("Effective density of states array (Nc) does not have the correct number of"
+                                    " elements. Property arrays must have the same number of elements as the thickness "
+                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                                    "elements.");
+        } else if (Nv.size() not_eq c_sz) {
+            throw std::length_error("Effective density of states array (Nv) does not have the correct number of"
+                                    " elements. Property arrays must have the same number of elements as the thickness "
+                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                                    "elements.");
+        } else if (Nani.size() not_eq c_sz) {
+            throw std::length_error("Background anion density (Nani) does not have the correct number of "
+                                    "elements. Property arrays must have the same number of elements as the thickness "
+                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                                    "elements.");
+        } else if (Ncat.size() not_eq c_sz) {
+            throw std::length_error("Background cation density (Ncat) does not have the correct number of "
+                                    "elements. Property arrays must have the same number of elements as the thickness "
+                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                                    "elements.");
+        } else if (a_max.size() not_eq c_sz) {
+            throw std::length_error("Ion density of states array (a_max) does not have the correct number of "
+                                    "elements. Property arrays must have the same number of elements as the thickness "
+                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                                    "elements.");
+        } else if (c_max.size() not_eq c_sz) {
+            throw std::length_error("Ion density of states array (c_max) does not have the correct number of "
+                                    "elements. Property arrays must have the same number of elements as the thickness "
+                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                                    "elements.");
+        } else if (epp.size() not_eq c_sz) {
+            throw std::length_error("Relative dielectric constant array (epp) does not have the correct number "
+                                    "of elements. Property arrays must have the same number of elements as the "
+                                    "thickness array (d), except SRH properties for interfaces which should have "
+                                    "length(d)-1 elements.");
+        } else if (B.size() not_eq c_sz) {
+            throw std::length_error("Radiative recombination coefficient array (B) does not have the correct "
+                                    "number of elements. Property arrays must have the same number of elements as the "
+                                    "thickness array (d), except SRH properties for interfaces which should have "
+                                    "length(d)-1 elements.");
+        } else if (EF0.size() not_eq c_sz) {
+            throw std::length_error("Equilibrium Fermi level array (EF0) does not have the correct number of "
+                                    "elements. Property arrays must have the same number of elements as the thickness "
+                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                                    "elements.");
+        } else if (g0.size() not_eq c_sz) {
+            throw std::length_error("Uniform generation array (g0) does not have the correct number of "
+                                    "elements. Property arrays must have the same number of elements as the thickness "
+                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                                    "elements.");
+        } else if (taun.size() not_eq c_sz) {
+            throw std::length_error("Bulk SRH electron time constants array (taun_bulk) does not have the "
+                                    "correct number of elements. Property arrays must have the same number of elements "
+                                    "as the thickness array (d), except SRH properties for interfaces which should have"
+                                    " length(d)-1 elements.");
+        } else if (taup.size() not_eq c_sz) {
+            throw std::length_error("Bulk SRH hole time constants array (taup_bulk) does not have the correct "
+                                    "number of elements. Property arrays must have the same number of elements as the "
+                                    "thickness array (d), except SRH properties for interfaces which should have "
+                                    "length(d)-1 elements.");
+        } else if (Et.size() not_eq c_sz) {
+            throw std::length_error("Bulk SRH trap energy array (Et) does not have the correct number of "
+                                    "elements. Property arrays must have the same number of elements as the thickness "
+                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                                    "elements.");
+        }
+        // Device and generation builder
+        // Import variables and structure, xx, gx1, gx2, and dev must be
+        // refreshed when to rebuild the device for example when
+        // changing device thickness on the fly. These are not present
+        // in the dependent variables as it is too costly to have them
+        // continuously called.
     }
 
     static constexpr F_T kB = 8.617330350e-5;  // Boltzmann constant [eV K^-1]
@@ -101,7 +241,8 @@ public:
     bool SRHset = true;  // Switch on/off SRH recombination - recommend setting to zero for initial solution
     bool radset = true;  // Switch on/off band-to-band recombination
     SZ_T N_max_variables = 5;  // Total number of allowable variables
-    PROB_DIST prob_dist_function = PROB_DIST::BLAKEMORE;  // 'Fermi' = Fermi-Dirac, 'Blakemore' = Blakemore approximation, 'Boltzmann' = Boltzmann statistics
+    // 'Fermi' = Fermi-Dirac, 'Blakemore' = Blakemore approximation, 'Boltzmann' = Boltzmann statistics
+    PROB_DIST prob_dist_function = PROB_DIST::BLAKEMORE;
     F_T gamma_Blakemore = 0.27;  // Blakemore coefficient
     F_T Fermi_limit = 0.2;  // Max allowable limit for Fermi levels beyond the bands [eV]
     SZ_T Fermi_Dn_points = 400;  // No. of points in the Fermi-Dirac look-up table
@@ -210,7 +351,9 @@ public:
     L<F_T> sn = {0};  // Electron interfacial surface recombination velocity [cm s-1]
     L<F_T> sp = {0};  // Hole interfacial surface recombination velocities [cm s-1]
     F_T frac_vsr_zone = 0.1;  // recombination zone thickness [fraction of interface thickness]
-    L<VSR_ZONE_LOC> vsr_zone_loc = {VSR_ZONE_LOC::AUTO};  // recombination zone location either: 'L', 'C', 'R', or 'auto'. IMPORT_PROPERTIES deals with the choice of value.
+    L<char> vsr_zone_loc;  // recombination zone location either: 'L', 'C', 'R', or 'auto'.
+    // IMPORT_PROPERTIES deals with the choice of value.
+    // auto is temporary
     F_T AbsTol_vsr = 1e10;  // The integrated interfacial recombination flux above which a warning can be flagged [cm-2 s-1]
     F_T RelTol_vsr = 0.05;  // Fractional error between abrupt and volumetric surface recombination models above which a warning is flagged
 
@@ -251,7 +394,7 @@ public:
             case PROB_DIST::BLAKEMORE:
                 return gamma_Blakemore;
             default:
-                throw std::runtime_error("prob_dist_function is neither Boltzmann not Blakemore");
+                throw std::invalid_argument("prob_dist_function is neither Boltzmann not Blakemore");
         }
     }
     // Get active layer indexes from layer_type
@@ -357,15 +500,21 @@ public:
     }
 
     // Thickness and point arrays
-    F_T dcum() const {
-        return std::accumulate(d.begin(), d.end(), 0);
+    L<F_T> dcum() const {
+        return std::partial_sum(d.begin(), d.end());
     }
 
-    SZ_T pcum() const {
-        return std::accumulate(layer_points.begin(), layer_points.end(), 0);
+    L<SZ_T> pcum() const {
+        return std::partial_sum(layer_points.begin(), layer_points.end());
     }
 
-    // pcum0 = {1, pcum}; dcum0 = {0, dcum};
+    L<F_T> dcum0() const {
+        return {0, std::partial_sum(d.begin(), d.end())};
+    }
+
+    L<SZ_T> pcum0() const {
+        return {1, std::partial_sum(layer_points.begin(), layer_points.end())};
+    }
 
     // interface switch for zeroing field in interfaces
     // int_switch all ones
@@ -556,15 +705,14 @@ public:
             if (it not_eq property_in.cend()) {
                 const SZ_T index = it->second;
                 L<T> property(end_row - start_row + 1);
-                int i = 0;
                 for (SZ_T rc = start_row; rc <= end_row; rc++) {
                     if constexpr (std::same_as<T, STR_T>) {
-                        property[i++] = data.at(rc).at(index);
+                        property[rc - start_row] = data.at(rc).at(index);
                     } else if constexpr (std::same_as<T, F_T>) {
                         STR_T double_str = data.at(rc).at(index);
-                        property[i++] = double_str.isEmpty() ? NAN : double_str.toDouble();
+                        property[rc - start_row] = double_str.isEmpty() ? NAN : double_str.toDouble();
                     } else if constexpr (std::same_as<T, SZ_T>) {
-                        property[i++] = data.at(rc).at(index).toLongLong();
+                        property[rc - start_row] = data.at(rc).at(index).toLongLong();
                     } else {
                         static_assert(false, "Invalid type for import_single_property");
                     }
@@ -595,11 +743,12 @@ private:
         SZ_T start_row;
         SZ_T end_row;
         SZ_T maxRow = csv_data.size();
-        if (properties.find("layer_type") == properties.cend()) {
-            throw std::runtime_error("No layer type (layer_type) defined in .csv."
+        const std::map<STR_T, SZ_T>::const_iterator pit_lt = properties.find("layer_type");
+        if (pit_lt == properties.cend()) {
+            throw std::runtime_error("No layer type (layer_type) defined in .csv. "
                      "layer_type must be defined when using .csv input file");
         }
-        SZ_T layer_type_index = properties.at("layer_type");  // ELECTRODE, LAYER, INTERFACE, ACTIVE
+        SZ_T layer_type_index = pit_lt->second;  // ELECTRODE, LAYER, INTERFACE, ACTIVE
         bool has_electrodes = false;
         if (csv_data.at(1).at(layer_type_index) == "electrode") {
             start_row = 2;
@@ -701,16 +850,53 @@ private:
         } else if (optical_model_str == "Beer-Lambert" or optical_model_str.toDouble() == 1) {
             optical_model = true;
         } else {
-            throw std::runtime_error("optical_model not recognized - defaulting to 'Beer-Lambert'");
+            std::cerr << "optical_model not recognized - defaulting to 'Beer-Lambert'\n";
         }
         // Illumination side
-        STR_T side_str = csv_data.at(1).at(properties.at("side"));  // Row first!
+        const STR_T side_str = csv_data.at(1).at(properties.at("side"));  // Row first!
         if (side_str == "right" or side_str.toDouble() == 2) {  // not toInt() or toUInt()!
             side = true;
         } else if (side_str == "left" or side_str.toDouble() == 1) {
             side = false;
         } else {
+            // Warn if xmesh_type is not correct
             throw std::runtime_error("Side property is not correctly specified.");
+        }
+        // Spatial mesh
+        const STR_T xmesh_type_str = csv_data.at(1).at(properties.at({"xmesh_type"}));
+        if (xmesh_type_str == "linear") {
+            xmesh_type = false;
+        } else if (xmesh_type_str == "erf-linear") {
+            xmesh_type = true;
+        } else {
+            throw std::runtime_error("PAR.xmesh_type should either be 'linear' or 'erf-linear'. "
+                                     "MESHGEN_X cannot generate a mesh if this is not the case.");
+        }
+        // Recombination zone location
+        if (layer_type.contains("Interface") or layer_type.contains("junction")) {
+            L<char> vsr_zone_loc_auto = locate_vsr_zone();
+            const std::map<STR_T, SZ_T>::const_iterator pit_vzl = properties.find("vsr_zone_loc");
+            L<STR_T> vsr_zone_loc_user(end_row - start_row + 1);
+            if (pit_vzl not_eq properties.cend()) {
+                for (SZ_T rc = start_row; rc <= end_row; rc++) {
+                    vsr_zone_loc_user[rc - start_row] = csv_data.at(rc).at(pit_vzl->second);
+                }
+                for (SZ_T i = 0; i < col_size(); i++) {
+                    const STR_T &user_vzl = vsr_zone_loc_user.at(i);
+                    if (user_vzl == "L") {  // toAscii() toLatin1()
+                        vsr_zone_loc[i] = 'L';
+                    } else if (user_vzl == "C") {
+                        vsr_zone_loc[i] = 'C';
+                    } else if (user_vzl == "R") {
+                        vsr_zone_loc[i] = 'R';
+                    } else if (user_vzl == "auto") {
+                        vsr_zone_loc[i] = vsr_zone_loc_auto.at(i);
+                    }
+                }
+            } else {
+                std::cerr << "Recombination zone location (vsr_zone_loc) not defined in .csv. Using auto defined\n";
+                vsr_zone_loc = vsr_zone_loc_auto;
+            }
         }
     }
 
@@ -718,23 +904,70 @@ private:
         // A function to locate the recombination zone within the interfacial regions based on the minority carrier
         // densities at equilibrium intelligent location
         // QList<bool> int_logical(par.col_size());
-        L<qsizetype> loc;  // interface layer locations
+        L<SZ_T> loc;  // interface layer locations
         for (SZ_T i = 0; i < col_size(); i++) {
             if (layer_type.at(i) == "interface") {
                 loc.emplace_back(i);
             }
         }
-        L<char> vsr_zone_loc(col_size());
-        for (qsizetype i : loc) {
+        vsr_zone_loc.resize(col_size());
+        L<F_T> n_0 = n0();
+        L<F_T> p_0 = p0();
+        for (const SZ_T i : loc) {
             // Gradient coefficients for surface recombination equivalence
-            double alpha0 = ((Phi_EA.at(i - 1) - Phi_EA.at(i + 1)) / kB * T + (std::log(Nc.at(i + 1)) - std::log(Nc.at(i - 1)))) / d.at(i);
-            double beta0 = ((Phi_IP.at(i - 1) - Phi_IP.at(i + 1)) / kB * T + (std::log(Nv.at(i + 1)) - std::log(Nv.at(i - 1)))) / d.at(i);
+            F_T alpha0 = ((Phi_EA.at(i - 1) - Phi_EA.at(i + 1)) / kB * T + (std::log(Nc.at(i + 1)) - std::log(Nc.at(i - 1)))) / d.at(i);
+            F_T beta0 = ((Phi_IP.at(i - 1) - Phi_IP.at(i + 1)) / kB * T + (std::log(Nv.at(i + 1)) - std::log(Nv.at(i - 1)))) / d.at(i);
             if (alpha0 <= 0 and beta0 > 0 or alpha0 < 0 and beta0 >= 0) {
+                if (n_0.at(i + 1) > p_0.at(i - 1)) {
+                    vsr_zone_loc[i] = 'R';
+                } else if (n_0.at(i + 1) < p_0.at(i - 1)) {
+                    vsr_zone_loc[i] = 'L';
+                } else {
+                    vsr_zone_loc[i] = 'C';
+                }
+            } else if (alpha0 >= 0 and beta0 < 0 or alpha0 > 0 and beta0 <= 0) {
+                if (p_0.at(i + 1) > n_0.at(i - 1)) {
+                    vsr_zone_loc[i] = 'R';
+                } else if (p_0.at(i + 1) < n_0.at(i - 1)) {
+                    vsr_zone_loc[i] = 'L';
+                } else {
+                    vsr_zone_loc[i] = 'C';
+                }
+            } else if (alpha0 <= 0 and beta0 < 0 or alpha0 < 0 and beta0 <= 0) {
+                vsr_zone_loc[i] = 'L';
+            } else if (alpha0 >= 0 and beta0 > 0 or alpha0 > 0 and beta0 >= 0) {
+                vsr_zone_loc[i] = 'R';
+            } else {
+                vsr_zone_loc[i] = 'C';
+            }
+        }
+        return vsr_zone_loc;
+    }
 
+    // Generates the spatial mesh dependent on option defined by XMESH_TYPE
+    L<F_T> meshgen_x() {
+        // Linearly spaced
+        L<F_T> x;  // pcum().back()
+        L<F_T> dcum = dcum0();
+        if (xmesh_type) {  // linear
+            for (SZ_T i = 0; i < col_size(); i++) {
+                x.append_range(Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i)));
+            }
+            x.emplace_back(dcum.back());
+        } else {  // erf-linear
+            for (SZ_T i = 0; i < col_size(); i++) {
+                if (layer_type.at(i) == "layer" or layer_type.at(i) == "active") {
+
+                }
+                x.append_range(Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i)));
             }
         }
     }
 
+    // Rebuilds important device properties
+    void refresh_device() {
+
+    }
 };
 
 #endif  // SUISAPP_PARAMETERCLASS_H
