@@ -34,15 +34,16 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Alternatively use --toolchain instead of CMAKE_TOOLCHAIN_FILE
 # set(CMAKE_PREFIX_PATH "D:\\Qt\\<qtver>\\msvc2019_64\\lib\\cmake")
 # After updating MSVC, remember to manually update the path to cl.exe in
-# build-Suis-Desktop_Qt_<ver>>_MSVC2019_64bit-Debug\vcpkg-dependencies\toolchain.cmake
+# build-Suis-Desktop_Qt_<ver>_MSVC2019_64bit-Debug\vcpkg-dependencies\toolchain.cmake
 # where CMAKE_C_COMPILER, CMAKE_CXX_COMPILER, and VCPKG_TARGET_TRIPLET are set.
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-
 # Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR)
 # See https://bugreports.qt.io/browse/QTBUG-92587
 # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/3027
-find_package(Qt6 6.7 REQUIRED COMPONENTS Charts Core Gui Qml Quick)
+# Every time add new qt packages here on Windows CLion remember to run `windeployqt --qmldir qml SuisApp.exe` under
+# `cmake-build-debug-visual-studio` in Qt shell
+# (see https://blog.csdn.net/yihuajack/article/details/136925071) or refer to
+# https://stackoverflow.com/questions/59187030/why-can-clion-correctly-build-and-link-qt-but-not-run-my-executable.
+find_package(Qt6 6.7 REQUIRED COMPONENTS Charts Core Gui Qml Quick Sql Widgets)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
@@ -74,7 +75,6 @@ qt_add_resources(SuisApp "configuration"
 )
 
 add_subdirectory(src)
-add_subdirectory(thirdparty)
 include_directories(${ORACLE_INCLUDE_DIR})
 
 include(FetchContent)
@@ -86,30 +86,21 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(QXlsx)
 
+set_target_properties(SuisApp PROPERTIES
+        WIN32_EXECUTABLE TRUE
+        MACOSX_BUNDLE TRUE
+)
+
 target_link_libraries(SuisApp PRIVATE
         Qt6::Charts
         Qt6::Core
         Qt6::Gui
         Qt6::Qml
         Qt6::Quick
+        Qt6::Sql
+        Qt6::Widgets
         QXlsx::QXlsx
-        # Octave::Octave
-        # https://stackoverflow.com/questions/77140854/how-to-install-soci-db-library-with-vcpkg-on-linux
-        # Using core (loading backends at runtime)
-        # $<IF:$<TARGET_EXISTS:SOCI::soci_core>,SOCI::soci_core,SOCI::soci_core_static>
-        # $<IF:$<TARGET_EXISTS:SOCI::soci_oracle>,SOCI::soci_oracle,SOCI::soci_oracle_static>
-        # https://github.com/SOCI/soci/issues/762
-        # Both Conan and vcpkg only support sqlite3, odbc, mysql, and postgresql backends but not oracle backend.
-        # include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-        # conan_basic_setup(TARGETS)
-        # conan_target_link_libraries(${PROJECT_NAME} ${CONAN_LIBS})
-        # See https://github.com/microsoft/vcpkg/issues/40146
-        # examples/subdir-include/CMakeLists.txt of SOCI/soci
-        Soci::core
-        Soci::oracle
 )
-
-# target_include_directories(SuisApp PRIVATE ${Octave_INCLUDE_DIRS})
 
 include(GNUInstallDirs)
 

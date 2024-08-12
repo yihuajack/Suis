@@ -7,6 +7,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.VirtualKeyboard
+// import content
 
 Page {
     id: root
@@ -26,6 +27,13 @@ Page {
             onClicked: {
                 simProcess.write(command)
                 term.text += ("<br /><b>" + command + " : </b>")
+            }
+        }
+
+        Button {
+            text: "Upload"
+            onClicked: {
+                // sqlmodel.upload()
             }
         }
     }

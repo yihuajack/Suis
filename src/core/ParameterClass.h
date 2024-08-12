@@ -11,8 +11,10 @@
 #include <set>
 #include <utility>
 
+#include "Device.h"
 #include "DistFun.h"
-#include "utils/Math.h"
+#include "GetVarSub.h"
+#include "utils/math.h"
 
 enum class SpatialCoordinate {
     CARTESIAN, CYLINDRICAL_POLAR, SPHERICAL_POLAR
@@ -381,6 +383,8 @@ public:
 
     // Impedance parameters
     // J_E_func, J_E_func_tilted, and E2_func
+    L<F_T> xx;
+    L<F_T> x_sub;
 
     SZ_T col_size() const {
         return layer_type.size();
@@ -950,24 +954,47 @@ private:
         L<F_T> x;  // pcum().back()
         L<F_T> dcum = dcum0();
         if (xmesh_type) {  // linear
-            for (SZ_T i = 0; i < col_size(); i++) {
+            for (SZ_T i : std::views::iota(0U, col_size())) {
                 x.append_range(Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i)));
             }
             x.emplace_back(dcum.back());
         } else {  // erf-linear
-            for (SZ_T i = 0; i < col_size(); i++) {
+            for (SZ_T i : std::views::iota(0U, col_size())) {
+                std::vector<F_T> x_layer;
                 if (layer_type.at(i) == "layer" or layer_type.at(i) == "active") {
-
+                    std::vector<F_T> parr = Utils::Math::linspace(-0.5, 1 / std::numbers::pi_v<F_T>, 0.5);
+                    std::size_t sz_parr = parr.size();
+                    x_layer.resize(sz_parr);
+                    F_T x_layer0 = std::erf(2 * std::numbers::pi_v<F_T> * xmesh_coeff.front() * parr.front());
+                    x_layer.front() = 0;
+                    for (std::size_t j : std::views::iota(1U, sz_parr)) {
+                        x_layer[i] = std::erf(2 * std::numbers::pi_v<F_T> * xmesh_coeff.at(i) * parr.at(i)) - x_layer0;
+                    }
+                    F_T max_x_layer = std::ranges::max(x_layer);
+                    for (std::size_t j : std::views::iota(1U, sz_parr)) {
+                        x_layer[i] = dcum.at(i) + x_layer[i] / max_x_layer * d.at(i);
+                    }
+                } else if (layer_type.at(i) == "junction" or layer_type.at(i) == "interface") {
+                    x_layer = Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i));
                 }
-                x.append_range(Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i)));
+                x.append_range(x_layer.begin(), x_layer.end() - 1);
+                x.emplace_back(dcum.back());
             }
         }
+        return x;
     }
+
+    // BUILD_DEVICE calls BUILD_PROPERTY for each device property. BUILD_PROPERTY then defines the
+    // properties at each point on the grid defined by MESHOPTION
+    Device<L<F_T>> build_device(bool meshoption);
 
     // Rebuilds important device properties
     void refresh_device() {
-
+        xx = meshgen_x();
+        x_sub = getvar_sub(xx);
     }
 };
+
+#include "BuildDevice.tpp"
 
 #endif  // SUISAPP_PARAMETERCLASS_H

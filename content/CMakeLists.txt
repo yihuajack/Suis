@@ -17,6 +17,8 @@ qt6_add_qml_module(content
         OpticalMaterialDialog.qml  # loader qml files cannot be omitted
         OpticalParsetPage.qml
         OpticalParsetPageForm.ui.qml
+        ResultPage.qml
+        ResultPageForm.ui.qml
         SimPage.qml
         Splash.qml
         WelcomePage.qml

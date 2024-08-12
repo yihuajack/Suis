@@ -11,8 +11,8 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QUrl>
-#include <soci/soci.h>
-#include <soci/oracle/soci-oracle.h>
+//#include <soci/soci.h>
+//#include <soci/oracle/soci-oracle.h>
 #include "xlsxabstractsheet.h"
 #include "xlsxdocument.h"
 #include "xlsxworkbook.h"
@@ -404,22 +404,6 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
 }
 
 int MaterialDbModel::readGCLDb(const QString &user_name, const QString &pw, const QString &db_path) {
-    const std::string connectString = "service=" + db_path.toStdString() + " user=" + user_name.toStdString() +
-                                      " password=" + pw.toStdString();
-    try {
-        soci::session sql("oracle", connectString);  // soci::oracle
-
-        qDebug() << "Successfully connected to \"" << connectString << "\", " << "using \"" << sql.get_backend_name() << "\" backend.\n";
-    } catch (soci::soci_error const& e) {
-        qWarning() << "Connection to \"" << connectString << "\" failed: " << e.what();
-        return 1;
-    } catch (std::runtime_error const& e) {
-        qWarning() << "Unexpected standard exception occurred: " << e.what();
-        return 1;
-    } catch (...) {
-        qWarning() << "Unexpected unknown exception occurred.";
-        return 1;
-    }
     return 0;
 }
 

@@ -52,3 +52,14 @@ concept FloatingList = requires(T t) {
     { t[0] } -> std::convertible_to<typename std::remove_reference_t<T>::value_type>;
     // { t.push_back(typename T::value_type{}) };
 } && std::floating_point<typename std::remove_reference_t<T>::value_type>;
+
+template <typename T>
+concept Vector = requires(T t) {
+    { t.begin() } -> std::forward_iterator;
+    { t.end() } -> std::forward_iterator;
+    { t.empty() } -> std::same_as<bool>;
+    { t[std::declval<std::size_t>()] } -> std::same_as<typename T::reference>;
+    { t.front() } -> std::same_as<typename T::reference>;
+    { t.back() } -> std::same_as<typename T::reference>;
+    { t.data() } -> std::same_as<typename T::pointer>;
+};

@@ -20,7 +20,7 @@ concept Pair = requires(T1 a) {
 
 // Compound requirements uses return-type-requirement -> type-constraint
 template<typename T1, typename T2>
-concept Vector = requires(T1 a) {
+concept PairVector = requires(T1 a) {
     { Pair<decltype(a.front()), T2> };
     { Pair<decltype(a.back()), T2> };
 };
@@ -33,7 +33,7 @@ public:
     // It seems that it is hard to put the definition of the constructor in the source file,
     // different from AbsorpAnalyticVecFn<T>::scale()
     template<typename U, typename V>
-    requires Vector<V, T> and Vector<U, T>
+    requires PairVector<V, T> and PairVector<U, T>
     OpticMaterial(QString mat_name, U&& n_wl, V&& n_data, U&& k_wl, V&& k_data) : mat_name(std::move(mat_name)),
                                                                                   n_wl(std::forward<U>(n_wl)),
                                                                                   n_data(std::forward<V>(n_data)),

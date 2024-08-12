@@ -57,7 +57,8 @@ QtObject {
 
         function simStart() {
             // "-nosplash", "-nodesktop", "-r"
-            simProcess.start("matlab", ["-batch", "\"run('E:/Documents/GitHub/ddmodel-octave/demo_ms_pin.m')\""], Process.ReadOnly)
+            // simProcess.start("matlab", ["-batch", "\"run('E:/Documents/GitHub/ddmodel-octave/demo_ms_pin.m')\""], Process.ReadOnly)
+            simProcess.start("matlab", Process.ReadOnly)
         }
 
         SimPage {

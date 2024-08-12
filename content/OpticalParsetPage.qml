@@ -8,6 +8,7 @@ import QtQuick
 import QtQuick.Controls  // ProgressBar
 import QtQuick.Dialogs  // native dialogs
 import com.github.yihuajack.DbSysModel
+// import SqlBrowser
 
 OpticalParsetPageForm {
     // https://stackoverflow.com/questions/46627883/can-not-initialize-qml-property-to
@@ -16,6 +17,10 @@ OpticalParsetPageForm {
     // signal dbPathsChanged(var dbPaths)
     // It is not a good idea to initialize ListElement in a QML ListModel and put matDbModel in optLView delegates
     // because matDbModel will not persist data.
+
+    // SqlBrowser {
+    //     id: sqlBrowser
+    // }
 
     ListView {
         id: optLView
