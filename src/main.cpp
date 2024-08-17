@@ -66,12 +66,14 @@ int main(int argc, char *argv[]) {
     // QString operator""_qs introduced since 6.2 deprecated since 6.8, use QString operator""_s instead.
     // See https://github.com/qbittorrent/qBittorrent/issues/19184.
     const QUrl url(u"qrc:/qt/qml/com/github/yihuajack/main.qml"_s);
+
     // Consider using KDSingleApplication
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, app.get(),
         [url](QObject *obj, const QUrl &objUrl) {
-            if (!obj && url == objUrl)
+            if (not obj and url == objUrl) {
                 QCoreApplication::exit(-1);
+            }
         },
         Qt::QueuedConnection);
 

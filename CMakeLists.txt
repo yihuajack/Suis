@@ -43,7 +43,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # `cmake-build-debug-visual-studio` in Qt shell
 # (see https://blog.csdn.net/yihuajack/article/details/136925071) or refer to
 # https://stackoverflow.com/questions/59187030/why-can-clion-correctly-build-and-link-qt-but-not-run-my-executable.
-find_package(Qt6 6.7 REQUIRED COMPONENTS Charts Core Gui Qml Quick Sql Widgets)
+find_package(Qt6 6.7 REQUIRED COMPONENTS Charts Core Gui Qml Quick Sql)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
@@ -98,7 +98,6 @@ target_link_libraries(SuisApp PRIVATE
         Qt6::Qml
         Qt6::Quick
         Qt6::Sql
-        Qt6::Widgets
         QXlsx::QXlsx
 )
 

@@ -11,8 +11,6 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QUrl>
-//#include <soci/soci.h>
-//#include <soci/oracle/soci-oracle.h>
 #include "xlsxabstractsheet.h"
 #include "xlsxdocument.h"
 #include "xlsxworkbook.h"

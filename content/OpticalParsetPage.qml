@@ -8,7 +8,6 @@ import QtQuick
 import QtQuick.Controls  // ProgressBar
 import QtQuick.Dialogs  // native dialogs
 import com.github.yihuajack.DbSysModel
-// import SqlBrowser
 
 OpticalParsetPageForm {
     // https://stackoverflow.com/questions/46627883/can-not-initialize-qml-property-to
@@ -17,10 +16,6 @@ OpticalParsetPageForm {
     // signal dbPathsChanged(var dbPaths)
     // It is not a good idea to initialize ListElement in a QML ListModel and put matDbModel in optLView delegates
     // because matDbModel will not persist data.
-
-    // SqlBrowser {
-    //     id: sqlBrowser
-    // }
 
     ListView {
         id: optLView
@@ -83,8 +78,19 @@ OpticalParsetPageForm {
                     enabled: model.checked
                     onClicked: {
                         if (model.name === "GCL") {
-                            dbFileDialog.nameFilters = ["*.xlsx"]
-                            dbLoginDialog.open();
+                            // For anyone wants something like WidgetItem:
+                            // https://stackoverflow.com/questions/59127594/is-there-any-way-to-embed-a-qwidget-inside-a-qqmlapplicationengine-or-qquickview
+                            // https://www.reddit.com/r/QtFramework/comments/u6rvvj/any_one_has_an_idea_how_to_use_a_qtwidget_in_qml/
+                            // https://github.com/edelhirsch/widgetitem/issues/1
+                            // ASSERT failure in QCoreApplication::sendEvent: "Cannot send
+                            // events to objects owned by a different thread. Current thread
+                            // 0x0x. Receiver 'SqlBrowser' (of type 'SqlBrowser') was created in thread 0x0x", file
+                            // C:\Users\qt\work\qt\qtbase\src\corelib\kernel\qcoreapplication.cpp,
+                            // line 544
+                            // https://stackoverflow.com/questions/38699293/qml-button-that-opens-a-window-from-applicationwindow
+                            let component = Qt.createComponent("SqlBrowserWindow.qml")
+                            let appWindow = component.createObject(root)
+                            appWindow.show()
                         } else {
                             if (model.name === "Solcore") {
                                 dbFileDialog.nameFilters = ["*.txt", "*.ini"]

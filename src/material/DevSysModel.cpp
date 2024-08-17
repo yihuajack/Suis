@@ -45,7 +45,7 @@ void DevSysModel::addDevice() {
 }
 
 void DevSysModel::removeDevice(const int &row) {
-    if (row < 0 || row >= static_cast<int>(m_list.size())) {
+    if (row < 0 or row >= static_cast<int>(m_list.size())) {
         return;
     }
     beginRemoveRows(QModelIndex(), row, row);
