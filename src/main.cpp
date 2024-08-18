@@ -15,6 +15,13 @@
 int main(int argc, char *argv[]) {
     set_qt_environment();
 
+    // qt.qpa.wayland: qtvirtualkeyboard currently is not supported at client-side, use QT_IM_MODULE=qtvirtualkeyboard at compositor-side.
+    // terminate called after throwing an instance of 'std::filesystem::__cxx11::filesystem_error'
+    //     what():  filesystem error: cannot make absolute path: Invalid argument []
+    // https://forum.qt.io/topic/148045/windows-to-linux-lost-virtualkeyboard
+    // https://bugreports.qt.io/browse/QTBUG-94994
+    // qputenv("QT_IM_MODULE", "qtvirtualkeyboard");
+
     // Application organization name would affect QSettings locations.
     // QGuiApplication::setOrganizationName(QStringLiteral("Yihua Liu"));
     QGuiApplication::setApplicationName(QStringLiteral("Suis"));

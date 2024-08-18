@@ -10,7 +10,7 @@
 #include <QString>
 
 #include "Global.h"
-#include "utils/math.h"
+#include "utils/Math.h"
 
 template<typename T1, typename T2>
 concept Pair = requires(T1 a) {

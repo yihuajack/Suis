@@ -120,11 +120,7 @@ std::filesystem::path Private::CustomProfile::downloadLocation() const {
 
 std::unique_ptr<QSettings> Private::CustomProfile::applicationSettings(const std::u16string &name) const {
     // here we force QSettings::IniFormat format always because we need it to be portable across platforms
-#if defined(Q_OS_WIN) || defined(Q_OS_MACOS)
     const std::u16string CONF_FILE_EXTENSION = u".ini"s;
-#else
-    const auto CONF_FILE_EXTENSION = u".conf"_s;
-#endif
     const std::filesystem::path settingsFilePath = configLocation() / std::filesystem::path(name + CONF_FILE_EXTENSION);
     return std::make_unique<QSettings>(QString::fromStdString(settingsFilePath.string()), QSettings::IniFormat);
 }

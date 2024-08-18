@@ -291,7 +291,7 @@ int MaterialDbModel::readSolcoreDb(const QString& db_path) {
             // emit dataChanged(index(0), index(static_cast<int>(m_list.size()) - 1));
             setProgress(static_cast<double>(std::distance(mat_map.cbegin(), it) + 1) / static_cast<double>(mat_map.size()));
         } catch (std::runtime_error& e) {
-            qWarning(e.what());
+            qWarning() << e.what();
             return 2;
         }
     }

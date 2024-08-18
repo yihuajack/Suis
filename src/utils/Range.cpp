@@ -87,16 +87,3 @@ auto Utils::Range::vv_flatten(const U &vv) -> std::vector<T> {
 template auto Utils::Range::vv_flatten(const std::valarray<std::valarray<double>> &vv) -> std::vector<double>;
 template auto Utils::Range::vv_flatten(const std::vector<std::valarray<double>> &vv) -> std::vector<double>;
 template auto Utils::Range::vv_flatten(const std::valarray<std::valarray<std::complex<double>>> &vv) -> std::vector<std::complex<double>>;
-
-#ifdef __cpp_lib_generator
-template<std::ranges::sized_range U>
-std::generator<const typename inner_type<U>::type&> Utils::Range::recursive_iterate(const U &nested_range) {
-    for (const typename U::value_type &elem : nested_range) {
-        if constexpr (std::ranges::sized_range<typename U::value_type>) {
-            recursive_iterate(elem);
-        } else {
-            co_yield nested_range;
-        }
-    }
-}
-#endif

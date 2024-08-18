@@ -47,7 +47,7 @@ find_package(Qt6 6.7 REQUIRED COMPONENTS Charts Core Gui Qml Quick Sql)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
-find_package(Boost 1.85.0 REQUIRED)
+find_package(Boost 1.83.0 REQUIRED)
 # find_package(Soci 4.0.3 CONFIG REQUIRED)
 # find_package(SQLite3 3.45.0 REQUIRED)
 # Check default CMAKE_FIND_LIBRARY_SUFFIXES in Modules/CMakeGenericSystem.cmake ("lib"/[".so" ".a"]) and

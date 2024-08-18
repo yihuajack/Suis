@@ -47,13 +47,6 @@ namespace Utils::Range {
     struct inner_type<T, std::void_t<typename T::value_type::value_type>>
             : inner_type<typename T::value_type> {
     };
-
-#ifdef __cpp_lib_generator
-#include <generator>
-
-    template<std::ranges::sized_range U>
-    std::generator<const typename inner_type<U>::type&> recursive_iterate(const U &nested_range);
-#endif
 }
 
 #endif  // UTILS_RANGE_H

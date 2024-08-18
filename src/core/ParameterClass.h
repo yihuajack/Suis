@@ -6,15 +6,18 @@
 #define SUISAPP_PARAMETERCLASS_H
 
 #include <iostream>
+#ifdef __cpp_lib_print
 #include <print>
+#endif
+#include <map>
+#include <numeric>
 #include <ranges>
 #include <set>
-#include <utility>
 
 #include "Device.h"
 #include "DistFun.h"
 #include "GetVarSub.h"
-#include "utils/math.h"
+#include "utils/Math.h"
 
 enum class SpatialCoordinate {
     CARTESIAN, CYLINDRICAL_POLAR, SPHERICAL_POLAR
@@ -406,7 +409,11 @@ public:
         auto val_it = std::ranges::find(layer_type, "active");
         if (val_it == layer_type.cend()) {
             // If no flag is give assume active layer is middle
+#ifdef __cpp_lib_print
             std::println("No designated 'active' layer - assigning middle layer to be active");
+#else
+            std::cout << "No designated 'active' layer - assigning middle layer to be active\n";
+#endif
             return std::round(col_size() / 2);
         }
         return std::distance(layer_type.cbegin(), val_it);
@@ -705,7 +712,7 @@ public:
                                        SZ_T start_row,
                                        SZ_T end_row) {
         for (const STR_T &possible_header : possible_headers) {
-            const std::map<STR_T, SZ_T>::const_iterator it = property_in.find(possible_header);
+            const typename std::map<STR_T, SZ_T>::const_iterator it = property_in.find(possible_header);
             if (it not_eq property_in.cend()) {
                 const SZ_T index = it->second;
                 L<T> property(end_row - start_row + 1);
@@ -747,7 +754,7 @@ private:
         SZ_T start_row;
         SZ_T end_row;
         SZ_T maxRow = csv_data.size();
-        const std::map<STR_T, SZ_T>::const_iterator pit_lt = properties.find("layer_type");
+        const typename std::map<STR_T, SZ_T>::const_iterator pit_lt = properties.find("layer_type");
         if (pit_lt == properties.cend()) {
             throw std::runtime_error("No layer type (layer_type) defined in .csv. "
                      "layer_type must be defined when using .csv input file");
@@ -879,7 +886,7 @@ private:
         // Recombination zone location
         if (layer_type.contains("Interface") or layer_type.contains("junction")) {
             L<char> vsr_zone_loc_auto = locate_vsr_zone();
-            const std::map<STR_T, SZ_T>::const_iterator pit_vzl = properties.find("vsr_zone_loc");
+            const typename std::map<STR_T, SZ_T>::const_iterator pit_vzl = properties.find("vsr_zone_loc");
             L<STR_T> vsr_zone_loc_user(end_row - start_row + 1);
             if (pit_vzl not_eq properties.cend()) {
                 for (SZ_T rc = start_row; rc <= end_row; rc++) {

@@ -10,7 +10,7 @@
 #include <valarray>
 #include <vector>
 
-#include "utils/math.h"
+#include "utils/Math.h"
 #include "material/OpticMaterial.h"
 
 /*
