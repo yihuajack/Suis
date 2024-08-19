@@ -120,10 +120,6 @@ OpticalParsetPageForm {
                 }
             }
 
-            DbLoginDialog {
-                id: dbLoginDialog
-            }
-
             // Inherit from Popup
             Dialog {
                 id: matListDialog

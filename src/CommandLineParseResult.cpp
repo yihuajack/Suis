@@ -20,7 +20,7 @@ CommandLineParseResult parseCommandLine(QCommandLineParser &parser, const QCoreA
     parser.addOption(configNameOption);
     parser.process(app);
     CommandLineParseResult result;
-    result.profileDir = std::filesystem::absolute(parser.value(profileOption).toStdString());
+    result.profileDir = parser.value(profileOption).toStdString();
     result.configName = parser.value(configNameOption).toStdU16String();
     return result;
 }

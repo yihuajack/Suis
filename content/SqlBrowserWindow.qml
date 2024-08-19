@@ -26,7 +26,7 @@ ApplicationWindow {
             title: qsTr("File")
             MenuItem {
                 text: qsTr("Add Connection...")
-                onTriggered: console.log("New File")
+                onTriggered: dbLoginDialog.open()
             }
 
             MenuSeparator {}
@@ -34,22 +34,6 @@ ApplicationWindow {
             MenuItem {
                 text: "Quit"
                 onTriggered: close()
-            }
-        }
-
-        Menu {
-            title: "About"
-            MenuItem {
-                text: "Cut"
-                onTriggered: console.log("Cut")
-            }
-            MenuItem {
-                text: "Copy"
-                onTriggered: console.log("Copy")
-            }
-            MenuItem {
-                text: "Paste"
-                onTriggered: console.log("Paste")
             }
         }
 
