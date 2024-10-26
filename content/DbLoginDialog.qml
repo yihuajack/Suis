@@ -9,7 +9,7 @@ import QtQuick.Layouts
 
 Dialog {
     id: dbLoginDialog
-    title: "Login"
+    title: qsTr("Login")
     width: 400
     height: 400
     anchors.centerIn: parent
@@ -19,10 +19,12 @@ Dialog {
         standardButtons: DialogButtonBox.Ok | DialogButtonBox.Cancel  // buttons: []
         onAccepted: {
             model.path = urlField.text
-            let login_status = model.db_model.readGCLDb(usernameField.text, passwordField.text, urlField.text)
+            let login_status = sqlTreeModel.addConnection("QOCI", urlField.text, usernameField.text, passwordField.text)
             // Injection of parameters into signal handlers is deprecated.
             // Use JavaScript functions with formal parameters instead.
-            statusText.text = statusInfo(login_status)
+            if (login_status === 0) {
+                sqlStatusText.text = "Ready."
+            }
             dbLoginDialog.accept()
         }
         onRejected: {
@@ -63,7 +65,7 @@ Dialog {
 
         RowLayout {
             Label {
-                text: "Database"
+                text: qsTr("Database")
                 Layout.alignment: Qt.AlignLeft
                 width: 80
             }

@@ -29,14 +29,12 @@ target_sources(SuisApp PRIVATE
         optics/tmm.cpp
         optics/tmm_vec.cpp
         # sql headers
-        sql/SqlBrowser.h
-#        sql/SqlTreeModel.h
-#        sql/SqlTreeItem.h
+        sql/SqlTreeModel.h
+        sql/SqlTreeItem.h
         # sql sources
-        sql/SqlBrowser.cpp
-#        sql/SqlTreeModel.cpp
-#        sql/SqlTreeItem.cpp
-        #utils headers
+        sql/SqlTreeModel.cpp
+        sql/SqlTreeItem.cpp
+        # utils headers
         utils/Approx.h
         utils/Fs.h
         utils/Log.h

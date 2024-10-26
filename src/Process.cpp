@@ -35,7 +35,16 @@ void Process::start(const QString& program, const QStringList& arguments, OpenMo
     if (not m_Process) {
         newProcess();
     }
-    m_Process->start(program, arguments, static_cast<QIODevice::OpenMode>((static_cast<int>(mode))));
+
+    m_Process->start(program, arguments, static_cast<QIODevice::OpenMode>(static_cast<int>(mode)));
+
+    if (not m_Process->waitForStarted(-1)) {
+        qDebug() << "Failed to start process:" << m_Process->errorString();
+    }
+
+    if (not m_Process->waitForFinished()) {
+        qDebug() << "Process finished with error:" << m_Process->errorString();
+    }
 }
 
 QByteArray Process::readAllStandardError() {
