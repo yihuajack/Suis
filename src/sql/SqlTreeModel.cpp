@@ -2,7 +2,7 @@
 // Created by Yihua Liu on 2024/8/12.
 //
 
-#include <QSqlError>
+#include <QtSql/QSqlError>
 #include <QtSql/QSqlDriver>
 
 #include "SqlTreeModel.h"

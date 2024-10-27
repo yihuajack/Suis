@@ -30,9 +30,14 @@ qt6_add_qml_module(content
     RESOURCES
         fonts/fonts.txt
         images/SuisLogo.svg
+        images/arrow_icon.png
 
     SOURCES
         ../src/Process.h ../src/Process.cpp
         ../src/material/DeviceModel.h ../src/material/DeviceModel.cpp
         ../src/material/DevSysModel.h ../src/material/DevSysModel.cpp
+        # sql headers
+        ../src/sql/SqlTreeModel.h
+        # sql sources
+        ../src/sql/SqlTreeModel.cpp
 )

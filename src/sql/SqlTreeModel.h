@@ -6,12 +6,14 @@
 #define SUISAPP_SQLTREEMODEL_H
 
 #include <QAbstractItemModel>
+#include <QQmlEngine>
 #include <QtSql/QSqlDatabase>
 
 #include "SqlTreeItem.h"
 
 class SqlTreeModel : public QAbstractItemModel {
     Q_OBJECT
+    QML_ELEMENT
 
 public:
     Q_DISABLE_COPY_MOVE(SqlTreeModel);

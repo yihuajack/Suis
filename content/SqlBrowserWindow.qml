@@ -7,7 +7,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
-import SqlTreeModel
+import content
 
 // Using a Component as the root of a QML document is deprecated:
 // types defined in qml documents are automatically wrapped into Components when needed.
@@ -15,9 +15,9 @@ ApplicationWindow {
     id: root
 
     height: 600
+    width: 800
     title: qsTr("SQL Browser")
     visible: false
-    width: 800
 
     footer: Text {
         id: sqlStatusText
@@ -65,8 +65,8 @@ ApplicationWindow {
 
     SqlTreeModel {
         id: sqlTreeModel
-
     }
+
     Loader {
         id: dialogLoader
 
@@ -82,6 +82,7 @@ ApplicationWindow {
         text: qsTr("The SQL Browser shows how a data browser can be used to visualize the results of SQL statements on a live database")
         title: qsTr("About")
     }
+
     ColumnLayout {
         anchors.fill: parent
 
@@ -89,7 +90,6 @@ ApplicationWindow {
         // columns: 2
         // rowSpacing: 10
         // columnSpacing: 10
-
         RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 0.7 * parent.height
@@ -102,9 +102,16 @@ ApplicationWindow {
                 Layout.fillHeight: true
                 // Lauout.preferredWidth: 0.5 * parent.width
                 Layout.fillWidth: true
+                clip: true
+
+                selectionModel: ItemSelectionModel { }
+
                 model: sqlTreeModel
 
-                delegate: Item {
+                delegate: TreeViewDelegate {
+                    id: viewDelegate
+
+                    readonly property real _padding: 5
                     required property int column
                     required property bool current
                     required property int depth
@@ -112,32 +119,87 @@ ApplicationWindow {
                     required property int hasChildren
                     required property bool isTreeNode
                     required property int row
+                    readonly property real szHeight: contentItem.implicitHeight * 2.5
                     required property TreeView treeView
 
-                    implicitHeight: root.height / 2
-                    implicitWidth: root.width / 2
+                    implicitHeight: szHeight
+                    implicitWidth: _padding + contentItem.x + contentItem.implicitWidth + _padding
 
-                    Rectangle {
-                        border.color: "gray"
-                        color: "lightgray"
-                        height: parent.height
-                        width: parent.width
+                    background: Rectangle { // Background rectangle enabled to show the alternative row colors
+                        id: background
 
-                        Text {
-                            id: text_name
-
-                            anchors.left: parent.left
-                            anchors.leftMargin: 10
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: model.name
+                        anchors.fill: parent
+                        color: {
+                            if (viewDelegate.model.row === viewDelegate.treeView.currentRow) {
+                                return Qt.lighter(palette.highlight, 1.2);
+                            } else {
+                                if (viewDelegate.treeView.alternatingRows && viewDelegate.model.row % 2 !== 0) {
+                                    return (Application.styleHints.colorScheme === Qt.Light) ? Qt.darker(palette.alternateBase, 1.25) : Qt.lighter(palette.alternateBase, 2.);
+                                } else {
+                                    return palette.base;
+                                }
+                            }
                         }
+
+                        Rectangle {
+                            color: {
+                                if (viewDelegate.model.row === viewDelegate.treeView.currentRow) {
+                                    return (Application.styleHints.colorScheme === Qt.Light) ? Qt.darker(palette.highlight, 1.25) : Qt.lighter(palette.highlight, 2.);
+                                } else {
+                                    return "transparent";
+                                }
+                            }
+                            height: parent.height
+                            visible: !viewDelegate.model.column
+                            // The selection indicator shown on the left side of the highlighted row
+                            width: viewDelegate._padding
+                        }
+                    }
+
+                    indicator: Item {
+                        x: viewDelegate._padding + viewDelegate.depth * viewDelegate.indentation
+                        implicitWidth: viewDelegate.szHeight
+                        implicitHeight: viewDelegate.szHeight
+                        visible: viewDelegate.isTreeNode && viewDelegate.hasChildren
+                        rotation: viewDelegate.expanded ? 90 : 0
+                        TapHandler {
+                            onSingleTapped: {
+                                let index = viewDelegate.treeView.index(viewDelegate.model.row, viewDelegate.model.column)
+                                viewDelegate.treeView.selectionModel.setCurrentIndex(index, ItemSelectionModel.NoUpdate)
+                                viewDelegate.treeView.toggleExpanded(viewDelegate.model.row)
+                            }
+                        }
+                        ColorImage {
+                            width: parent.width / 3
+                            height: parent.height / 3
+                            anchors.centerIn: parent
+                            source: "qrc:/images/arrow_icon.png"
+                            color: palette.buttonText
+                        }
+                    }
+
+                    contentItem: Item {
+                        x: viewDelegate._padding + (viewDelegate.depth + viewDelegate.indentation)
+                        height: parent.height
+                        width: parent.width - viewDelegate._padding - x
+
+                        Label {
+                            id: text_name
+                            width: parent.width
+
+                            elide: Text.ElideRight
+                            text: viewDelegate.model.name
+                        }
+
                         MouseArea {
+                            // https://forum.qt.io/topic/31893/treeview-context-menu
+                            // https://stackoverflow.com/questions/32448678/how-to-show-a-context-menu-on-right-click-in-qt5-5-qml-treeview
                             id: nodeArea
 
                             acceptedButtons: Qt.RightButton
                             anchors.fill: parent
 
-                            onClicked: menu.popup()
+                            onClicked: contextMenu.popup()
 
                             Menu {
                                 id: contextMenu
@@ -147,19 +209,19 @@ ApplicationWindow {
 
                                     onTriggered: SqlTreeModel.refresh(model.index)
                                 }
+
                                 MenuItem {
                                     enabled: isTreeNode && !hasChildren
                                     text: "Show Schema"
 
-                                    onTriggered: sqlTableView.model = model.table
+                                    onTriggered: sqlTableView.model = viewDelegate.model.table
                                 }
                             }
                         }
                     }
                 }
-                selectionModel: ItemSelectionModel {
-                }
             }
+
             TableView {
                 id: sqlTableView
 

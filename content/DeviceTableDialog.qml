@@ -46,9 +46,9 @@ Dialog {
                 columnSpacing: 1
                 rowSpacing: 1
 
-                model: device
+                selectionModel: ItemSelectionModel { }
 
-                selectionModel: ItemSelectionModel {}
+                model: device
 
                 // QML QQuickRectangle: TableView: detected anchors on delegate with index: .
                 // Use implicitWidth and implicitHeight instead.
@@ -83,10 +83,8 @@ Dialog {
                         // Note that in qtdeclarative/src/quick/doc/snippets/qml/tableview/editdelegate.qml
                         // 'display = text' is shorthand for:
                         // let index = TableView.view.index(row, column)
-                        // For branch 6.7.2:
-                        // TableView.view.model.setData(index, text, Qt.DisplayRole)
-                        // For branch 6.8:
-                        // TableView.view.model.setData(index, "display", text)
+                        // For branch 6.7.2: TableView.view.model.setData(index, text, Qt.DisplayRole)
+                        // For branch 6.8:   TableView.view.model.setData(index, "display", text)
                         TableView.onCommit: {
                             console.log("Table view commiting")
                             display = text  // edit = text
@@ -94,6 +92,10 @@ Dialog {
                         }
                     }
                 }
+            }
+
+            SelectionRectangle {
+                target: tableView
             }
         }
     }

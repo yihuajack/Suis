@@ -34,9 +34,7 @@ int main(int argc, char *argv[]) {
      * https://doc.qt.io/qt-6/qtquickcontrols-customize.html
      * Avoid using qmlRegisterType and friends to expose C++ to QML
      * Instead, promote the QML_ELEMENT macro and how to edit the build files accordingly.
-     */
-    qmlRegisterType<SqlTreeModel>("SqlTreeModel", 1, 0, "SqlTreeModel");
-    /* https://doc.qt.io/qt-6/qtqml-cppintegration-overview.html
+     * https://doc.qt.io/qt-6/qtqml-cppintegration-overview.html
      * [Defining QML Types from C++](https://doc.qt.io/qt-6/qtqml-cppintegration-definetypes.html)
      * https://scythe-studio.com/en/blog/how-to-integrate-qml-and-c-expose-object-and-register-c-class-to-qml
      * (Not recommended) [Embedding C++ Objects into QML with Context Properties]
@@ -46,12 +44,12 @@ int main(int argc, char *argv[]) {
      * just use qmlRegisterSingletonInstance. Note: cppObject must outlive the QML engine in which it is used.
      * QScopedPointer<DbSysModel> db_system(new DbSysModel);
      * qmlRegisterSingletonInstance("com.github.yihuajack.DbSysModel", 1, 0, "DbSysModel", db_system.get());
+     * DbSysModel needs this approach because it includes QXlsx headers
      */
     qmlRegisterSingletonType<DbSysModel>("com.github.yihuajack.DbSysModel", 1, 0,
                                          "DbSysModel",
                                          [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
-        // qobject_singletontype_provider
-        Q_UNUSED(engine)
+        Q_UNUSED(engine)  // qobject_singletontype_provider
         Q_UNUSED(scriptEngine)
 
         return DbSysModel::instance();  // auto *db_system = new DbSysModel();
