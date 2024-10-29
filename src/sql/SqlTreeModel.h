@@ -14,6 +14,7 @@
 class SqlTreeModel : public QAbstractItemModel {
     Q_OBJECT
     QML_ELEMENT
+    // QML_SINGLETON
 
 public:
     Q_DISABLE_COPY_MOVE(SqlTreeModel);

@@ -17,7 +17,8 @@ QtObject {
         function simStart() {
             // Remember to add matlab to path!
             // simProcess.start("matlab", ["-nosplash", "-nodesktop", "-r", "run('E:/Documents/GitHub/ddmodel-octave/demo_ms_pin.m')"], Process.ReadOnly);
-            simProcess.start("matlab", ["-batch", "run('E:/Documents/GitHub/ddmodel-octave/demo_ms_pin.m')"], Process.ReadOnly);
+            // simProcess.start("matlab", ["-batch", "run('E:/Documents/GitHub/ddmodel-octave/demo_ms_pin.m')"], Process.ReadOnly);
+            simProcess.start("octave", ["--no-gui", "--quiet", "'E:/Documents/GitHub/ddmodel-octave/demo_ms_pin.m'"], Process.ReadOnly);
         }
 
         height: 480

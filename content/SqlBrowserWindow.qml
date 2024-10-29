@@ -63,6 +63,7 @@ ApplicationWindow {
         }
     }
 
+    // If making SqlTreeModel QML_SINGETON, then cannot use this declaration!
     SqlTreeModel {
         id: sqlTreeModel
     }
@@ -95,16 +96,16 @@ ApplicationWindow {
             Layout.preferredHeight: 0.7 * parent.height
 
             TreeView {
-                id: dbTreeView
+                id: treeView
 
                 // Layout.column: 0
                 // Layout.columnSpan: 1
-                Layout.fillHeight: true
                 // Lauout.preferredWidth: 0.5 * parent.width
                 Layout.fillWidth: true
+                Layout.fillHeight: true
                 clip: true
 
-                selectionModel: ItemSelectionModel { }
+                selectionModel: ItemSelectionModel { }  // by default
 
                 model: sqlTreeModel
 
@@ -112,20 +113,14 @@ ApplicationWindow {
                     id: viewDelegate
 
                     readonly property real _padding: 5
-                    required property int column
-                    required property bool current
-                    required property int depth
-                    required property bool expanded
-                    required property int hasChildren
-                    required property bool isTreeNode
-                    required property int row
                     readonly property real szHeight: contentItem.implicitHeight * 2.5
-                    required property TreeView treeView
+                    // required property int row, column, depth, hasChildren, bool current, expanded, isTreeNode
+                    // required property TreeView treeView
 
                     implicitHeight: szHeight
                     implicitWidth: _padding + contentItem.x + contentItem.implicitWidth + _padding
 
-                    background: Rectangle { // Background rectangle enabled to show the alternative row colors
+                    background: Rectangle {  // Background rectangle enabled to show the alternative row colors
                         id: background
 
                         anchors.fill: parent
@@ -156,68 +151,33 @@ ApplicationWindow {
                         }
                     }
 
-                    indicator: Item {
-                        x: viewDelegate._padding + viewDelegate.depth * viewDelegate.indentation
-                        implicitWidth: viewDelegate.szHeight
-                        implicitHeight: viewDelegate.szHeight
-                        visible: viewDelegate.isTreeNode && viewDelegate.hasChildren
-                        rotation: viewDelegate.expanded ? 90 : 0
-                        TapHandler {
-                            onSingleTapped: {
-                                let index = viewDelegate.treeView.index(viewDelegate.model.row, viewDelegate.model.column)
-                                viewDelegate.treeView.selectionModel.setCurrentIndex(index, ItemSelectionModel.NoUpdate)
-                                viewDelegate.treeView.toggleExpanded(viewDelegate.model.row)
-                            }
-                        }
-                        ColorImage {
-                            width: parent.width / 3
-                            height: parent.height / 3
-                            anchors.centerIn: parent
-                            source: "qrc:/images/arrow_icon.png"
-                            color: palette.buttonText
-                        }
-                    }
+                    // indicator: Item {
+                    //     x: viewDelegate._padding + viewDelegate.depth * viewDelegate.indentation
+                    //     implicitWidth: viewDelegate.szHeight
+                    //     implicitHeight: viewDelegate.szHeight
+                    //     visible: viewDelegate.isTreeNode && viewDelegate.hasChildren
+                    //     rotation: viewDelegate.expanded ? 90 : 0
+                    //     TapHandler {
+                    //         onSingleTapped: {
+                    //             let index = viewDelegate.treeView.index(viewDelegate.model.row, viewDelegate.model.column)
+                    //             viewDelegate.treeView.selectionModel.setCurrentIndex(index, ItemSelectionModel.NoUpdate)
+                    //             viewDelegate.treeView.toggleExpanded(viewDelegate.model.row)
+                    //         }
+                    //     }
+                    //     ColorImage {
+                    //         width: parent.width / 3
+                    //         height: parent.height / 3
+                    //         anchors.centerIn: parent
+                    //         source: "qrc:/images/arrow_icon.png"
+                    //         color: palette.buttonText
+                    //     }
+                    // }
 
-                    contentItem: Item {
-                        x: viewDelegate._padding + (viewDelegate.depth + viewDelegate.indentation)
-                        height: parent.height
+                    contentItem: Label {
+                        x: viewDelegate._padding + viewDelegate.depth + viewDelegate.indentation
                         width: parent.width - viewDelegate._padding - x
-
-                        Label {
-                            id: text_name
-                            width: parent.width
-
-                            elide: Text.ElideRight
-                            text: viewDelegate.model.name
-                        }
-
-                        MouseArea {
-                            // https://forum.qt.io/topic/31893/treeview-context-menu
-                            // https://stackoverflow.com/questions/32448678/how-to-show-a-context-menu-on-right-click-in-qt5-5-qml-treeview
-                            id: nodeArea
-
-                            acceptedButtons: Qt.RightButton
-                            anchors.fill: parent
-
-                            onClicked: contextMenu.popup()
-
-                            Menu {
-                                id: contextMenu
-
-                                MenuItem {
-                                    text: "Refresh"
-
-                                    onTriggered: SqlTreeModel.refresh(model.index)
-                                }
-
-                                MenuItem {
-                                    enabled: isTreeNode && !hasChildren
-                                    text: "Show Schema"
-
-                                    onTriggered: sqlTableView.model = viewDelegate.model.table
-                                }
-                            }
-                        }
+                        text: viewDelegate.model.display
+                        elide: Text.ElideRight
                     }
                 }
             }

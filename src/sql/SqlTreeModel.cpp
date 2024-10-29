@@ -182,7 +182,7 @@ bool SqlTreeModel::addConnection(const QString &driver, const QString &database,
     QSqlError err;
     QStringList sl_db = database.split(':');
     QStringList subsl_db = sl_db.back().split('/');
-    QString db_name = subsl_db.back();
+    const QString& db_name = subsl_db.back();
     QString conn_name = driver + QLatin1Char(':');
     if (not user.isEmpty()) {
         conn_name += user + QLatin1Char('@');
@@ -215,11 +215,10 @@ bool SqlTreeModel::addConnection(const QString &driver, const QString &database,
         qInfo() << err;
         QSqlDatabase::removeDatabase(conn_name);
         return true;
-    } else {
-        insertRows(rowCount(), 1);
-        rootItem->child(rootItem->childCount() - 1)->setData(0, conn_name);
-        return false;
     }
+    insertRows(rowCount(), 1);
+    rootItem->child(rootItem->childCount() - 1)->setData(0, conn_name);
+    return false;
 }
 
 QHash<int, QByteArray> SqlTreeModel::roleNames() const {

@@ -32,6 +32,7 @@ qt6_add_qml_module(content
         images/SuisLogo.svg
         images/arrow_icon.png
 
+    # SOURCES is equivalent to adding the sources to the backing target with the built-in target_sources() CMake command
     SOURCES
         ../src/Process.h ../src/Process.cpp
         ../src/material/DeviceModel.h ../src/material/DeviceModel.cpp
