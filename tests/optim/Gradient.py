@@ -17,8 +17,6 @@ def model(p, start_row):
     try:
         output = subprocess.run(command, capture_output=True, text=True, check=True)
         print("MATLAB Output:\n", output.stdout)
-        # df_stats = pd.read_csv(r'E:\Documents\GitHub\ddmodel-octave\stats.csv')
-        # return np.array([df_stats.loc[7, 'B'], df_stats.loc[8, 'B'], df_stats.loc[12, 'B'], df_stats.loc[13, 'B']])
         return pd.read_csv(r'E:\Documents\GitHub\ddmodel-octave\JV.csv', header=None).iloc[start_row:, 1].to_numpy()
 
     except subprocess.CalledProcessError as e:

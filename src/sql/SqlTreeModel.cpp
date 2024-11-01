@@ -189,21 +189,8 @@ bool SqlTreeModel::addConnection(const QString &driver, const QString &database,
     }
     conn_name += db_name;
     // https://doc.qt.io/qt-6/sql-driver.html#how-to-build-the-oci-plugin-on-windows
-    // In Qt 6.7.2 (MSVC 2019 64-bit) command line prompt:
-    // qt-cmake -G "Visual Studio 17 2022" D:\Qt\6.7.2\Src\qtbase\src\plugins\sqldrivers
-    // -DCMAKE_INSTALL_PREFIX=D:\Qt\6.7.2\msvc2019_64
-    // -DOracle_INCLUDE_DIR=C:\Users\DELL\Downloads\WINDOWS.X64_193000_db_home\oci\include
-    // -DOracle_LIBRARY=C:\Users\DELL\Downloads\WINDOWS.X64_193000_db_home\oci\lib\msvc\oci.lib
-    // qt-cmake is D:\Qt\<qtver>\msvc2019_64\bin\qt-cmake.bat
-    // Caution: using system default cmake like GNU Octave\Octave-9.2.0\mingw64\bin\cmake.exe will cause weird errors
-    // when building the ODBC driver!
-    // Also remember the manual fix in https://bugreports.qt.io/browse/QTBUG-128670
-    // (https://stackoverflow.com/questions/37007939/command-line-error-d8016-o2-and-rtc1-command-line-options-are-incompatibl)
-    // (https://youtrack.jetbrains.com/issue/CPP-35594/CLionCommand-line-error-D8016-O2-and-RTC1-command-line-options-are-incompatible)
-    // D:\Qt\Tools\CMake_64\bin\cmake.exe --build . --config RelWithDebInfo
-    // D:\Qt\Tools\CMake_64\bin\cmake.exe --install .
-    // Debug mode for *d.dll and RelWithDebInfo for *.dll
-    // Building for multiple configurations: RelWithDebInfo;Debug. Main configuration is: RelWithDebInfo.
+    // https://blog.csdn.net/yihuajack/article/details/143381286
+    // https://bugreports.qt.io/browse/QTBUG-128670
     // Remember to rerun windeployqt reset CMake caches and reload the project!
     // https://forum.qt.io/topic/158713/cannot-load-qoci-sql-driver-even-successfully-built
     QSqlDatabase db = QSqlDatabase::addDatabase(driver, conn_name);
