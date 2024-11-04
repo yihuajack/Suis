@@ -7,9 +7,9 @@ from skopt.utils import use_named_args
 
 # Define the search space
 search_space = [
-    Real(1e-5, 5e-5, name='dE'),
-    Real(1e-5, 5e-5, name='dP'),
-    Real(5e-6, 2e-5, name='dH')
+    Real(4e-6, 4e-5, name='dH'),
+    Real(2e-5, 1e-4, name='dP'),
+    Real(1e-6, 1e-5, name='dE')
 ]
 
 def model(x):
@@ -33,7 +33,7 @@ def model(x):
 # Objective function to minimize
 @use_named_args(search_space)
 def objective_function(**params):
-    log_x = [params[key] for key in ['dE', 'dP', 'dH']]
+    log_x = [params[key] for key in ['dH', 'dP', 'dE']]
     y = model(log_x)  # Get outputs from the black-box model
     loss = -y ** 2
     return loss

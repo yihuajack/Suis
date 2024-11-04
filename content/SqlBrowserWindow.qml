@@ -151,27 +151,28 @@ ApplicationWindow {
                         }
                     }
 
-                    // indicator: Item {
-                    //     x: viewDelegate._padding + viewDelegate.depth * viewDelegate.indentation
-                    //     implicitWidth: viewDelegate.szHeight
-                    //     implicitHeight: viewDelegate.szHeight
-                    //     visible: viewDelegate.isTreeNode && viewDelegate.hasChildren
-                    //     rotation: viewDelegate.expanded ? 90 : 0
-                    //     TapHandler {
-                    //         onSingleTapped: {
-                    //             let index = viewDelegate.treeView.index(viewDelegate.model.row, viewDelegate.model.column)
-                    //             viewDelegate.treeView.selectionModel.setCurrentIndex(index, ItemSelectionModel.NoUpdate)
-                    //             viewDelegate.treeView.toggleExpanded(viewDelegate.model.row)
-                    //         }
-                    //     }
-                    //     ColorImage {
-                    //         width: parent.width / 3
-                    //         height: parent.height / 3
-                    //         anchors.centerIn: parent
-                    //         source: "qrc:/images/arrow_icon.png"
-                    //         color: palette.buttonText
-                    //     }
-                    // }
+                    indicator: Item {
+                        x: viewDelegate._padding + viewDelegate.depth * viewDelegate.indentation
+                        implicitWidth: viewDelegate.szHeight
+                        implicitHeight: viewDelegate.szHeight
+                        visible: viewDelegate.isTreeNode && viewDelegate.hasChildren
+                        rotation: viewDelegate.expanded ? 90 : 0
+                        TapHandler {
+                            onSingleTapped: {
+                                let index = viewDelegate.treeView.index(viewDelegate.model.row, viewDelegate.model.column)
+                                viewDelegate.treeView.selectionModel.setCurrentIndex(index, ItemSelectionModel.NoUpdate)
+                                viewDelegate.treeView.toggleExpanded(viewDelegate.model.row)
+                            }
+                        }
+                        // https://stackoverflow.com/questions/69964071/qt-qml-colorimage-is-not-a-type
+                        // ColorImage {
+                        //     width: parent.width / 3
+                        //     height: parent.height / 3
+                        //     anchors.centerIn: parent
+                        //     source: "qrc:/images/arrow_icon.png"
+                        //     color: palette.buttonText
+                        // }
+                    }
 
                     contentItem: Label {
                         x: viewDelegate._padding + viewDelegate.depth + viewDelegate.indentation

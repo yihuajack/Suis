@@ -42,3 +42,6 @@ qt6_add_qml_module(content
         # sql sources
         ../src/sql/SqlTreeModel.cpp
 )
+
+# https://forum.qt.io/topic/159516/undefined-reference-to-qsqldatabase-and-other-qtsql-headers-of-qt-cmake-project-on-linux
+target_link_libraries(content PUBLIC Qt6::Sql)
