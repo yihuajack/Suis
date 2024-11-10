@@ -22,6 +22,7 @@ qt6_add_qml_module(content
         SimPage.qml
         Splash.qml
         SqlBrowserWindow.qml
+        SqlBrowserTreeView.qml
         WelcomePage.qml
         WelcomePageForm.ui.qml
         WizardFlow.qml

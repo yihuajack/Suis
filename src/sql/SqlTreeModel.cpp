@@ -2,15 +2,14 @@
 // Created by Yihua Liu on 2024/8/12.
 //
 
-#include <QtSql/QSqlError>
 #include <QtSql/QSqlDriver>
+#include <QtSql/QSqlError>
+#include <QtSql/QSqlRelationalTableModel>
 
 #include "SqlTreeModel.h"
-#include "SqlTableModel.h"
 
 SqlTreeModel::SqlTreeModel(QObject *parent) : QAbstractItemModel(parent) {
-    QStringList drivers = QSqlDatabase::drivers();
-    if (drivers.empty()) {
+    if (const QStringList drivers = QSqlDatabase::drivers(); drivers.empty()) {
         qWarning() << tr("No database drivers found.")
                    << tr("This part requires at least one Qt database driver. "
                          "Please check the documentation how to build the "
@@ -26,30 +25,30 @@ SqlTreeModel::SqlTreeModel(QObject *parent) : QAbstractItemModel(parent) {
 
 SqlTreeModel::~SqlTreeModel() = default;
 
-QVariant SqlTreeModel::data(const QModelIndex &index, int role) const {
+QVariant SqlTreeModel::data(const QModelIndex &index, const int role) const {
     if (not index.isValid()) {
         return {};
     }
 
-    SqlTreeItem *item = getItem(index);
+    const SqlTreeItem *item = getItem(index);
     // for std::shared_ptr needs Q_DECLARE_SMART_POINTER_METATYPE(std::shared_ptr)
     // https://www.kdab.com/psa-qpointer-has-a-terrible-name/
-    auto pair = item->data(index.column()).value<std::pair<QString, QSharedPointer<QSqlRelationalTableModel>>>();
+    auto [fst, snd] = item->data(index.column()).value<std::pair<QString, QSharedPointer<QSqlRelationalTableModel>>>();
 
     if (role == Qt::DisplayRole) {
-        return pair.first;
+        return fst;
     } else if (role == SqlTableRole) {
-        return QVariant::fromValue(pair.second);
+        return QVariant::fromValue(snd);
     } else {
         return {};
     }
 }
 
-QVariant SqlTreeModel::headerData(int section, Qt::Orientation orientation, int role) const {
+QVariant SqlTreeModel::headerData(const int section, const Qt::Orientation orientation, const int role) const {
     return orientation == Qt::Horizontal and role == Qt::DisplayRole ? rootItem->data(section) : QVariant{};
 }
 
-QModelIndex SqlTreeModel::index(int row, int column, const QModelIndex &parent) const {
+QModelIndex SqlTreeModel::index(const int row, const int column, const QModelIndex &parent) const {
     if (parent.isValid() and parent.column() not_eq 0) {
         return {};
     }
@@ -100,7 +99,7 @@ Qt::ItemFlags SqlTreeModel::flags(const QModelIndex &index) const {
     return Qt::ItemIsEditable | QAbstractItemModel::flags(index);
 }
 
-bool SqlTreeModel::setData(const QModelIndex &index, const QVariant &value, int role) {
+bool SqlTreeModel::setData(const QModelIndex &index, const QVariant &value, const int role) {
     if (role not_eq Qt::EditRole) {
         return false;
     }
@@ -115,7 +114,7 @@ bool SqlTreeModel::setData(const QModelIndex &index, const QVariant &value, int 
     return result;
 }
 
-bool SqlTreeModel::setHeaderData(int section, Qt::Orientation orientation, const QVariant &value, int role) {
+bool SqlTreeModel::setHeaderData(const int section, const Qt::Orientation orientation, const QVariant &value, const int role) {
     if (role not_eq Qt::EditRole or orientation not_eq Qt::Horizontal) {
         return false;
     }
@@ -129,7 +128,7 @@ bool SqlTreeModel::setHeaderData(int section, Qt::Orientation orientation, const
     return result;
 }
 
-bool SqlTreeModel::insertColumns(int position, int columns, const QModelIndex &parent) {
+bool SqlTreeModel::insertColumns(const int position, const int columns, const QModelIndex &parent) {
     beginInsertColumns(parent, position, position + columns - 1);
     const bool success = rootItem->insertColumns(position, columns);
     endInsertColumns();
@@ -137,7 +136,7 @@ bool SqlTreeModel::insertColumns(int position, int columns, const QModelIndex &p
     return success;
 }
 
-bool SqlTreeModel::removeColumns(int position, int columns, const QModelIndex &parent) {
+bool SqlTreeModel::removeColumns(const int position, const int columns, const QModelIndex &parent) {
     beginRemoveColumns(parent, position, position + columns - 1);
     const bool success = rootItem->removeColumns(position, columns);
     endRemoveColumns();
@@ -149,7 +148,7 @@ bool SqlTreeModel::removeColumns(int position, int columns, const QModelIndex &p
     return success;
 }
 
-bool SqlTreeModel::insertRows(int position, int rows, const QModelIndex &parent) {
+bool SqlTreeModel::insertRows(const int position, const int rows, const QModelIndex &parent) {
     SqlTreeItem *parentItem = getItem(parent);
     if (not parentItem) {
         return false;
@@ -162,7 +161,7 @@ bool SqlTreeModel::insertRows(int position, int rows, const QModelIndex &parent)
     return success;
 }
 
-bool SqlTreeModel::removeRows(int position, int rows, const QModelIndex &parent) {
+bool SqlTreeModel::removeRows(const int position, const int rows, const QModelIndex &parent) {
     SqlTreeItem *parentItem = getItem(parent);
     if (not parentItem) {
         return false;
@@ -230,8 +229,8 @@ void SqlTreeModel::refresh(const QModelIndex &current) {
         insertRows(row, 1, parent);
 
         const QString table_name = parent.data().toString();
-        QSharedPointer<QSqlRelationalTableModel> table_model = QSharedPointer<QSqlRelationalTableModel>(new QSqlRelationalTableModel(
-                nullptr, db), &QSqlRelationalTableModel::deleteLater);
+        const QSharedPointer<QSqlRelationalTableModel> table_model = QSharedPointer<QSqlRelationalTableModel>(new QSqlRelationalTableModel(
+                                                                                            nullptr, db), &QSqlRelationalTableModel::deleteLater);
         table_model->setTable(table_name);
         table_model->setEditStrategy(QSqlRelationalTableModel::OnManualSubmit);
         table_model->select();

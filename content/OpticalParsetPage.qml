@@ -72,6 +72,10 @@ OpticalParsetPageForm {
                     }
                 }
 
+                // SqlBrowserWindow {
+                //     id: sqlBrowserWindow
+                // }
+
                 Button {
                     id: dbImportButton
                     text: "Import"

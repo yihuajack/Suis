@@ -6,7 +6,7 @@
 
 SqlTreeItem::SqlTreeItem(QVariantList data, SqlTreeItem *parent) : itemData(std::move(data)), m_parentItem(parent) {}
 
-SqlTreeItem *SqlTreeItem::child(int number) {
+SqlTreeItem *SqlTreeItem::child(const int number) const {
     return number >= 0 and number < childCount() ? m_childItems.at(number).get() : nullptr;
 }
 
@@ -34,12 +34,12 @@ int SqlTreeItem::columnCount() const {
     return static_cast<int>(itemData.count());
 }
 
-QVariant SqlTreeItem::data(int column) const {
+QVariant SqlTreeItem::data(const int column) const {
     return itemData.value(column);
 }
 
-bool SqlTreeItem::insertChildren(int position, int count, int columns) {
-    if (position < 0 or position > static_cast<qsizetype>(m_childItems.size())) {
+bool SqlTreeItem::insertChildren(const int position, const int count, const int columns) {
+    if (position < 0 or position > static_cast<int>(m_childItems.size())) {
         return false;
     }
 
@@ -52,7 +52,7 @@ bool SqlTreeItem::insertChildren(int position, int count, int columns) {
     return true;
 }
 
-bool SqlTreeItem::insertColumns(int position, int columns) {
+bool SqlTreeItem::insertColumns(const int position, const int columns) {
     if (position < 0 or position > itemData.size()) {
         return false;
     }
@@ -68,12 +68,12 @@ bool SqlTreeItem::insertColumns(int position, int columns) {
     return true;
 }
 
-SqlTreeItem *SqlTreeItem::parent() {
+SqlTreeItem *SqlTreeItem::parent() const {
     return m_parentItem;
 }
 
-bool SqlTreeItem::removeChildren(int position, int count) {
-    if (position < 0 or position + count > qsizetype(m_childItems.size())) {
+bool SqlTreeItem::removeChildren(const int position, const int count) {
+    if (position < 0 or position + count > static_cast<qsizetype>(m_childItems.size())) {
         return false;
     }
 
@@ -84,7 +84,7 @@ bool SqlTreeItem::removeChildren(int position, int count) {
     return true;
 }
 
-bool SqlTreeItem::removeColumns(int position, int columns) {
+bool SqlTreeItem::removeColumns(const int position, const int columns) {
     if (position < 0 or position + columns > itemData.size()) {
         return false;
     }
@@ -100,7 +100,7 @@ bool SqlTreeItem::removeColumns(int position, int columns) {
     return true;
 }
 
-bool SqlTreeItem::setData(int column, const QVariant &value) {
+bool SqlTreeItem::setData(const int column, const QVariant &value) {
     if (column < 0 or column >= itemData.size()) {
         return false;
     }

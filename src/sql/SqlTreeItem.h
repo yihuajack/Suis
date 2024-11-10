@@ -11,13 +11,13 @@ class SqlTreeItem {
 public:
     explicit SqlTreeItem(QVariantList data, SqlTreeItem *parent = nullptr);
 
-    SqlTreeItem *child(int number);
+    [[nodiscard]] SqlTreeItem *child(int number) const;
     [[nodiscard]] int childCount() const;
     [[nodiscard]] int columnCount() const;
     [[nodiscard]] QVariant data(int column) const;
     bool insertChildren(int position, int count, int columns);
     bool insertColumns(int position, int columns);
-    SqlTreeItem *parent();
+    [[nodiscard]] SqlTreeItem *parent() const;
     bool removeChildren(int position, int count);
     bool removeColumns(int position, int columns);
     [[nodiscard]] int row() const;

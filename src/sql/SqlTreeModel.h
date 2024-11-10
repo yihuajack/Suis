@@ -7,14 +7,13 @@
 
 #include <QAbstractItemModel>
 #include <QQmlEngine>
-#include <QtSql/QSqlDatabase>
 
 #include "SqlTreeItem.h"
 
 class SqlTreeModel : public QAbstractItemModel {
     Q_OBJECT
     QML_ELEMENT
-    // QML_SINGLETON
+    QML_SINGLETON
 
 public:
     Q_DISABLE_COPY_MOVE(SqlTreeModel);
