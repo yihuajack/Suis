@@ -8,7 +8,7 @@
 
 #include "SqlTreeModel.h"
 
-SqlTreeModel::SqlTreeModel(QObject *parent) : QAbstractItemModel(parent) {
+SqlTreeModel::SqlTreeModel(QObject *parent) : QAbstractItemModel(parent), rootItem(std::make_unique<SqlTreeItem>(QVariantList(1))) {  // Initialize the column size to 1!
     if (const QStringList drivers = QSqlDatabase::drivers(); drivers.empty()) {
         qWarning() << tr("No database drivers found.")
                    << tr("This part requires at least one Qt database driver. "
@@ -17,31 +17,24 @@ SqlTreeModel::SqlTreeModel(QObject *parent) : QAbstractItemModel(parent) {
     } else if (not drivers.contains("QOCI")) {
         qWarning() << tr("QOCI driver not available.");
     }
-
-    QVariantList rootData(1);
-
-    rootItem = std::make_unique<SqlTreeItem>(rootData);
 }
 
 SqlTreeModel::~SqlTreeModel() = default;
 
 QVariant SqlTreeModel::data(const QModelIndex &index, const int role) const {
-    if (not index.isValid()) {
-        return {};
-    }
+    Q_ASSERT(checkIndex(index, QAbstractItemModel::CheckIndexOption::IndexIsValid));
 
     const SqlTreeItem *item = getItem(index);
     // for std::shared_ptr needs Q_DECLARE_SMART_POINTER_METATYPE(std::shared_ptr)
     // https://www.kdab.com/psa-qpointer-has-a-terrible-name/
-    auto [fst, snd] = item->data(index.column()).value<std::pair<QString, QSharedPointer<QSqlRelationalTableModel>>>();
 
     if (role == Qt::DisplayRole) {
-        return fst;
-    } else if (role == SqlTableRole) {
-        return QVariant::fromValue(snd);
-    } else {
-        return {};
+        return item->data(index.column()).value<QString>();
     }
+    if (role == SqlTableRole) {
+        return QVariant::fromValue(item->data(index.column()).value<QSharedPointer<QSqlRelationalTableModel>>());
+    }
+    return {};
 }
 
 QVariant SqlTreeModel::headerData(const int section, const Qt::Orientation orientation, const int role) const {
@@ -49,16 +42,16 @@ QVariant SqlTreeModel::headerData(const int section, const Qt::Orientation orien
 }
 
 QModelIndex SqlTreeModel::index(const int row, const int column, const QModelIndex &parent) const {
-    if (parent.isValid() and parent.column() not_eq 0) {
+    if (not hasIndex(row, column, parent)) {  // parent.isValid() and parent.column() not_eq 0
         return {};
     }
 
-    SqlTreeItem *parentItem = getItem(parent);
+    const SqlTreeItem *parentItem = getItem(parent);
     if (not parentItem) {
         return {};
     }
 
-    if (SqlTreeItem *childItem = parentItem->child(row)) {
+    if (const SqlTreeItem *childItem = parentItem->child(row)) {
         return createIndex(row, column, childItem);
     }
     return {};
@@ -77,7 +70,7 @@ QModelIndex SqlTreeModel::parent(const QModelIndex &index) const {
 }
 
 int SqlTreeModel::rowCount(const QModelIndex &parent) const {
-    if (parent.isValid() and parent.column() > 0) {
+    if (parent.column() > 0) {
         return 0;
     }
 
@@ -87,16 +80,14 @@ int SqlTreeModel::rowCount(const QModelIndex &parent) const {
 }
 
 int SqlTreeModel::columnCount(const QModelIndex &parent) const {
-    Q_UNUSED(parent)
+    if (parent.isValid()) {
+        return static_cast<SqlTreeItem*>(parent.internalPointer())->columnCount();
+    }
     return rootItem->columnCount();
 }
 
 Qt::ItemFlags SqlTreeModel::flags(const QModelIndex &index) const {
-    if (not index.isValid()) {
-        return Qt::NoItemFlags;
-    }
-
-    return Qt::ItemIsEditable | QAbstractItemModel::flags(index);
+    return index.isValid() ? Qt::ItemIsEditable | QAbstractItemModel::flags(index) : Qt::NoItemFlags;
 }
 
 bool SqlTreeModel::setData(const QModelIndex &index, const QVariant &value, const int role) {
@@ -105,7 +96,7 @@ bool SqlTreeModel::setData(const QModelIndex &index, const QVariant &value, cons
     }
 
     SqlTreeItem *item = getItem(index);
-    bool result = item->setData(index.column(), value);
+    const bool result = item->setData(index.column(), value);
 
     if (result) {
         emit dataChanged(index, index, {Qt::DisplayRole, Qt::EditRole});
@@ -137,6 +128,9 @@ bool SqlTreeModel::insertColumns(const int position, const int columns, const QM
 }
 
 bool SqlTreeModel::removeColumns(const int position, const int columns, const QModelIndex &parent) {
+    if (columns < 1) {
+        return true;
+    }
     beginRemoveColumns(parent, position, position + columns - 1);
     const bool success = rootItem->removeColumns(position, columns);
     endRemoveColumns();
@@ -166,6 +160,9 @@ bool SqlTreeModel::removeRows(const int position, const int rows, const QModelIn
     if (not parentItem) {
         return false;
     }
+    if (rows < 1) {
+        return true;
+    }
 
     beginRemoveRows(parent, position, position + rows - 1);
     const bool success = parentItem->removeChildren(position, rows);
@@ -176,9 +173,6 @@ bool SqlTreeModel::removeRows(const int position, const int rows, const QModelIn
 
 bool SqlTreeModel::addConnection(const QString &driver, const QString &database, const QString &user,
                                  const QString &passwd) {
-    static int cCount = 0;
-
-    QSqlError err;
     QStringList sl_db = database.split(':');
     QStringList subsl_db = sl_db.back().split('/');
     const QString& db_name = subsl_db.back();
@@ -197,13 +191,16 @@ bool SqlTreeModel::addConnection(const QString &driver, const QString &database,
     db.setPort(subsl_db.front().toInt());
     db.setDatabaseName(db_name);
     if (not db.open(user, passwd)) {
-        err = db.lastError();
-        qInfo() << err;
+        qInfo() << db.lastError();
         QSqlDatabase::removeDatabase(conn_name);
         return true;
     }
-    insertRows(rowCount(), 1);
-    rootItem->child(rootItem->childCount() - 1)->setData(0, conn_name);
+    // insertRows(rowCount(), 1);
+    // rootItem->child(rootItem->childCount() - 1)->setData(0, conn_name);
+    beginInsertRows(QModelIndex(), rowCount(), rowCount());
+    rootItem->appendChild(std::make_unique<SqlTreeItem>(QVariantList{conn_name}, rootItem.get()));
+    endInsertRows();
+    refresh(index(rootItem->childCount() - 1, 0));
     return false;
 }
 
@@ -217,7 +214,25 @@ QHash<int, QByteArray> SqlTreeModel::roleNames() const {
 void SqlTreeModel::refresh(const QModelIndex &current) {
     // root does not have QModelIndex
     const QModelIndex parent = current.parent();  // db if table, top if db, invalid if top
-    const QString conn_name = parent.isValid() ? parent.data().toString() : current.data().toString();
+    QString conn_name;
+    if (parent.isValid()) {
+        if (parent.data().canConvert<QString>()) {
+            conn_name = parent.data().toString();
+        } else {
+            qWarning() << "Parent index data is not a QString.";
+            return;
+        }
+    } else if (current.isValid()) {
+        if (current.data().canConvert<QString>()) {
+            conn_name = current.data().toString();
+        } else {
+            qWarning() << "Current index data is not a QString.";
+            return;
+        }
+    } else {
+        qWarning() << "No current or parent index.";
+        return;
+    }
     const QSqlDatabase db = QSqlDatabase::database(conn_name, false);
     if (not db.isOpen()) {
         qWarning() << "Database not open.";
@@ -237,9 +252,10 @@ void SqlTreeModel::refresh(const QModelIndex &current) {
         getItem(parent)->child(row)->setData(0, QVariant::fromValue(table_model));
     } else {  // current = intermediate db node
         removeRows(0, rowCount(current), current);
-        QStringList tables = db.tables();
-        int num_tables = static_cast<int>(tables.size());
-        insertRows(0, num_tables, parent);
+        // https://forum.qt.io/topic/159677/qsqldatabase-tables-get-stuck
+        const QStringList tables = db.tables();
+        const int num_tables = static_cast<int>(tables.size());
+        insertRows(0, num_tables, current);
 
         for (int t = 0; t < num_tables; t++) {
             QSharedPointer<QSqlRelationalTableModel> table_model = QSharedPointer<QSqlRelationalTableModel>(new QSqlRelationalTableModel(
@@ -256,26 +272,12 @@ void SqlTreeModel::refreshAll() {
     const QStringList connectionNames = QSqlDatabase::connectionNames();
     beginResetModel();
     removeRows(0, rowCount());
-    insertRows(0, static_cast<int>(connectionNames.size()));
+    // insertRows(0, static_cast<int>(connectionNames.size()));
     for (int cn = 0; cn < connectionNames.size(); cn++) {
-        const QSqlDatabase db = QSqlDatabase::database(connectionNames.at(cn), false);
-        if (not db.isOpen()) {
-            qWarning() << "Database not open.";
-            return;
-        }
-        QStringList tables = db.tables();
-        int num_tables = static_cast<int>(tables.size());
-        const QModelIndex db_index = index(cn, 0);
-        insertRows(0, num_tables, db_index);
-
-        for (int t = 0; t < num_tables; t++) {
-            QSharedPointer<QSqlRelationalTableModel> table_model = QSharedPointer<QSqlRelationalTableModel>(new QSqlRelationalTableModel(
-                    nullptr, db), &QSqlRelationalTableModel::deleteLater);
-            table_model->setTable(tables.at(t));
-            table_model->setEditStrategy(QSqlRelationalTableModel::OnManualSubmit);
-            table_model->select();
-            getItem(db_index)->child(t)->setData(0, QVariant::fromValue(table_model));
-        }
+        beginInsertRows(QModelIndex(), rowCount(), rowCount());
+        rootItem->appendChild(std::make_unique<SqlTreeItem>(QVariantList{connectionNames.at(cn)}, rootItem.get()));
+        endInsertRows();
+        refresh(index(cn, 0));
     }
     endResetModel();
 }

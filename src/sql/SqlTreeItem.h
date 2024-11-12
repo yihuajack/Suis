@@ -11,6 +11,7 @@ class SqlTreeItem {
 public:
     explicit SqlTreeItem(QVariantList data, SqlTreeItem *parent = nullptr);
 
+    void appendChild(std::unique_ptr<SqlTreeItem>&& child);
     [[nodiscard]] SqlTreeItem *child(int number) const;
     [[nodiscard]] int childCount() const;
     [[nodiscard]] int columnCount() const;

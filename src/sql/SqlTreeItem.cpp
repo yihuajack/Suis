@@ -6,6 +6,11 @@
 
 SqlTreeItem::SqlTreeItem(QVariantList data, SqlTreeItem *parent) : itemData(std::move(data)), m_parentItem(parent) {}
 
+void SqlTreeItem::appendChild(std::unique_ptr<SqlTreeItem>&& child) {
+    m_childItems.emplace_back(std::move(child));
+}
+
+
 SqlTreeItem *SqlTreeItem::child(const int number) const {
     return number >= 0 and number < childCount() ? m_childItems.at(number).get() : nullptr;
 }
