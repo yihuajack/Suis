@@ -4,6 +4,7 @@
 
 #include <QtSql/QSqlDriver>
 #include <QtSql/QSqlError>
+#include <QtSql/QSqlQuery>
 #include <QtSql/QSqlRelationalTableModel>
 
 #include "SqlTreeModel.h"
@@ -213,6 +214,7 @@ QHash<int, QByteArray> SqlTreeModel::roleNames() const {
 
 void SqlTreeModel::refresh(const QModelIndex &current) {
     // root does not have QModelIndex
+    using namespace Qt::Literals::StringLiterals;
     const QModelIndex parent = current.parent();  // db if table, top if db, invalid if top
     QString conn_name;
     if (parent.isValid()) {
@@ -233,7 +235,11 @@ void SqlTreeModel::refresh(const QModelIndex &current) {
         qWarning() << "No current or parent index.";
         return;
     }
-    const QSqlDatabase db = QSqlDatabase::database(conn_name, false);
+    QSqlDatabase db = QSqlDatabase::database(conn_name, false);
+    if (not db.isValid()) {
+        qWarning() << "Database is invalid.";
+        return;
+    }
     if (not db.isOpen()) {
         qWarning() << "Database not open.";
         return;
@@ -253,8 +259,37 @@ void SqlTreeModel::refresh(const QModelIndex &current) {
     } else {  // current = intermediate db node
         removeRows(0, rowCount(current), current);
         // https://forum.qt.io/topic/159677/qsqldatabase-tables-get-stuck
-        const QStringList tables = db.tables();
+        // Warning: QSqlDatabase::tables(QSql::TableType type = QSql::Tables) will query all the tables visible to the user.
+        // For the test database, there will be 35610 tables queried!
+        // const QStringList tables = db.tables();
+        QSqlQuery table_query(db);
+        // table_query.setForwardOnly(true);
+        // table_query.exec("SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER=%1"_L1 % db.userName().toUpper());
+        // Prepared statement
+        if (const bool prepared = table_query.prepare("SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER=:owner"_L1); not prepared) {
+            qWarning() << "Failed to prepare SELECT TABLE_NAME query:" << table_query.lastError();
+        }
+        table_query.bindValue(":owner", db.userName().toUpper());
+        table_query.exec();  // set active if return true
+        // const QSqlResult *sql_result = table_query.result();
+        // QVariant v = sql_result->handle();
+        // if (v.isValid() and qstrcmp(v.typeName(), "OCIStmt*") == 0) {
+        //     OCIstmt *handle = *static_cast<OCIstmt **>(v.data());
+        // }
+        if (not table_query.isActive()) {  // Remember to add "not"
+            // See https://forum.qt.io/topic/159693/qsqlquery-exec-returns-false
+            qWarning() << "Failed to execute SELECT TABLE_NAME query:" << table_query.executedQuery() << table_query.lastError();
+            return;
+        }
+        QStringList tables;
+        while (table_query.next()) {
+            tables.emplace_back(table_query.value(0).toString());
+        }
         const int num_tables = static_cast<int>(tables.size());
+        if (num_tables > 200) {
+            qWarning("Database contains more than 200 tables.");
+            return;
+        }
         insertRows(0, num_tables, current);
 
         for (int t = 0; t < num_tables; t++) {
