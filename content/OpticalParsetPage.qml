@@ -72,6 +72,7 @@ OpticalParsetPageForm {
                     }
                 }
 
+                // For easier debugging (debugger cannot give detailed information for dynamically created objects)
                 // SqlBrowserWindow {
                 //     id: sqlBrowserWindow
                 // }

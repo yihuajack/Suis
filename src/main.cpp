@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
     // Consider using KDSingleApplication
     QObject::connect(
         &engine, &QQmlApplicationEngine::objectCreated, app.get(),
-        [url](QObject *obj, const QUrl &objUrl) {
+        [url](const QObject *obj, const QUrl &objUrl) -> void {
             if (not obj and url == objUrl) {
                 QCoreApplication::exit(-1);
             }

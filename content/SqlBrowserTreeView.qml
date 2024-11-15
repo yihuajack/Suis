@@ -5,7 +5,10 @@
 
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 import content
+
+pragma ComponentBehavior: Bound
 
 Rectangle {
     id: root
@@ -15,9 +18,12 @@ Rectangle {
     TreeView {
         id: treeView
 
+        property int lastIndex: -1
+
         // Layout.column: 0
         // Layout.columnSpan: 1
-        // Lauout.preferredWidth: 0.5 * parent.width
+        // Layout.preferredWidth: 0.5 * parent.width
+        anchors.fill: parent
         clip: true
 
         selectionModel: ItemSelectionModel { }  // by default
@@ -27,46 +33,26 @@ Rectangle {
         delegate: TreeViewDelegate {
             id: viewDelegate
 
-            readonly property real _padding: 5
+            readonly property real _padding: 0
             readonly property real szHeight: contentItem.implicitHeight * 2.5
             // required property int row, column, depth, hasChildren, bool current, expanded, isTreeNode
             // required property TreeView treeView
-            required property var tableModel
+            // Since we have the 'ComponentBehavior Bound' pragma, we need to
+            // require these properties from our model. This is a convenient way
+            // to bind the properties provided by the model's role names.
+            required property int index
+            // required property var tableModel  // Required properties with initializer do not make sense.
 
             implicitHeight: szHeight
             implicitWidth: _padding + contentItem.x + contentItem.implicitWidth + _padding
 
-            background: Rectangle {  // Background rectangle enabled to show the alternative row colors
-                id: background
-
-                anchors.fill: parent
-                color: {
-                    if (viewDelegate.model.row === viewDelegate.treeView.currentRow) {
-                        return Qt.lighter(palette.highlight, 1.2);
-                    } else {
-                        if (viewDelegate.treeView.alternatingRows && viewDelegate.model.row % 2 !== 0) {
-                            return (Application.styleHints.colorScheme === Qt.Light) ? Qt.darker(palette.alternateBase, 1.25) : Qt.lighter(palette.alternateBase, 2.);
-                        } else {
-                            return palette.base;
-                        }
-                    }
-                }
-
-                Rectangle {
-                    color: {
-                        if (viewDelegate.model.row === viewDelegate.treeView.currentRow) {
-                            return (Application.styleHints.colorScheme === Qt.Light) ? Qt.darker(palette.highlight, 1.25) : Qt.lighter(palette.highlight, 2.);
-                        } else {
-                            return "transparent";
-                        }
-                    }
-                    height: parent.height
-                    visible: !viewDelegate.model.column
-                    // The selection indicator shown on the left side of the highlighted row
-                    width: viewDelegate._padding
-                }
+            background: Rectangle {
+                color: (viewDelegate.index === treeView.lastIndex)
+                    ? Colors.selection
+                    : (hoverHandler.hovered ? Colors.active : "transparent")
             }
 
+            // https://stackoverflow.com/questions/69964071/qt-qml-colorimage-is-not-a-type
             indicator: Item {
                 x: viewDelegate._padding + viewDelegate.depth * viewDelegate.indentation
                 implicitWidth: viewDelegate.szHeight
@@ -80,14 +66,18 @@ Rectangle {
                         viewDelegate.treeView.toggleExpanded(viewDelegate.model.row)
                     }
                 }
-                // https://stackoverflow.com/questions/69964071/qt-qml-colorimage-is-not-a-type
-                // ColorImage {
-                //     width: parent.width / 3
-                //     height: parent.height / 3
-                //     anchors.centerIn: parent
-                //     source: "qrc:/images/arrow_icon.png"
-                //     color: palette.buttonText
-                // }
+                Image {
+                    id: arrowIcon
+                    anchors.verticalCenter: parent.verticalCenter
+                    source: "images/arrow_icon.png"
+                    sourceSize.width: 20
+                    sourceSize.height: 20
+                    fillMode: Image.PreserveAspectFit
+
+                    smooth: true
+                    antialiasing: true
+                    asynchronous: true
+                }
             }
 
             contentItem: Label {
@@ -95,6 +85,32 @@ Rectangle {
                 width: parent.width - viewDelegate._padding - x
                 text: viewDelegate.model.display
                 elide: Text.ElideRight
+                color: Colors.text
+            }
+
+            // We color the directory icons with this MultiEffect, where we overlay
+            // the colorization color ontop of the SVG icons.
+            // https://forum.qt.io/topic/159736/qml-multieffect-garbled-error-message
+            MultiEffect {
+                id: iconOverlay
+
+                anchors.fill: indicator.arrowIcon
+                source: arrowIcon
+                colorization: 1.0
+                brightness: 1.0
+                colorizationColor: {
+                    const isTable = viewDelegate.index === treeView.lastIndex && !viewDelegate.hasChildren;
+                    if (isTable) {
+                        return Qt.lighter(Colors.database, 3)
+                    }
+
+                    const isExpanded = viewDelegate.expanded && viewDelegate.hasChildren;
+                    return isExpanded ? Colors.color2 : Colors.database
+                }
+            }
+
+            HoverHandler {
+                id: hoverHandler
             }
 
             TapHandler {
@@ -106,14 +122,48 @@ Rectangle {
                             treeView.lastIndex = viewDelegate.index
                             // If this model item doesn't have children, it means it's representing a table.
                             if (!viewDelegate.hasChildren) {
-                                root.tableSelected(viweDelegate.tableModel)
+                                root.tableSelected(viewDelegate.model.table)
                             }
                             break;
                         case Qt.RightButton:
-                            if (treeDelegate.hasChildren) {
+                            if (viewDelegate.hasChildren) {
                                 contextMenu.popup();
                             }
                             break;
+                    }
+                }
+            }
+
+            ContextMenu {
+                id: contextMenu
+                Action {
+                    text: qsTr("Set as root index")
+                    onTriggered: {
+                        treeView.rootIndex = treeView.index(viewDelegate.row, 0)
+                    }
+                }
+                Action {
+                    text: qsTr("Reset root index")
+                    onTriggered: treeView.rootIndex = undefined
+                }
+            }
+        }
+
+        // Provide our own custom ScrollIndicator for the TreeView.
+        ScrollIndicator.vertical: ScrollIndicator {
+            active: true
+            implicitWidth: 15
+
+            contentItem: Rectangle {
+                implicitWidth: 6
+                implicitHeight: 6
+
+                color: Colors.color1
+                opacity: sqlTreeView.movingVertically ? 0.5 : 0.0
+
+                Behavior on opacity {
+                    OpacityAnimator {
+                        duration: 500
                     }
                 }
             }

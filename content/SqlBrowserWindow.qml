@@ -9,17 +9,22 @@ import QtQuick.Dialogs
 import QtQuick.Layouts
 import content
 
+// https://doc.qt.io/qt-6/qtqml-documents-structure.html
+// https://youtrack.jetbrains.com/issue/CPP-42122/QML-Language-Support-Add-support-for-Qt-6.7-pragmas-including-ComponentBehavior-etc.
+pragma ComponentBehavior: Bound
+
 // Using a Component as the root of a QML document is deprecated:
 // types defined in qml documents are automatically wrapped into Components when needed.
 ApplicationWindow {
     id: root
 
-    property var currentSqlTableModel
+    property var currentSqlTableModel: {}  // nothing = undefined
 
     height: 600
     width: 800
     title: qsTr("SQL Browser")
     visible: false
+    color: Colors.background
 
     footer: Text {
         id: sqlStatusText
@@ -95,9 +100,24 @@ ApplicationWindow {
             SplitView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                handle: Rectangle {
+                    implicitWidth: 10
+                    color: SplitHandle.pressed ? Colors.color2 : Colors.background
+                    border.color: SplitHandle.hovered ? Colors.color2 : Colors.background
+                    opacity: SplitHandle.hovered || sqlTreeView.width < 15 ? 1.0 : 0.0
+
+                    Behavior on opacity {
+                        OpacityAnimator {
+                            duration: 1400
+                        }
+                    }
+                }
 
                 SqlBrowserTreeView {
                     id: sqlTreeView
+                    color: Colors.surface1
+                    SplitView.preferredWidth: 250
+                    SplitView.fillHeight: true
 
                     onTableSelected: tableModel => root.currentSqlTableModel = tableModel
                 }
@@ -105,11 +125,8 @@ ApplicationWindow {
                 TableView {
                     id: sqlTableView
 
-                    // Layout.column: 1
-                    // Layout.columnSpan: 1
-                    Layout.fillHeight: true
-                    // Layout.fillWidth: true
-                    Layout.preferredWidth: 0.5 * parent.width
+                    SplitView.fillWidth: true
+                    SplitView.fillHeight: true
 
                     model: root.currentSqlTableModel
                 }

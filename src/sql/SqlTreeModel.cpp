@@ -33,7 +33,10 @@ QVariant SqlTreeModel::data(const QModelIndex &index, const int role) const {
         return item->data(index.column()).value<QString>();
     }
     if (role == SqlTableRole) {
-        return QVariant::fromValue(item->data(index.column()).value<QSharedPointer<QSqlRelationalTableModel>>());
+        if (not hasChildren(index)) {
+            return QVariant::fromValue(item->data(index.column()).value<QSharedPointer<QSqlRelationalTableModel>>());
+        }
+        qWarning("Non-leaf nodes do not have table role.");
     }
     return {};
 }
@@ -235,7 +238,7 @@ void SqlTreeModel::refresh(const QModelIndex &current) {
         qWarning() << "No current or parent index.";
         return;
     }
-    QSqlDatabase db = QSqlDatabase::database(conn_name, false);
+    const QSqlDatabase db = QSqlDatabase::database(conn_name, false);
     if (not db.isValid()) {
         qWarning() << "Database is invalid.";
         return;
