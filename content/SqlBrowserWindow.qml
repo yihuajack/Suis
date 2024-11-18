@@ -7,6 +7,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Dialogs
 import QtQuick.Layouts
+import QtQml
 import content
 
 // https://doc.qt.io/qt-6/qtqml-documents-structure.html
@@ -18,7 +19,7 @@ pragma ComponentBehavior: Bound
 ApplicationWindow {
     id: root
 
-    property var currentSqlTableModel: {}  // nothing = undefined
+    property var currentSqlTableModel
 
     height: 600
     width: 800
@@ -26,11 +27,22 @@ ApplicationWindow {
     visible: false
     color: Colors.background
 
-    footer: Text {
-        id: sqlStatusText
+    footer: Row {
+        leftPadding: 10
+        spacing: 10
 
-        color: "steelblue"
+        Text {
+            text: qsTr("Queried Database Index")
+            font.pixelSize: 16
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        TextField {
+            id: queryDbIndex
+            text: "0"
+        }
     }
+
     menuBar: MenuBar {
         Menu {
             title: qsTr("File")
@@ -100,6 +112,7 @@ ApplicationWindow {
             SplitView {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+
                 handle: Rectangle {
                     implicitWidth: 10
                     color: SplitHandle.pressed ? Colors.color2 : Colors.background
@@ -119,16 +132,58 @@ ApplicationWindow {
                     SplitView.preferredWidth: 250
                     SplitView.fillHeight: true
 
+                    // Cannot assign QSharedPointer<SqlTableModel> to SqlTableModel*
                     onTableSelected: tableModel => root.currentSqlTableModel = tableModel
                 }
 
-                TableView {
-                    id: sqlTableView
+                Rectangle {
+                    color: Colors.surface1  // Application.styleHints.appearance === Qt.Light ? palette.mid : palette.midlight
 
                     SplitView.fillWidth: true
                     SplitView.fillHeight: true
 
-                    model: root.currentSqlTableModel
+                    HorizontalHeaderView {
+                        id: horizontalHeader
+                        anchors.left: sqlTableView.left
+                        anchors.top: parent.top
+                        syncView: sqlTableView
+                        clip: true
+                    }
+
+                    VerticalHeaderView {
+                        id: verticalHeader
+                        anchors.top: sqlTableView.top
+                        anchors.left: parent.left
+                        syncView: sqlTableView
+                        clip: true
+                    }
+
+                    TableView {
+                        id: sqlTableView
+                        anchors.left: verticalHeader.right
+                        anchors.top: horizontalHeader.bottom
+                        anchors.right: parent.right
+                        anchors.bottom: parent.bottom
+                        columnWidthProvider: function() { return 100; }
+                        rowHeightProvider: function() { return 60; }
+                        ScrollBar.horizontal: ScrollBar { }
+                        ScrollBar.vertical: ScrollBar { }
+                        clip: true
+
+                        model: root.currentSqlTableModel
+
+                        // implicitWidth and implicitHeight readonly for Text
+                        // https://forum.qt.io/topic/159763/tableview-with-qsqlrelationaltablemodel-cells-are-all-2
+                        delegate: ItemDelegate {
+                            required property var model
+                            text: model.display
+                            padding: 10
+                            font.pixelSize: 15
+                        }
+
+                        ScrollIndicator.horizontal: ScrollIndicator { }
+                        ScrollIndicator.vertical: ScrollIndicator { }
+                    }
                 }
             }
         }
@@ -146,6 +201,10 @@ ApplicationWindow {
                 id: queryText
 
                 anchors.fill: parent
+
+                onEditingFinished: {
+                    SqlTreeModel.execQuery(queryText.text, Number.fromLocaleString(Qt.locale(), queryDbIndex.text))
+                }
             }
         }
     }

@@ -43,10 +43,9 @@ public:
 
     Q_INVOKABLE bool addConnection(const QString &driver, const QString &database, const QString &user,
                                    const QString &passwd);
-
     Q_INVOKABLE void refresh(const QModelIndex &current);
-
     Q_INVOKABLE void refreshAll();
+    Q_INVOKABLE static void execQuery(const QString &query, int db_id);
 
 protected:
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;

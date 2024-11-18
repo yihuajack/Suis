@@ -9,7 +9,9 @@
 
 #include "SqlTreeModel.h"
 
-SqlTreeModel::SqlTreeModel(QObject *parent) : QAbstractItemModel(parent), rootItem(std::make_unique<SqlTreeItem>(QVariantList(1))) {  // Initialize the column size to 1!
+SqlTreeModel::SqlTreeModel(QObject *parent) : QAbstractItemModel(parent), rootItem(std::make_unique<SqlTreeItem>(QVariantList(1))) {
+    // Initialize the column size!
+    // We do not need two columns that one for the name and the other one for the table.
     if (const QStringList drivers = QSqlDatabase::drivers(); drivers.empty()) {
         qWarning() << tr("No database drivers found.")
                    << tr("This part requires at least one Qt database driver. "
@@ -23,18 +25,25 @@ SqlTreeModel::SqlTreeModel(QObject *parent) : QAbstractItemModel(parent), rootIt
 SqlTreeModel::~SqlTreeModel() = default;
 
 QVariant SqlTreeModel::data(const QModelIndex &index, const int role) const {
-    Q_ASSERT(checkIndex(index, QAbstractItemModel::CheckIndexOption::IndexIsValid));
+    Q_ASSERT(checkIndex(index, CheckIndexOption::IndexIsValid));
 
-    const SqlTreeItem *item = getItem(index);
     // for std::shared_ptr needs Q_DECLARE_SMART_POINTER_METATYPE(std::shared_ptr)
     // https://www.kdab.com/psa-qpointer-has-a-terrible-name/
+    const QVariant data = getItem(index)->data(index.column());
 
     if (role == Qt::DisplayRole) {
-        return item->data(index.column()).value<QString>();
+        if (data.canConvert<QString>()) {
+            return data.value<QString>();
+        }
+        if (not hasChildren(index)) {
+            return data.value<std::pair<QString, QSqlRelationalTableModel*>>().first;
+        }
+        qWarning("Display role data is not a QString.");
     }
     if (role == SqlTableRole) {
         if (not hasChildren(index)) {
-            return QVariant::fromValue(item->data(index.column()).value<QSharedPointer<QSqlRelationalTableModel>>());
+            return QVariant::fromValue(
+                data.value<std::pair<QString, QSqlRelationalTableModel*>>().second);
         }
         qWarning("Non-leaf nodes do not have table role.");
     }
@@ -208,13 +217,6 @@ bool SqlTreeModel::addConnection(const QString &driver, const QString &database,
     return false;
 }
 
-QHash<int, QByteArray> SqlTreeModel::roleNames() const {
-    QHash<int, QByteArray> roles;
-    roles[Qt::DisplayRole] = "display";
-    roles[SqlTableRole] = "table";
-    return roles;
-}
-
 void SqlTreeModel::refresh(const QModelIndex &current) {
     // root does not have QModelIndex
     using namespace Qt::Literals::StringLiterals;
@@ -253,12 +255,13 @@ void SqlTreeModel::refresh(const QModelIndex &current) {
         insertRows(row, 1, parent);
 
         const QString table_name = parent.data().toString();
-        const QSharedPointer<QSqlRelationalTableModel> table_model = QSharedPointer<QSqlRelationalTableModel>(new QSqlRelationalTableModel(
-                                                                                            nullptr, db), &QSqlRelationalTableModel::deleteLater);
+        // const QSharedPointer<QSqlRelationalTableModel> table_model = QSharedPointer<QSqlRelationalTableModel>(new QSqlRelationalTableModel(
+        //                                                                                     nullptr, db), &QSqlRelationalTableModel::deleteLater);
+        QSqlRelationalTableModel *table_model = new QSqlRelationalTableModel(nullptr, db);
         table_model->setTable(table_name);
         table_model->setEditStrategy(QSqlRelationalTableModel::OnManualSubmit);
         table_model->select();
-        getItem(parent)->child(row)->setData(0, QVariant::fromValue(table_model));
+        getItem(parent)->child(row)->setData(0, QVariant::fromValue(std::pair(table_name, table_model)));
     } else {  // current = intermediate db node
         removeRows(0, rowCount(current), current);
         // https://forum.qt.io/topic/159677/qsqldatabase-tables-get-stuck
@@ -290,18 +293,17 @@ void SqlTreeModel::refresh(const QModelIndex &current) {
         }
         const int num_tables = static_cast<int>(tables.size());
         if (num_tables > 200) {
-            qWarning("Database contains more than 200 tables.");
+            qWarning("Database contains more than 200 tables, aborting.");
             return;
         }
         insertRows(0, num_tables, current);
 
         for (int t = 0; t < num_tables; t++) {
-            QSharedPointer<QSqlRelationalTableModel> table_model = QSharedPointer<QSqlRelationalTableModel>(new QSqlRelationalTableModel(
-                    nullptr, db), &QSqlRelationalTableModel::deleteLater);
+            QSqlRelationalTableModel *table_model = new QSqlRelationalTableModel(nullptr, db);
             table_model->setTable(tables.at(t));
             table_model->setEditStrategy(QSqlRelationalTableModel::OnManualSubmit);
             table_model->select();
-            getItem(current)->child(t)->setData(0, QVariant::fromValue(table_model));
+            getItem(current)->child(t)->setData(0, QVariant::fromValue(std::pair(tables.at(t), table_model)));
         }
     }
 }
@@ -318,6 +320,23 @@ void SqlTreeModel::refreshAll() {
         refresh(index(cn, 0));
     }
     endResetModel();
+}
+
+void SqlTreeModel::execQuery(const QString &query, const int db_id) {
+    const QSqlDatabase db = QSqlDatabase::database(QSqlDatabase::connectionNames().at(db_id));  // Do not use the default connection (defaultConnection)
+    if (not db.isOpen()) {
+        qWarning() << "database not open";
+        return;
+    }
+    QSqlQuery sql_query(db);
+    sql_query.exec(query);
+}
+
+QHash<int, QByteArray> SqlTreeModel::roleNames() const {
+    QHash<int, QByteArray> roles;
+    roles[Qt::DisplayRole] = "display";
+    roles[SqlTableRole] = "table";
+    return roles;
 }
 
 SqlTreeItem *SqlTreeModel::getItem(const QModelIndex &index) const {
