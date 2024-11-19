@@ -34,12 +34,16 @@ target_sources(SuisApp PRIVATE
         sql/SqlTreeItem.cpp
         # utils headers
         utils/Approx.h
+        utils/CSV.h
+        utils/DataIO.h
         utils/Fs.h
         utils/Log.h
         utils/Math.h
         utils/Range.h
         # utils sources
         utils/Approx.cpp
+        utils/CSV.cpp
+        utils/DataIO.cpp
         utils/Fs.cpp
         utils/Log.cpp
         utils/Math.cpp

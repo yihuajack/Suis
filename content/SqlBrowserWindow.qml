@@ -40,6 +40,9 @@ ApplicationWindow {
         TextField {
             id: queryDbIndex
             text: "0"
+            onReleased: {
+                SqlTreeModel.dbId = Number.fromLocaleString(Qt.locale(), queryDbIndex.text)
+            }
         }
     }
 
@@ -203,7 +206,7 @@ ApplicationWindow {
                 anchors.fill: parent
 
                 onEditingFinished: {
-                    SqlTreeModel.execQuery(queryText.text, Number.fromLocaleString(Qt.locale(), queryDbIndex.text))
+                    SqlTreeModel.execQuery(queryText.text)
                 }
             }
         }

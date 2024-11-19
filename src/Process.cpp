@@ -51,8 +51,15 @@ QByteArray Process::readAllStandardError() {
     return m_Process ? m_Process->readAllStandardError() : QByteArray();
 }
 
-QByteArray Process::readAllStandardOutput() {
-    return m_Process ? m_Process->readAllStandardOutput() : QByteArray();
+QString Process::readAllStandardOutput() {
+    // MATLAB `feature('locale')`:
+    // terminalEncoding: 'GBK'
+    if (not m_Process) {
+        return {};
+    }
+    const QByteArray rawOutput = m_Process->readAllStandardOutput();
+    QStringDecoder decoder(QStringDecoder::System);
+    return decoder.decode(rawOutput);
 }
 
 qint64 Process::write(const QString& data) {

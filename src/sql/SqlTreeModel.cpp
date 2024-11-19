@@ -8,6 +8,7 @@
 #include <QtSql/QSqlRelationalTableModel>
 
 #include "SqlTreeModel.h"
+#include "utils/DataIO.h"
 
 SqlTreeModel::SqlTreeModel(QObject *parent) : QAbstractItemModel(parent), rootItem(std::make_unique<SqlTreeItem>(QVariantList(1))) {
     // Initialize the column size!
@@ -322,14 +323,55 @@ void SqlTreeModel::refreshAll() {
     endResetModel();
 }
 
-void SqlTreeModel::execQuery(const QString &query, const int db_id) {
-    const QSqlDatabase db = QSqlDatabase::database(QSqlDatabase::connectionNames().at(db_id));  // Do not use the default connection (defaultConnection)
+void SqlTreeModel::execQuery(const QString &query) const {
+    const QSqlDatabase db = QSqlDatabase::database(QSqlDatabase::connectionNames().at(m_dbId));  // Do not use the default connection (defaultConnection)
     if (not db.isOpen()) {
         qWarning() << "database not open";
         return;
     }
     QSqlQuery sql_query(db);
     sql_query.exec(query);
+}
+
+bool SqlTreeModel::upload() const {
+    const QSqlDatabase db = QSqlDatabase::database(QSqlDatabase::connectionNames().at(m_dbId));  // Do not use the default connection (defaultConnection)
+    if (not db.isOpen()) {
+        qWarning() << "database not open";
+        return false;
+    }
+    const std::array<double, 13> stats = Utils::DataIO::readSingleStats(
+        R"(E:\Documents\GitHub\ddmodel-octave\stats.csv)");
+    QSqlQuery sql_query(db);
+    sql_query.prepare(
+        "INSERT INTO AI_STATS (JSC_F, VOC_F, MPP_F, EFFICIENCY_F, MPPV_F, FF_F, JSC_R, VOC_R, MPP_R, "
+        "EFFICIENCY_R, MPPV_R, FF_R, HF) VALUES (:JSC_F, :VOC_F, :MPP_F, :EFFICIENCY_F, :MPPV_F, :FF_F, :JSC_R, "
+        ":VOC_R, :MPP_R, :EFFICIENCY_R, :MPPV_R, :FF_R, :HF)");
+    sql_query.bindValue(":JSC_F", stats.front());
+    sql_query.bindValue(":VOC_F", stats.at(2));
+    sql_query.bindValue(":MPP_F", stats.at(3));
+    sql_query.bindValue(":EFFICIENCY_F", stats.at(4));
+    sql_query.bindValue(":MPPV_F", stats.at(5));
+    sql_query.bindValue(":FF_F", stats.at(6));
+    sql_query.bindValue(":JSC_R", stats.at(7));
+    sql_query.bindValue(":VOC_R", stats.at(8));
+    sql_query.bindValue(":MPP_R", stats.at(9));
+    sql_query.bindValue(":EFFICIENCY_R", stats.at(10));
+    sql_query.bindValue(":MPPV_R", stats.at(11));
+    sql_query.bindValue(":FF_R", stats.at(12));
+    sql_query.bindValue(":HF", stats.back());
+    if (not sql_query.exec()) {
+        qWarning() << "Failed to insert stats to AI_STATS:" << sql_query.lastError();
+        return false;
+    }
+    return true;
+}
+
+int SqlTreeModel::dbId() const {
+    return m_dbId;
+}
+
+void SqlTreeModel::setDbId(const int dbId) {
+    m_dbId = dbId;
 }
 
 QHash<int, QByteArray> SqlTreeModel::roleNames() const {

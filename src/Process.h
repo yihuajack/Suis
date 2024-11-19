@@ -36,9 +36,11 @@ signals:
 public:
     explicit Process(QObject* parent = nullptr);
     ~Process() override;
-    Q_INVOKABLE void start(const QString& program, const QStringList& arguments = QStringList(), Process::OpenMode mode = ReadWrite);
+    // Clazy: Invokable arguments need to be fully-qualified (Process::OpenMode instead of OpenMode)
+    Q_INVOKABLE void start(const QString& program, const QStringList& arguments = QStringList(),
+                           Process::OpenMode mode = ReadWrite);
     Q_INVOKABLE QByteArray readAllStandardError();
-    Q_INVOKABLE QByteArray readAllStandardOutput();
+    Q_INVOKABLE QString readAllStandardOutput();
     Q_INVOKABLE qint64 write(const QString& data);
 
 protected:

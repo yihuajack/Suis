@@ -7,6 +7,7 @@ import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
 import QtQuick.VirtualKeyboard
+import content
 
 Page {
     id: root
@@ -25,14 +26,19 @@ Page {
             property string command: input.text.trim() + "\n"
             onClicked: {
                 simProcess.write(command)
-                term.text += ("<br /><b>" + command + " : </b>")
+                term.text += ("\n" + command + " :")
             }
         }
 
         Button {
             text: "Upload"
             onClicked: {
-                // sqlmodel.upload()
+                let uploaded = SqlTreeModel.upload()
+                if (!uploaded) {
+                    term.text += ("\nFailed to upload!")
+                } else {
+                    term.text += ("\nSuccessfully uploaded!")
+                }
             }
         }
     }

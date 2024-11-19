@@ -14,6 +14,7 @@ class SqlTreeModel : public QAbstractItemModel {
     Q_OBJECT
     QML_ELEMENT
     QML_SINGLETON
+    Q_PROPERTY(int dbId READ dbId WRITE setDbId NOTIFY dbIdChanged)
 
 public:
     Q_DISABLE_COPY_MOVE(SqlTreeModel);
@@ -45,7 +46,14 @@ public:
                                    const QString &passwd);
     Q_INVOKABLE void refresh(const QModelIndex &current);
     Q_INVOKABLE void refreshAll();
-    Q_INVOKABLE static void execQuery(const QString &query, int db_id);
+    Q_INVOKABLE void execQuery(const QString &query) const;
+    Q_INVOKABLE bool upload() const;
+
+    [[nodiscard]] int dbId() const;
+    void setDbId(int dbId);
+
+signals:
+    void dbIdChanged();
 
 protected:
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
@@ -54,6 +62,8 @@ private:
     [[nodiscard]] SqlTreeItem *getItem(const QModelIndex &index) const;
 
     std::unique_ptr<SqlTreeItem> rootItem;
+
+    int m_dbId = 0;
 };
 
 
