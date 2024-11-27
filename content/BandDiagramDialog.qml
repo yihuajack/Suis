@@ -19,6 +19,7 @@ Dialog {
         id: plotChartView
         title: "Band Diagram"
         anchors.fill: parent
+        margins.bottom: 50
 
         ValueAxis {
             id: axisX
@@ -29,6 +30,7 @@ Dialog {
 
         ValueAxis {
             id: axisY
+            titleText: "E (eV)"
             min: Math.min.apply(null, device.VBM)
             max: 0
         }
