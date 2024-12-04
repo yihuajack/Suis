@@ -13,11 +13,12 @@ search_space = [
 ]
 
 def model(x):
-    df = pd.read_csv(r'E:\Documents\GitHub\ddmodel-octave\Input_files\spiro_mapi_tio2_custom.csv')
+    path = r'E:\Documents\GitHub\ddmodel-octave\Input_files\spiro_fapbi3_tio2.csv'
+    df = pd.read_csv(path)
     df.loc[1, 'thickness'] = x[0]
     df.loc[3, 'thickness'] = x[1]
     df.loc[5, 'thickness'] = x[2]
-    df.to_csv(r'E:\Documents\GitHub\ddmodel-octave\Input_files\spiro_mapi_tio2_custom.csv', index=False)
+    df.to_csv(path, index=False)
     # Also see https://ww2.mathworks.cn/help/matlab/matlab-engine-for-python.html
     command = ["matlab", "-batch", "run('E:/Documents/GitHub/ddmodel-octave/fast_test.m')"]
 

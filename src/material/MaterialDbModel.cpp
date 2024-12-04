@@ -317,13 +317,13 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
         return 2;
     }
     data_sheet->workbook()->setActiveSheet(0);
-    auto *wsheet = (QXlsx::Worksheet *)data_sheet->workbook()->activeSheet();
+    auto *wsheet = dynamic_cast<QXlsx::Worksheet*>(data_sheet->workbook()->activeSheet());
     if (wsheet == nullptr) {
         qWarning("Data sheet not found");
         return 2;
     }
-    int maxRow = wsheet->dimension().rowCount();  // qsizetype is long long (different from std::size_t)
-    int maxCol = wsheet->dimension().columnCount();
+    const int maxRow = wsheet->dimension().rowCount();  // qsizetype is long long (different from std::size_t)
+    const int maxCol = wsheet->dimension().columnCount();
     // QVector is an alias for QList.
     // QMapIterator<int, QMap<int, std::shared_ptr<Cell>>> iterates by rows
     // QList<QXlsx::CellLocation> clList = wsheet->getFullCells(&maxRow, &maxCol);
@@ -331,8 +331,7 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
     QList<std::pair<double, QList<double>>> wls{{1, QList<double>(maxRow - 1)}};  // header by default
     for (int rc = 2; rc <= maxRow; rc++) {
         // QXlsx::Worksheet::cellAt() uses QMap find
-        QXlsx::Cell *cell = wsheet->cellAt(rc, 1);
-        if (cell not_eq nullptr) {
+        if (const QXlsx::Cell *cell = wsheet->cellAt(rc, 1); cell not_eq nullptr) {
             // QXlsx::Cell::readValue() will keep formula text!
             wls.front().second[rc - 2] = cell->value().toDouble() * 1e-9;
         }  // qDebug() << "Empty cell at Row " << rc << " Column " << 0;
@@ -365,25 +364,25 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
         }
     }
     for (QMap<QString, QList<std::pair<int, double>>>::const_iterator it = mat_name_indices.cbegin();
-         it not_eq mat_name_indices.cend(); it++) {
+         it not_eq mat_name_indices.cend(); ++it) {
         QList<std::pair<double, QList<double>>> n_series;
         QList<std::pair<double, QList<double>>> k_series;
-        for (const std::pair<int, double>& index : it.value()) {
+        for (const auto& [fst, snd] : it.value()) {
             QList<double> n_list(maxRow - 1);
             QList<double> k_list(maxRow - 1);
             for (int rc = 2; rc <= maxRow; rc++) {
-                QXlsx::Cell *cell = wsheet->cellAt(rc, index.first);
+                const QXlsx::Cell *cell = wsheet->cellAt(rc, fst);
                 // std::shared_ptr<QXlsx::Cell> cell = clList.at(rc * maxCol + cc).cell;
                 if (cell not_eq nullptr) {
                     n_list[rc - 2] = cell->readValue().toDouble();
                 }  // qDebug() << "Empty cell at Row " << rc << " Column " << cc;
-                cell = wsheet->cellAt(rc, index.first + 1);
+                cell = wsheet->cellAt(rc, fst + 1);
                 if (cell not_eq nullptr) {
                     k_list[rc - 2] = cell->readValue().toDouble();
                 }
             }
-            n_series.emplace_back(index.second, n_list);
-            k_series.emplace_back(index.second, k_list);
+            n_series.emplace_back(snd, n_list);
+            k_series.emplace_back(snd, k_list);
         }
         // std::vector<double> n_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(n_list.size())};
         // std::vector<double> k_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(k_list.size())};

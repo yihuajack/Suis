@@ -23,9 +23,9 @@ Dialog {
 
         ValueAxis {
             id: axisX
-            titleText: "x coordinate (μm)"
+            titleText: "x coordinate (nm)"
             min: 0
-            max: cumsum(device.d) * 1e6
+            max: cumsum(device.d) * 1e7
         }
 
         ValueAxis {
@@ -43,11 +43,11 @@ Dialog {
 
             Component.onCompleted: {
                 condBMSeries.append(0, device.CBM[0])
-                let x_pos = device.d[0] * 1e6
+                let x_pos = device.d[0] * 1e7
                 condBMSeries.append(x_pos, device.CBM[0])
                 for (let i = 1; i < device.col_size; i++) {
                     condBMSeries.append(x_pos, device.CBM[i])
-                    x_pos += device.d[i] * 1e6
+                    x_pos += device.d[i] * 1e7
                     condBMSeries.append(x_pos, device.CBM[i])
                 }
             }
@@ -61,11 +61,11 @@ Dialog {
 
             Component.onCompleted: {
                 valBMSeries.append(0, device.VBM[0])
-                let x_pos = device.d[0] * 1e6
+                let x_pos = device.d[0] * 1e7
                 valBMSeries.append(x_pos, device.VBM[0])
                 for (let i = 1; i < device.col_size; i++) {
                     valBMSeries.append(x_pos, device.VBM[i])
-                    x_pos += device.d[i] * 1e6
+                    x_pos += device.d[i] * 1e7
                     valBMSeries.append(x_pos, device.VBM[i])
                 }
             }

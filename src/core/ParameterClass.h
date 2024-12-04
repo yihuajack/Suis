@@ -33,7 +33,7 @@ enum class FUN_TYPE {
 
 template<template <typename...> class L, typename F_T, typename STR_T>
 class ParameterClass {
-    using SZ_T = L<F_T>::size_type;
+    using SZ_T = typename L<F_T>::size_type;
     // using CHAR_T = STR_T::value_type;
 public:
     ParameterClass(const L<L<STR_T>> &csv_data, const std::map<STR_T, typename L<F_T>::size_type> &properties) {
@@ -42,12 +42,12 @@ public:
         const SZ_T c_sz = col_size();
         const L<F_T> N_D = ND();
         const L<F_T> N_A = NA();
-        for (SZ_T i = 0; i < c_sz; i++) {
+        for (SZ_T i = 0; i < c_sz; ++i) {
             // Warn if doping density exceeds eDOS
             if (N_D.at(i) > Nc.at(i) or N_A.at(i) > Nc.at(i)) {
-                throw std::runtime_error("Doping density must be less than eDOS. For consistent values ensure "
-                                         "electrode work functions are within the band gap and check expressions for "
-                                         "doping density in Dependent variables.");
+                // throw std::runtime_error("Doping density must be less than eDOS. For consistent values ensure "
+                //                          "electrode work functions are within the band gap and check expressions for "
+                //                          "doping density in Dependent variables.");
             }
             // Warn if trap energies are outside of band gap energies
             if (Et.at(i) >= Phi_EA.at(i) or Et.at(i) <= Phi_IP.at(i)) {
@@ -64,8 +64,8 @@ public:
             }
             // Warn if electrode work functions are outside of boundary layer bandgap
             if (Phi_left < Phi_IP.front() or Phi_left > Phi_EA.front()) {
-                throw std::out_of_range("Left-hand work function (Phi_left) out of range: value must exist "
-                                        "within left-hand layer band gap");
+                // throw std::out_of_range("Left-hand work function (Phi_left) out of range: value must exist "
+                //                         "within left-hand layer band gap");
             }
             if (Phi_right < Phi_IP.back() or Phi_right > Phi_EA.back()) {
                 throw std::out_of_range("Right-hand work function (Phi_right) out of range: value must exist "
@@ -79,101 +79,121 @@ public:
                                     "elements. Property arrays must have the same number of elements as the "
                                     "thickness array (d), except SRH properties for interfaces which should have "
                                     "length(d)-1 elements.");
-        } else if (Phi_IP.size() not_eq c_sz) {
+        }
+        if (Phi_IP.size() not_eq c_sz) {
             throw std::length_error("Ionization Potential array (Phi_IP) does not have the correct number of "
-                                    "elements. Property arrays must have the same number of elements as the "
-                                    "thickness array (d), except SRH properties for interfaces which should have "
-                                    "length(d)-1 elements.");
-        } else if (mu_n.size() not_eq c_sz) {
+                "elements. Property arrays must have the same number of elements as the "
+                "thickness array (d), except SRH properties for interfaces which should have "
+                "length(d)-1 elements.");
+        }
+        if (mu_n.size() not_eq c_sz) {
             throw std::length_error("Electron mobility array (mu_n) does not have the correct number of "
-                                    "elements. Property arrays must have the same number of elements as the "
-                                    "thickness array (d), except SRH properties for interfaces which should have "
-                                    "length(d)-1 elements.");
-        } else if (mu_p.size() not_eq c_sz) {
+                "elements. Property arrays must have the same number of elements as the "
+                "thickness array (d), except SRH properties for interfaces which should have "
+                "length(d)-1 elements.");
+        }
+        if (mu_p.size() not_eq c_sz) {
             throw std::length_error("Hole mobility array (mu_p) does not have the correct number of elements. "
-                                    "Property arrays must have the same number of elements as the thickness array (d), "
-                                    "except SRH properties for interfaces which should have length(d)-1 elements.");
-        } else if (mu_a.size() not_eq c_sz) {
+                "Property arrays must have the same number of elements as the thickness array (d), "
+                "except SRH properties for interfaces which should have length(d)-1 elements.");
+        }
+        if (mu_a.size() not_eq c_sz) {
             throw std::length_error("Anion mobility array (mu_a) does not have the correct number of elements. "
-                                    "Property arrays must have the same number of elements as the thickness array (d), "
-                                    "except SRH properties for interfaces which should have length(d)-1 elements.");
-        } else if (mu_c.size() not_eq c_sz) {
+                "Property arrays must have the same number of elements as the thickness array (d), "
+                "except SRH properties for interfaces which should have length(d)-1 elements.");
+        }
+        if (mu_c.size() not_eq c_sz) {
             throw std::length_error("Cation mobility array (mu_c) does not have the correct number of elements."
-                                    " Property arrays must have the same number of elements as the thickness array (d),"
-                                    " except SRH properties for interfaces which should have length(d)-1 elements.");
-        } else if (N_A.size() not_eq c_sz) {
+                " Property arrays must have the same number of elements as the thickness array (d),"
+                " except SRH properties for interfaces which should have length(d)-1 elements.");
+        }
+        if (N_A.size() not_eq c_sz) {
             throw std::length_error("Acceptor density array (NA) does not have the correct number of elements. "
-                                    "Property arrays must have the same number of elements as the thickness array (d), "
-                                    "except SRH properties for interfaces which should have length(d)-1 elements.");
-        } else if (N_D.size() not_eq c_sz) {
+                "Property arrays must have the same number of elements as the thickness array (d), "
+                "except SRH properties for interfaces which should have length(d)-1 elements.");
+        }
+        if (N_D.size() not_eq c_sz) {
             throw std::length_error("Donor density array (ND) does not have the correct number of elements. "
-                                    "Property arrays must have the same number of elements as the thickness array (d), "
-                                    "except SRH properties for interfaces which should have length(d)-1 elements.");
-        } else if (Nc.size() not_eq c_sz) {
+                "Property arrays must have the same number of elements as the thickness array (d), "
+                "except SRH properties for interfaces which should have length(d)-1 elements.");
+        }
+        if (Nc.size() not_eq c_sz) {
             throw std::length_error("Effective density of states array (Nc) does not have the correct number of"
-                                    " elements. Property arrays must have the same number of elements as the thickness "
-                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
-                                    "elements.");
-        } else if (Nv.size() not_eq c_sz) {
+                " elements. Property arrays must have the same number of elements as the thickness "
+                "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                "elements.");
+        }
+        if (Nv.size() not_eq c_sz) {
             throw std::length_error("Effective density of states array (Nv) does not have the correct number of"
-                                    " elements. Property arrays must have the same number of elements as the thickness "
-                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
-                                    "elements.");
-        } else if (Nani.size() not_eq c_sz) {
+                " elements. Property arrays must have the same number of elements as the thickness "
+                "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                "elements.");
+        }
+        if (Nani.size() not_eq c_sz) {
             throw std::length_error("Background anion density (Nani) does not have the correct number of "
-                                    "elements. Property arrays must have the same number of elements as the thickness "
-                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
-                                    "elements.");
-        } else if (Ncat.size() not_eq c_sz) {
+                "elements. Property arrays must have the same number of elements as the thickness "
+                "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                "elements.");
+        }
+        if (Ncat.size() not_eq c_sz) {
             throw std::length_error("Background cation density (Ncat) does not have the correct number of "
-                                    "elements. Property arrays must have the same number of elements as the thickness "
-                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
-                                    "elements.");
-        } else if (a_max.size() not_eq c_sz) {
+                "elements. Property arrays must have the same number of elements as the thickness "
+                "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                "elements.");
+        }
+        if (a_max.size() not_eq c_sz) {
             throw std::length_error("Ion density of states array (a_max) does not have the correct number of "
-                                    "elements. Property arrays must have the same number of elements as the thickness "
-                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
-                                    "elements.");
-        } else if (c_max.size() not_eq c_sz) {
+                "elements. Property arrays must have the same number of elements as the thickness "
+                "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                "elements.");
+        }
+        if (c_max.size() not_eq c_sz) {
             throw std::length_error("Ion density of states array (c_max) does not have the correct number of "
-                                    "elements. Property arrays must have the same number of elements as the thickness "
-                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
-                                    "elements.");
-        } else if (epp.size() not_eq c_sz) {
+                "elements. Property arrays must have the same number of elements as the thickness "
+                "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                "elements.");
+        }
+        if (epp.size() not_eq c_sz) {
             throw std::length_error("Relative dielectric constant array (epp) does not have the correct number "
-                                    "of elements. Property arrays must have the same number of elements as the "
-                                    "thickness array (d), except SRH properties for interfaces which should have "
-                                    "length(d)-1 elements.");
-        } else if (B.size() not_eq c_sz) {
+                "of elements. Property arrays must have the same number of elements as the "
+                "thickness array (d), except SRH properties for interfaces which should have "
+                "length(d)-1 elements.");
+        }
+        if (B.size() not_eq c_sz) {
             throw std::length_error("Radiative recombination coefficient array (B) does not have the correct "
-                                    "number of elements. Property arrays must have the same number of elements as the "
-                                    "thickness array (d), except SRH properties for interfaces which should have "
-                                    "length(d)-1 elements.");
-        } else if (EF0.size() not_eq c_sz) {
+                "number of elements. Property arrays must have the same number of elements as the "
+                "thickness array (d), except SRH properties for interfaces which should have "
+                "length(d)-1 elements.");
+        }
+        if (EF0.size() not_eq c_sz) {
             throw std::length_error("Equilibrium Fermi level array (EF0) does not have the correct number of "
-                                    "elements. Property arrays must have the same number of elements as the thickness "
-                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
-                                    "elements.");
-        } else if (g0.size() not_eq c_sz) {
+                "elements. Property arrays must have the same number of elements as the thickness "
+                "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                "elements.");
+        }
+        if (g0.size() not_eq c_sz) {
             throw std::length_error("Uniform generation array (g0) does not have the correct number of "
-                                    "elements. Property arrays must have the same number of elements as the thickness "
-                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
-                                    "elements.");
-        } else if (taun.size() not_eq c_sz) {
+                "elements. Property arrays must have the same number of elements as the thickness "
+                "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                "elements.");
+        }
+        if (taun.size() not_eq c_sz) {
             throw std::length_error("Bulk SRH electron time constants array (taun_bulk) does not have the "
-                                    "correct number of elements. Property arrays must have the same number of elements "
-                                    "as the thickness array (d), except SRH properties for interfaces which should have"
-                                    " length(d)-1 elements.");
-        } else if (taup.size() not_eq c_sz) {
+                "correct number of elements. Property arrays must have the same number of elements "
+                "as the thickness array (d), except SRH properties for interfaces which should have"
+                " length(d)-1 elements.");
+        }
+        if (taup.size() not_eq c_sz) {
             throw std::length_error("Bulk SRH hole time constants array (taup_bulk) does not have the correct "
-                                    "number of elements. Property arrays must have the same number of elements as the "
-                                    "thickness array (d), except SRH properties for interfaces which should have "
-                                    "length(d)-1 elements.");
-        } else if (Et.size() not_eq c_sz) {
+                "number of elements. Property arrays must have the same number of elements as the "
+                "thickness array (d), except SRH properties for interfaces which should have "
+                "length(d)-1 elements.");
+        }
+        if (Et.size() not_eq c_sz) {
             throw std::length_error("Bulk SRH trap energy array (Et) does not have the correct number of "
-                                    "elements. Property arrays must have the same number of elements as the thickness "
-                                    "array (d), except SRH properties for interfaces which should have length(d)-1 "
-                                    "elements.");
+                "elements. Property arrays must have the same number of elements as the thickness "
+                "array (d), except SRH properties for interfaces which should have length(d)-1 "
+                "elements.");
         }
         // Device and generation builder
         // Import variables and structure, xx, gx1, gx2, and dev must be

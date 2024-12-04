@@ -16,7 +16,7 @@ DeviceModel::DeviceModel(QObject *parent) : QAbstractTableModel(parent) {}
 
 int DeviceModel::rowCount(const QModelIndex &parent) const {
     Q_UNUSED(parent)
-    return static_cast<int>(ParameterClass<QList, double, QString>::size);
+    return ParameterClass<QList, double, QString>::size;
 }
 
 int DeviceModel::columnCount(const QModelIndex &parent) const {
@@ -31,9 +31,8 @@ QVariant DeviceModel::data(const QModelIndex &index, int role) const {
     }
     if (role == Qt::DisplayRole) {
         return par->get<QVariant>(index.row()).toList().at(index.column());
-    } else {
-        return {};
     }
+    return {};
 }
 
 bool DeviceModel::setData(const QModelIndex &index, const QVariant &value, int role) {
@@ -41,8 +40,7 @@ bool DeviceModel::setData(const QModelIndex &index, const QVariant &value, int r
     //     return false;
     // }
     if (role == Qt::DisplayRole) {
-        QVariant cellData = par->get<QVariant>(index.row()).toList().at(index.column());
-        if (value == cellData) {
+        if (QVariant cellData = par->get<QVariant>(index.row()).toList().at(index.column()); value == cellData) {
             return false;
         }
         par->set(value, index.row(), index.column());
@@ -97,7 +95,7 @@ QList<double> DeviceModel::readVBM() const {
     return par->Phi_IP;
 }
 
-Q_INVOKABLE QVariant DeviceModel::headerData(int section, Qt::Orientation orientation, int role) const {
+Q_INVOKABLE QVariant DeviceModel::headerData(const int section, const Qt::Orientation orientation, const int role) const {
     if (role not_eq Qt::DisplayRole) {
         return {};
     }
