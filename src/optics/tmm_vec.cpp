@@ -21,9 +21,9 @@
 using namespace std::complex_literals;
 
 template<typename T>
-AbsorpAnalyticVecFn<T>::AbsorpAnalyticVecFn(const AbsorpAnalyticVecFn<T> &other) : a1(other.a1), a3(other.a3),
-                                                                                   A1(other.A1), A2(other.A2),
-                                                                                   A3(other.A3), d(other.d) {}
+AbsorpAnalyticVecFn<T>::AbsorpAnalyticVecFn(const AbsorpAnalyticVecFn &other) : A3(other.A3), a1(other.a1),
+                                                                                   a3(other.a3), A1(other.A1),
+                                                                                   A2(other.A2), d(other.d) {}
 
 template<typename T>
 void AbsorpAnalyticVecFn<T>::fill_in(const coh_tmm_vec_dict<T> &coh_tmm_data, const std::valarray<std::ptrdiff_t> &f_layer) {

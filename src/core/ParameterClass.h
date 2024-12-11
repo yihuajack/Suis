@@ -34,7 +34,7 @@ enum class FUN_TYPE {
 template<template <typename...> class L, typename F_T, typename STR_T>
 class ParameterClass {
     using SZ_T = typename L<F_T>::size_type;
-    // using CHAR_T = STR_T::value_type;
+
 public:
     ParameterClass(const L<L<STR_T>> &csv_data, const std::map<STR_T, typename L<F_T>::size_type> &properties) {
         import_properties(csv_data, properties);
@@ -45,9 +45,9 @@ public:
         for (SZ_T i = 0; i < c_sz; ++i) {
             // Warn if doping density exceeds eDOS
             if (N_D.at(i) > Nc.at(i) or N_A.at(i) > Nc.at(i)) {
-                // throw std::runtime_error("Doping density must be less than eDOS. For consistent values ensure "
-                //                          "electrode work functions are within the band gap and check expressions for "
-                //                          "doping density in Dependent variables.");
+                throw std::runtime_error("Doping density must be less than eDOS. For consistent values ensure "
+                                         "electrode work functions are within the band gap and check expressions for "
+                                         "doping density in Dependent variables.");
             }
             // Warn if trap energies are outside of band gap energies
             if (Et.at(i) >= Phi_EA.at(i) or Et.at(i) <= Phi_IP.at(i)) {
@@ -64,8 +64,8 @@ public:
             }
             // Warn if electrode work functions are outside of boundary layer bandgap
             if (Phi_left < Phi_IP.front() or Phi_left > Phi_EA.front()) {
-                // throw std::out_of_range("Left-hand work function (Phi_left) out of range: value must exist "
-                //                         "within left-hand layer band gap");
+                throw std::out_of_range("Left-hand work function (Phi_left) out of range: value must exist "
+                                        "within left-hand layer band gap");
             }
             if (Phi_right < Phi_IP.back() or Phi_right > Phi_EA.back()) {
                 throw std::out_of_range("Right-hand work function (Phi_right) out of range: value must exist "
@@ -736,7 +736,7 @@ public:
             if (it not_eq property_in.cend()) {
                 const SZ_T index = it->second;
                 L<T> property(end_row - start_row + 1);
-                for (SZ_T rc = start_row; rc <= end_row; rc++) {
+                for (SZ_T rc = start_row; rc <= end_row; ++rc) {
                     if constexpr (std::same_as<T, STR_T>) {
                         property[rc - start_row] = data.at(rc).at(index);
                     } else if constexpr (std::same_as<T, F_T>) {

@@ -77,8 +77,7 @@ void DbSysModel::addModel(MaterialDbModel *db_model) {
 OpticMaterial<QList<double>> *DbSysModel::getMatByName(const QString &mat_name) const {
     for (const MaterialDbModel *mat_db : m_db) {
         if (mat_db->checked()) {
-            OpticMaterial<QList<double>> *opt_mat = mat_db->getMatByName(mat_name);
-            if (opt_mat) {
+            if (OpticMaterial<QList<double>> *opt_mat = mat_db->getMatByName(mat_name)) {
                 return opt_mat;
             }
         }
@@ -105,11 +104,9 @@ DbSysModel *DbSysModel::instance() {
 }
 
 void DbSysModel::onProgressChanged() {
-    auto *db_model = qobject_cast<MaterialDbModel *>(sender());
-    if (db_model) {
-        int row = static_cast<int>(m_db.indexOf(db_model));
-        if (row >= 0) {
-            QModelIndex index = createIndex(row, 0);
+    if (auto *db_model = qobject_cast<MaterialDbModel *>(sender())) {
+        if (const int row = static_cast<int>(m_db.indexOf(db_model)); row >= 0) {
+            const QModelIndex index = createIndex(row, 0);
             emit dataChanged(index, index, {ProgressRole});
         }
     }

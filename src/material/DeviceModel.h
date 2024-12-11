@@ -9,7 +9,6 @@
 #include <QQmlEngine>
 
 #include "core/ParameterClass.h"
-#include "optics/OpticStack.h"
 
 class DeviceModel : public QAbstractTableModel {
     Q_OBJECT

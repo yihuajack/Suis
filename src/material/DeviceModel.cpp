@@ -5,7 +5,6 @@
 #include <numeric>
 #include <ranges>
 #include <QDir>
-#include <QUrl>
 #include <QtGui/QGuiApplication>
 
 #include "DbSysModel.h"
@@ -122,16 +121,17 @@ Q_INVOKABLE bool DeviceModel::readDfDev(const QString &db_path) {
         csv_data.append(fields);
     }
     doc.close();
-    qsizetype maxCol = csv_data.front().size();
+    const qsizetype maxCol = csv_data.front().size();
     std::map<QString, qsizetype> properties;
     for (qsizetype cc = 0; cc < maxCol; cc++) {
         properties[csv_data.front().at(cc)] = cc;
     }
     try {
-        if (csv_data.at(1).at(properties.at("layer_type")) == "electrode") {  // wl & RAT for this case only
-            opt_material = ParameterClass<QList, double, QString>::import_single_property<QString>(csv_data, properties, {"material", "stack"}, 1, csv_data.size() - 1);  // include electrodes
-            opt_d = ParameterClass<QList, double, QString>::import_single_property<double>(csv_data, properties, {"dcell", "d", "thickness"}, 1, csv_data.size() - 1);  // include front surface electrode
+        if (csv_data.at(1).at(properties.at("layer_type")) not_eq "electrode" or csv_data.back().at(properties.at("layer_type")) not_eq "electrode") {
+            throw std::runtime_error("The first and last layer must be electrode.");  // include electrodes
         }
+        opt_material = ParameterClass<QList, double, QString>::import_single_property<QString>(csv_data, properties, {"material", "stack"}, 1, csv_data.size() - 1);
+        opt_d = ParameterClass<QList, double, QString>::import_single_property<double>(csv_data, properties, {"dcell", "d", "thickness"}, 1, csv_data.size() - 1);
         par = std::make_unique<ParameterClass<QList, double, QString>>(csv_data, properties);
     } catch (std::out_of_range &e) {
         // DEBUG -> INFO -> WARNING -> CRITICAL -> FATAL in <QtGlobal>
@@ -153,14 +153,14 @@ Q_INVOKABLE void DeviceModel::calcRAT() {
     // auto *db_system = engine->singletonInstance<DbSysModel*>("com.github.yihuajack.DbSysModel", "DbSysModel");
     // https://stackoverflow.com/questions/25403363/how-to-implement-a-singleton-provider-for-qmlregistersingletontype
     // https://stackoverflow.com/questions/50073626/reference-to-qml-singleton-class-instance
-    DbSysModel *db_system = DbSysModel::instance();
+    const DbSysModel *db_system = DbSysModel::instance();
     if (not db_system) {
         qWarning("QML singleton instance DbSysModel does not exist.");
         return;
     }
     std::vector<std::pair<OpticMaterial<QList<double>> *, double>> structure;
     if (par->side) {  // right; need to reverse
-        if (opt_material.back().isEmpty()) {  // cbegin() and cend() are not empty!
+        if (opt_material.back().isEmpty()) {
             opt_material.back() = "ITO";
         }
         if (opt_material.front().isEmpty()) {
@@ -172,7 +172,12 @@ Q_INVOKABLE void DeviceModel::calcRAT() {
         structure.emplace_back(db_system->getMatByName(opt_material.back()), opt_d.back());
         for (qsizetype i = par->layer_type.size() - 1; i >= 0; i--) {  // does not include the substrate
             if (par->layer_type.at(i) not_eq "interface") {
-                structure.emplace_back(db_system->getMatByName(opt_material.at(i + 1)), opt_d.at(i + 1));
+                structure.emplace_back(db_system->getMatByName(opt_material.at(i + 1)), opt_d.at(i + 1));  // skip electrodes
+                if (i not_eq par->layer_type.size() - 1 and par->layer_type.at(i + 1) == "interface" and par->layer_type.at(i) == "layer") {
+                    structure.back().second += opt_d.at(i + 2);
+                }
+            } else if (i not_eq 0 and par->layer_type.at(i + 1) == "layer") {  // is interface
+                structure.back().second += opt_d.at(i + 1);
             }
         }
     } else {
@@ -182,18 +187,23 @@ Q_INVOKABLE void DeviceModel::calcRAT() {
         if (opt_material.back().isEmpty()) {  // Default back surface
             opt_material.back() = "Ag";
         }
-        if (opt_d.front() == 0) {  // Default front surface thickness
+        if (std::isnan(opt_d.front())) {  // Default front surface thickness
             opt_d.front() = 5e-8;
-        }
+        }  // opt_d.back() should be NaN; other values are meaningless
         structure.emplace_back(db_system->getMatByName(opt_material.front()), opt_d.front());
         for (qsizetype i = 0; i < par->layer_type.size(); i++) {  // maxRow - 3
             if (par->layer_type.at(i) not_eq "interface") {
                 structure.emplace_back(db_system->getMatByName(opt_material.at(i + 1)), opt_d.at(i + 1));
+                if (i not_eq 0 and par->layer_type.at(i - 1) == "interface" and par->layer_type.at(i) == "layer") {
+                    structure.back().second += opt_d.at(i);
+                }
+            } else if (i not_eq 0 and par->layer_type.at(i - 1) == "layer") {  // is interface
+                structure.back().second += opt_d.at(i + 1);
             }
         }
     }
     // For convenience, the wavelengths are expected to be sorted already, but still minmax here.
-    // Since Ubuntu 24.04 has gcc libstdc++ 14, we are able to use std::ranges::to here for supported compilers.
+    // Since Ubuntu 24 has gcc libstdc++ 14, we are able to use std::ranges::to here for supported compilers.
     // https://en.cppreference.com/w/cpp/compiler_support
     const std::vector<std::pair<double, double>> minmax_wls = structure |
             std::views::transform([](const std::pair<OpticMaterial<QList<double>> *, double> &pair) -> std::pair<double, double> {
@@ -219,6 +229,5 @@ Q_INVOKABLE void DeviceModel::calcRAT() {
         T = {std::begin(T_va), std::end(T_va)};
     } catch (std::runtime_error &e) {
         qWarning() << "Runtime error in calcRAT " << e.what();
-        return;
     }
 }

@@ -16,6 +16,7 @@ V getvar_sub(const V& var) {
     std::ranges::transform(var.begin(), var.end() - 1, var.begin() + 1, result.begin(), [](typename V::value_type a, typename V::value_type b) {
         return (a + b) / 2.0;
     });
+    return result;
 }
 
 #endif  // SUISAPP_GETVARSUB_H

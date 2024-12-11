@@ -28,14 +28,11 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # CMake Arguments:
 # -DCMAKE_TOOLCHAIN_FILE="D:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\vcpkg\scripts\buildsystems\vcpkg.cmake"
-# Visual Studio toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\<qtver>\msvc2019_64\lib\cmake
+# Visual Studio toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\<qtver>\msvc2022_64\lib\cmake
 # MinGW toolchain: -DCMAKE_PREFIX_PATH=D:\Qt\<qtver>\mingw_64\lib\cmake
-# MSVC 2019 ARM64: msvc2019_arm64, LLVM-MinGW: llvm-mingw_64
+# MSVC 2022 ARM64: msvc2022_arm64, LLVM-MinGW: llvm-mingw_64
 # Alternatively use --toolchain instead of CMAKE_TOOLCHAIN_FILE
-# set(CMAKE_PREFIX_PATH "D:\\Qt\\<qtver>\\msvc2019_64\\lib\\cmake")
-# After updating MSVC, remember to manually update the path to cl.exe in
-# build-Suis-Desktop_Qt_<ver>_MSVC2019_64bit-Debug\vcpkg-dependencies\toolchain.cmake
-# where CMAKE_C_COMPILER, CMAKE_CXX_COMPILER, and VCPKG_TARGET_TRIPLET are set.
+# set(CMAKE_PREFIX_PATH "D:\\Qt\\<qtver>\\msvc2022_64\\lib\\cmake")
 # Could NOT find WrapVulkanHeaders (missing: Vulkan_INCLUDE_DIR)
 # See https://bugreports.qt.io/browse/QTBUG-92587
 # https://gitlab.kitware.com/cmake/cmake/-/merge_requests/3027

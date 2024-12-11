@@ -2,6 +2,7 @@
 // Created by Yihua Liu on 2024/6/4.
 //
 
+#include <map>
 #include <stdexcept>
 #include <utility>
 #include <QDir>
@@ -10,7 +11,7 @@
 #include <QProcessEnvironment>
 #include <QRegularExpression>
 #include <QStandardPaths>
-#include <QUrl>
+#include <QString>
 #include "xlsxabstractsheet.h"
 #include "xlsxdocument.h"
 #include "xlsxworkbook.h"
@@ -139,6 +140,7 @@ QString findSolcoreUserConfig() {
 }
 
 int MaterialDbModel::readSolcoreDb(const QString& db_path) {
+    using namespace Qt::Literals::StringLiterals;
     const QUrl url(db_path);
     QString db_path_imported = db_path;
     if (url.isLocalFile()) {
@@ -172,7 +174,8 @@ int MaterialDbModel::readSolcoreDb(const QString& db_path) {
     // you have to manually set the SOLCORE_ROOT for parameter system, etc., so the import step cannot be omitted.
     const ParameterSystem par_sys(solcore_config.loadGroup("Parameters"), ini_finfo.absolutePath());
     const QMap<QString, QString> mat_map = solcore_config.loadGroup("Materials");
-    for (QMap<QString, QString>::const_iterator it = mat_map.cbegin(); it not_eq mat_map.cend(); it++) {
+    const QMap<QString, QString> others_map = solcore_config.loadGroup("Others");
+    for (QMap<QString, QString>::const_iterator it = mat_map.cbegin(); it not_eq mat_map.cend(); ++it) {
         try {
             const QString& mat_name = it.key();
             QString mat_path = it.value();
@@ -295,6 +298,21 @@ int MaterialDbModel::readSolcoreDb(const QString& db_path) {
             return 2;
         }
     }
+    // read SOPRA db embedded in solcore
+    if (others_map.contains("sopra")) {
+        QString sopra_path = others_map["sopra"];
+        sopra_path.replace("SOLCORE_ROOT", ini_finfo.absolutePath());
+        for (const OpticMaterial<QList<double>> *db : m_list) {
+            if (db->name() == u"Sopra"_s) {
+
+            }
+        }
+    }
+    return 0;
+}
+
+int MaterialDbModel::readSopraDb(const QString& db_path) {
+    const QDir sopra_dir(db_path);
     return 0;
 }
 
@@ -311,13 +329,13 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
     }
     doc.selectSheet("data");
     // QXlsx::AbstractSheet is not a derived class of QObject
-    QXlsx::AbstractSheet *data_sheet = doc.sheet("data");
+    const QXlsx::AbstractSheet *data_sheet = doc.sheet("data");
     if (data_sheet == nullptr) {
         qWarning("Data sheet in data file %s does not exist!", qUtf8Printable(db_path));
         return 2;
     }
     data_sheet->workbook()->setActiveSheet(0);
-    auto *wsheet = dynamic_cast<QXlsx::Worksheet*>(data_sheet->workbook()->activeSheet());
+    const auto *wsheet = dynamic_cast<QXlsx::Worksheet*>(data_sheet->workbook()->activeSheet());
     if (wsheet == nullptr) {
         qWarning("Data sheet not found");
         return 2;
@@ -404,8 +422,7 @@ OpticMaterial<QList<double>> *MaterialDbModel::getMatByName(const QString &mat_n
     if (m_list.find(mat_name) not_eq m_list.cend()) {
         OpticMaterial<QList<double>> *opt_mat = m_list[mat_name];
         return opt_mat;
-    } else {
-        qDebug() << mat_name << "not found in MaterialDbModel" << m_name;
-        return nullptr;
     }
+    qDebug() << mat_name << "not found in MaterialDbModel" << m_name;
+    return nullptr;
 }

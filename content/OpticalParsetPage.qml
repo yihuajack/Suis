@@ -76,7 +76,6 @@ OpticalParsetPageForm {
                 // SqlBrowserWindow {
                 //     id: sqlBrowserWindow
                 // }
-
                 Button {
                     id: dbImportButton
                     text: "Import"
@@ -189,6 +188,8 @@ OpticalParsetPageForm {
                     status = model.db_model.readSolcoreDb(model.path)
                 } else if (model.name === "Df") {
                     status = model.db_model.readDfDb(model.path)
+                } else if (model.name === "Sopra") {
+                    status = model.db_model.readSopraDb(model.path)
                 }
                 statusText.text = statusInfo(status)
                 showButton.enabled = status === 0

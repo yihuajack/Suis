@@ -5,7 +5,6 @@
 #ifndef SUISAPP_DBSYSMODEL_H
 #define SUISAPP_DBSYSMODEL_H
 
-#include <QAbstractListModel>
 #include <QQmlEngine>
 
 #include "MaterialDbModel.h"

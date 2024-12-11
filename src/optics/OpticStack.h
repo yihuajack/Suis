@@ -6,7 +6,6 @@
 #define SUISAPP_OPTICSTACK_H
 
 #include <complex>
-#include <string>
 #include <valarray>
 #include <vector>
 
@@ -69,14 +68,14 @@ public:
     // template<typename U>
     // requires std::same_as<U, std::vector<std::pair<OpticMaterial<T> *, double>>>
     explicit OpticStack(std::vector<std::pair<OpticMaterial<T> *, double>> &&structure,  // r-value reference
-                        bool no_back_reflection = false,
+                        const bool no_back_reflection = false,
                         OpticMaterial<T> *substrate = nullptr,
-                        OpticMaterial<T> *incidence = nullptr) : structure(std::move(structure)),
-                                                                 no_back_reflection(no_back_reflection),
-                                                                 substrate(substrate),
-                                                                 incidence(incidence),
+                        OpticMaterial<T> *incidence = nullptr) : no_back_reflection(no_back_reflection),
                                                                  num_mat_layers(structure.size() + (substrate not_eq nullptr) +
-                                                                                (incidence not_eq nullptr)) {}
+                                                                     (incidence not_eq nullptr)),
+                                                                 structure(std::move(structure)),
+                                                                 substrate(substrate),
+                                                                 incidence(incidence) {}
 
     bool no_back_reflection;
     std::size_t num_mat_layers;  // include non-null substrate and incidence
