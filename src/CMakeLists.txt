@@ -33,7 +33,6 @@ target_sources(SuisApp PRIVATE
         # sql sources
         sql/SqlTreeItem.cpp
         # utils headers
-        utils/Approx.h
         utils/CSV.h
         utils/DataIO.h
         utils/Fs.h
@@ -41,7 +40,6 @@ target_sources(SuisApp PRIVATE
         utils/Math.h
         utils/Range.h
         # utils sources
-        utils/Approx.cpp
         utils/CSV.cpp
         utils/DataIO.cpp
         utils/Fs.cpp
@@ -57,7 +55,7 @@ target_sources(SuisApp PRIVATE
         Profile.h
         ProfilePrivate.h
         SettingsStorage.h
-        # top sources
+        # top sources% num_layers
         Application.cpp
         CommandLineParseResult.cpp
         Parameter.cpp
@@ -67,3 +65,10 @@ target_sources(SuisApp PRIVATE
         SettingsStorage.cpp
         main.cpp
 )
+
+if (BUILD_TESTS)
+    target_sources(SuisApp PRIVATE
+        utils/Approx.h
+        utils/Approx.cpp
+    )
+endif()

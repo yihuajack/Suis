@@ -61,7 +61,12 @@ rat_dict<typename std::remove_reference_t<U>::value_type> calculate_rat(std::uni
                 throw std::runtime_error(error_info);
             }
             coherency_va[0] = LayerType::Incoherent;
+#ifdef __cpp_lib_ranges_enumerate
             for (const auto [i, layer_type] : std::views::enumerate(coherency_list)) {
+#else
+            for (auto i = 0; i < coherency_list.size(); ++i) {
+                auto layer_type = coherency_list[i];
+#endif
                 coherency_va[i] = layer_type == 'c' ? LayerType::Coherent : LayerType::Incoherent;
             }
             coherency_va[stack->num_mat_layers + 1] = LayerType::Incoherent;
@@ -138,7 +143,15 @@ rat_dict<typename std::remove_reference_t<U>::value_type> calculate_rat(std::uni
             rat_out.emplace("T", (std::get<std::valarray<T>>(out_p.at("T")) + std::get<std::valarray<T>>(out_s.at("T"))) / 2);
             rat_out.emplace("A", 1 - std::get<std::valarray<T>>(rat_out.at("R")) - std::get<std::valarray<T>>(rat_out.at("T")));
             std::vector<std::valarray<T>> A_per_layer;
+#ifdef __cpp_lib_ranges_zip
             for (const auto [p, s] : std::views::zip(inc_absorp_in_each_layer(out_p), inc_absorp_in_each_layer(out_s))) {
+#else
+            auto inc_s = inc_absorp_in_each_layer(out_s);
+            auto inc_p = inc_absorp_in_each_layer(out_p);
+            for (auto i = 0; i < inc_s.size(); ++i) {
+                auto s = inc_s[i];
+                auto p = inc_p[i];
+#endif
                 A_per_layer.emplace_back((p + s) / 2);
             }
             rat_out.emplace("A_per_layer", A_per_layer);

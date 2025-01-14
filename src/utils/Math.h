@@ -52,7 +52,12 @@ namespace Utils::Math {
         }
         std::remove_reference_t<U> yi(static_cast<typename std::remove_reference_t<U>::value_type>(xi.size()));
         // const typename std::remove_reference_t<V>::value_type xi_val
+#ifdef __cpp_lib_ranges_enumerate
         for (const auto [i, xi_val] : std::views::enumerate(xi)) {
+#else
+        for (auto i = 0; i < xi.size(); ++i) {
+            auto xi_val = xi[i];
+#endif
             if (xi_val <= x.front()) {
                 yi[i] = y.front();
             } else if (xi_val >= x.back()) {

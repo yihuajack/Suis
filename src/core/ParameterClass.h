@@ -745,7 +745,13 @@ public:
                     } else if constexpr (std::same_as<T, SZ_T>) {
                         property[rc - start_row] = data.at(rc).at(index).toLongLong();
                     } else {
-                        static_assert(false, "Invalid type for import_single_property");
+                        // CWG Issue 2518, P2593
+                        // https://stackoverflow.com/questions/38304847/how-does-a-failed-static-assert-work-in-an-if-constexpr-false-block
+#if (defined __GNUC__ && __GNUC__ < 13)
+                        static_assert(std::is_same_v<T, void>, "Invalid type for import_single_property");  // !sizeof(T)
+#else
+                        static_assert(false, "Invalid type for import_single_property");  // C++23
+#endif
                     }
                 }
                 return property;
@@ -795,7 +801,12 @@ private:
             throw std::runtime_error("Missing back surface electrode; RAT calculation is disabled.");
         }
         layer_type.resize(end_row - start_row + 1);
+#if (defined _cpp_lib_ranges_enumerate && defined _cpp_lib_ranges_iota)
         for (const auto [i, rc] : std::views::enumerate(std::views::iota(start_row, end_row + 1))) {
+#else
+        for (auto i = 0; i < end_row - start_row; ++i) {
+            auto rc = start_row + i;
+#endif
             layer_type[static_cast<SZ_T>(i)] = csv_data.at(rc).at(layer_type_index);
         }
         // Material name array

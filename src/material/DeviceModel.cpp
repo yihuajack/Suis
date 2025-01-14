@@ -205,12 +205,22 @@ Q_INVOKABLE void DeviceModel::calcRAT() {
     // For convenience, the wavelengths are expected to be sorted already, but still minmax here.
     // Since Ubuntu 24 has gcc libstdc++ 14, we are able to use std::ranges::to here for supported compilers.
     // https://en.cppreference.com/w/cpp/compiler_support
+#ifdef _cpp_lib_ranges_to_container
     const std::vector<std::pair<double, double>> minmax_wls = structure |
             std::views::transform([](const std::pair<OpticMaterial<QList<double>> *, double> &pair) -> std::pair<double, double> {
         const QList<double> q_wls = pair.first->nWl();
         const auto [min, max] = std::ranges::minmax_element(q_wls);
         return {*min, *max};  // Warning: do not return dangling or (const) iterators
     }) | std::ranges::to<std::vector<std::pair<double, double>>>();
+#else
+    const auto view = structure |
+            std::views::transform([](const std::pair<OpticMaterial<QList<double>> *, double> &pair) -> std::pair<double, double> {
+        const QList<double> q_wls = pair.first->nWl();
+        const auto [min, max] = std::ranges::minmax_element(q_wls);
+        return {*min, *max};  // Warning: do not return dangling or (const) iterators
+                      });
+    const std::vector<std::pair<double, double>> minmax_wls(view.begin(), view.end());
+#endif
     const auto [min_minmax_wl, max_min_max_wl] = std::ranges::minmax_element(minmax_wls);
     const double min_wl = min_minmax_wl->first;
     const double max_wl = max_min_max_wl->second;

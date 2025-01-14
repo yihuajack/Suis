@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.27)
+cmake_minimum_required(VERSION 3.22)
 
 option(LINK_INSIGHT "Link Qt Insight Tracker library" ON)
 # If code.qt.io website server fails, turn off the following option to suppress the errors:
@@ -16,6 +16,7 @@ option(LINK_INSIGHT "Link Qt Insight Tracker library" ON)
 # Uncheck "Creates a project that you can open in Qt Design Studio"
 # from content/CMakeLists.txt:5 (qt6_add_qml_module)
 option(BUILD_QDS_COMPONENTS "Build design studio components" ON)
+option(BUILD_TESTS "Enable building tests" OFF)
 
 project(SuisApp
         VERSION 1.0.0
@@ -44,6 +45,7 @@ find_package(Qt6 6.8 REQUIRED COMPONENTS Charts Core Gui Qml Quick Sql)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
+# use ppa:mhier/libboost-latest and install libboost1.83-all-dev in jammy ubuntu
 find_package(Boost 1.83.0 REQUIRED)
 # find_package(Soci 4.0.3 CONFIG REQUIRED)
 # find_package(SQLite3 3.45.0 REQUIRED)
