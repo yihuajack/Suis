@@ -30,6 +30,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
 find_package(Boost 1.84.0 REQUIRED)
 
 include_directories(${Boost_INCLUDE_DIRS})
+include_directories(../..)
+include_directories(../../src)
 
 add_executable(test-tmm-vec test_tmm_vec.cpp
         ../../src/optics/tmm_vec.cpp

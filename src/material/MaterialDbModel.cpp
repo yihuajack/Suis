@@ -4,10 +4,10 @@
 
 #include <map>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 #include <QDir>
 #include <QFile>
-#include <QPointer>
 #include <QProcessEnvironment>
 #include <QRegularExpression>
 #include <QStandardPaths>
@@ -18,6 +18,8 @@
 
 #include "IniConfigParser.h"
 #include "MaterialDbModel.h"
+
+#include "DbSysModel.h"
 #include "ParameterSystem.h"
 
 MaterialDbModel::MaterialDbModel(QObject *parent, QString name) : QAbstractListModel(parent), m_progress(0),
@@ -188,6 +190,8 @@ int MaterialDbModel::readSolcoreDb(const QString& db_path) {
             static const QRegularExpression ws_regexp("\\s+");
             QString line;
             QStringList ln_data;
+            // Note that same Solcore material has the same n_wl and k_wl even for different compositions, so there is
+            // no need to store many n_wl and k_wl for one material.
             if (par_sys.isComposition(mat_name, "x")) {
                 const QDir n_dir = mat_dir.filePath("n");
                 const QDir k_dir = mat_dir.filePath("k");
@@ -300,19 +304,55 @@ int MaterialDbModel::readSolcoreDb(const QString& db_path) {
     }
     // read SOPRA db embedded in solcore
     if (others_map.contains("sopra")) {
-        QString sopra_path = others_map["sopra"];
-        sopra_path.replace("SOLCORE_ROOT", ini_finfo.absolutePath());
-        for (const OpticMaterial<QList<double>> *db : m_list) {
-            if (db->name() == u"Sopra"_s) {
-
+        for (const MaterialDbModel *db : DbSysModel::instance()) {
+            if (db->name() == u"Sopra"_s and db->checked()) {
+                QString sopra_path = others_map["sopra"];
+                sopra_path.replace("SOLCORE_ROOT", ini_finfo.absolutePath());
+                setPath(sopra_path);  // signal emitted
+                return readSopraDb(sopra_path);
             }
         }
     }
     return 0;
 }
 
+// Optical Data from Sopra SA http://www.sspectra.com/sopra.html
 int MaterialDbModel::readSopraDb(const QString& db_path) {
     const QDir sopra_dir(db_path);
+    QFile sopra_db = sopra_dir.filePath("SOPRA_DB_Updated.csv");
+    try {
+        if (not sopra_db.open(QIODevice::ReadOnly)) {
+            throw std::runtime_error("Cannot open file " + QFileInfo(sopra_db).filePath().toStdString());
+        }
+        QTextStream sopra_stream(&sopra_db);
+        // std::array<std::vector<QString>, 4> info;
+        sopra_stream.readLine();  // skip header
+        while (not sopra_stream.atEnd()) {
+            QString line = sopra_stream.readLine();
+            QStringList ln_data = line.split(',');
+            if (ln_data.length() not_eq 4 or ln_data.front() == "Filename") {
+                continue;
+            }
+            const QString& mat_name = ln_data.front();
+            const QString path = sopra_dir.filePath(mat_name + ".MAT");
+            // info.front().emplace_back(ln_data.at(2));  // Material
+            // info.at(2).emplace_back(ln_data.at(3));  // Wavelength (nm)
+            // info.at(3).emplace_back(ln_data.back());  // File Info
+            // info.back().emplace_back(path);  // File Path
+            try {
+                auto *opt_mat = new OpticMaterial<QList<double>>(mat_name, DbType::SOPRA, path);
+                beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
+                m_list.insert(mat_name, opt_mat);
+                endInsertRows();
+            } catch (std::runtime_error &e) {
+                qWarning() << e.what();
+                return 2;
+            }
+        }
+    } catch (std::runtime_error& e) {
+        qWarning() << e.what();
+        return 1;
+    }
     return 0;
 }
 
@@ -336,25 +376,13 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
     }
     data_sheet->workbook()->setActiveSheet(0);
     const auto *wsheet = dynamic_cast<QXlsx::Worksheet*>(data_sheet->workbook()->activeSheet());
-    if (wsheet == nullptr) {
+    if (not wsheet) {
         qWarning("Data sheet not found");
         return 2;
     }
     const int maxRow = wsheet->dimension().rowCount();  // qsizetype is long long (different from std::size_t)
     const int maxCol = wsheet->dimension().columnCount();
-    // QVector is an alias for QList.
-    // QMapIterator<int, QMap<int, std::shared_ptr<Cell>>> iterates by rows
-    // QList<QXlsx::CellLocation> clList = wsheet->getFullCells(&maxRow, &maxCol);
-    // This approach costs more time, less space.
-    QList<std::pair<double, QList<double>>> wls{{1, QList<double>(maxRow - 1)}};  // header by default
-    for (int rc = 2; rc <= maxRow; rc++) {
-        // QXlsx::Worksheet::cellAt() uses QMap find
-        if (const QXlsx::Cell *cell = wsheet->cellAt(rc, 1); cell not_eq nullptr) {
-            // QXlsx::Cell::readValue() will keep formula text!
-            wls.front().second[rc - 2] = cell->value().toDouble() * 1e-9;
-        }  // qDebug() << "Empty cell at Row " << rc << " Column " << 0;
-    }
-    QMap<QString, QList<std::pair<int, double>>> mat_name_indices;
+    std::unordered_set<QString> mat_name_set;
     // Scan the header first.
     for (int cc = 2; cc < maxCol; cc += 2) {
         // const QString mat_name = clList.at(cc).cell->readValue().toString();
@@ -372,14 +400,24 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
             qWarning("Adjacent columns %d and %d are different materials", cc, cc + 1);
         }
         const double fraction = mat_name_list_sz == 2 ? 1 : mat_name_list.at(2).toDouble();
-        if (mat_name_indices.contains(mat_name)) {
+        if (mat_name_set.contains(mat_name)) {
             if (mat_name_list_sz == 2) {
-                qWarning("Duplicate header detected as Column %d", cc);
+                qWarning("Duplicate header detected at column %d", cc);
             }
-            mat_name_indices[mat_name].emplace_back(cc, fraction);
         } else {
-            mat_name_indices.insert(mat_name, {{cc, fraction}});
+            mat_name_set.insert(mat_name);
+            // std::vector<double> n_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(n_list.size())};
+            // std::vector<double> k_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(k_list.size())};
+            // Warning: must dynamically new the object! Do not insert a reference; otherwise, it will change for each loop!
+            // You are using wls multiple times! Do not try to move wls to k_wl!
+            // Otherwise, qlist.h inline T& last() { Q_ASSERT(!isEmpty()); return *(end()-1); } assertion will fail.
+            // auto *opt_mat = new OpticMaterial<QList<double>>(it.key(), wls, std::move(n_series), wls, std::move(k_series));
+            auto *opt_mat = new OpticMaterial<QList<double>>(mat_name, DbType::DF, db_path_imported);
+            beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
+            m_list.insert(mat_name, opt_mat);
+            endInsertRows();
         }
+        setProgress(static_cast<double>(cc + 2) / static_cast<double>(maxCol));
     }
     for (QMap<QString, QList<std::pair<int, double>>>::const_iterator it = mat_name_indices.cbegin();
          it not_eq mat_name_indices.cend(); ++it) {
@@ -401,19 +439,8 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
             }
             n_series.emplace_back(snd, n_list);
             k_series.emplace_back(snd, k_list);
+            break;
         }
-        // std::vector<double> n_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(n_list.size())};
-        // std::vector<double> k_wl = {wls.begin(), wls.begin() + static_cast<std::vector<double>::difference_type>(k_list.size())};
-        // Warning: must dynamically new the object! Do not insert a reference; otherwise, it will change for each loop!
-        // You are using wls multiple times! Do not try to move wls to k_wl!
-        // Otherwise, qlist.h inline T& last() { Q_ASSERT(!isEmpty()); return *(end()-1); } assertion will fail.
-        auto *opt_mat = new OpticMaterial<QList<double>>(it.key(), wls, std::move(n_series), wls, std::move(k_series));
-        // Critical! Without this QML cannot know the model is changed!
-        beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
-        m_list.insert(it.key(), opt_mat);
-        endInsertRows();
-        // emit dataChanged(index(0), index(static_cast<int>(m_list.size()) - 1));
-        setProgress(static_cast<double>(std::distance(mat_name_indices.cbegin(), it) + 1) / static_cast<double>(mat_name_indices.size()));
     }
     return 0;
 }

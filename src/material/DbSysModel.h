@@ -11,6 +11,7 @@
 
 class DbSysModel : public QAbstractListModel {
     Q_OBJECT
+    QML_SINGLETON
 
 public:
     enum DbSysRoles {

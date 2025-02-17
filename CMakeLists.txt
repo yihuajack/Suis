@@ -47,8 +47,6 @@ set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 # use ppa:mhier/libboost-latest and install libboost1.83-all-dev in jammy ubuntu
 find_package(Boost 1.83.0 REQUIRED)
-# find_package(Soci 4.0.3 CONFIG REQUIRED)
-# find_package(SQLite3 3.45.0 REQUIRED)
 # Check default CMAKE_FIND_LIBRARY_SUFFIXES in Modules/CMakeGenericSystem.cmake ("lib"/[".so" ".a"]) and
 # Modules/Platform/Windows.cmake (["" "lib"]/["dll.lib" ".lib" ".a"]) for MSVC
 # SET(CMAKE_FIND_LIBRARY_PREFIXES "lib")
@@ -90,7 +88,7 @@ FetchContent_MakeAvailable(QXlsx)
 # If you are developing for iOS or macOS you should consider setting an
 # explicit, fixed bundle identifier manually though.
 set_target_properties(SuisApp PROPERTIES
-        #    MACOSX_BUNDLE_GUI_IDENTIFIER com.example.appQuickTest
+        # MACOSX_BUNDLE_GUI_IDENTIFIER com.example.appQuickTest
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
         MACOSX_BUNDLE TRUE
@@ -111,7 +109,6 @@ include(GNUInstallDirs)
 install(TARGETS SuisApp
         BUNDLE DESTINATION .
         # https://stackoverflow.com/questions/10671916/how-to-copy-dll-files-into-the-same-folder-as-the-executable-using-cmake
-        # avoid soci_core_4_1.dll not found
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )

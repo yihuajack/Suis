@@ -32,11 +32,11 @@
 #include <type_traits>
 
 template <typename T>
-constexpr typename std::add_const_t<T> &asConst(T &t) noexcept { return t; }
+constexpr std::add_const_t<T> &asConst(T &t) noexcept { return t; }
 
 // Forward rvalue as const
 template <typename T>
-constexpr typename std::add_const_t<T> asConst(T &&t) noexcept { return std::forward<T>(t); }
+constexpr std::add_const_t<T> asConst(T &&t) noexcept { return std::forward<T>(t); }
 
 // Prevent const rvalue arguments
 template <typename T>

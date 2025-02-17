@@ -161,7 +161,7 @@ Q_INVOKABLE void DeviceModel::calcRAT() {
     std::vector<std::pair<OpticMaterial<QList<double>> *, double>> structure;
     if (par->side) {  // right; need to reverse
         if (opt_material.back().isEmpty()) {
-            opt_material.back() = "ITO";
+            opt_material.back() = "ITO2"; // Sopra's ITO
         }
         if (opt_material.front().isEmpty()) {
             opt_material.front() = "Ag";

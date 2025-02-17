@@ -1460,6 +1460,7 @@ void runall() {
     test_coh_tmm_kz_list();
     test_coh_tmm_th_list();
     test_coh_tmm_inputs();
+    test_coh_tmm_reverse();
     test_ellips_psi();
     test_ellips_Delta();
     test_unpolarized_RT_R();
