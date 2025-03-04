@@ -14,10 +14,14 @@ WizardFlowForm {
 
     state: "initial"
 
+    property string backendPath: ""
+    property string devConfPath: ""
+
     onNextClicked: {
         if (root.state === "initial") {
             root.state = "parSetOptical"
             stackView.push(opticalParsetPage)
+            backendPath = welcomePage.backendPath
         } else if (root.state === "parSetOptical") {
             root.state = "parSetElectrical"
             // opticalParsetPage.getOptMat("Ag")
@@ -56,6 +60,10 @@ WizardFlowForm {
     ElectricalParsetPage {
         id: electricalParsetPage
         visible: false
+
+        onDevConfChanged: {
+            devConfPath = electricalParsetPage.devConf
+        }
     }
 
     states: [

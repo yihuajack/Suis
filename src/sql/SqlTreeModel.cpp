@@ -2,6 +2,7 @@
 // Created by Yihua Liu on 2024/8/12.
 //
 
+#include <QDir>
 #include <QtSql/QSqlDriver>
 #include <QtSql/QSqlError>
 #include <QtSql/QSqlQuery>
@@ -292,10 +293,11 @@ void SqlTreeModel::refresh(const QModelIndex &current) {
         while (table_query.next()) {
             tables.emplace_back(table_query.value(0).toString());
         }
-        const int num_tables = static_cast<int>(tables.size());
-        if (num_tables > 200) {
-            qWarning("Database contains more than 200 tables, aborting.");
-            return;
+        int num_tables = static_cast<int>(tables.size());
+        if (num_tables > m_maxTables) {
+            num_tables = m_maxTables;
+            qWarning() << "Database contains more than" << m_maxTables << "tables, will only insert the first"
+                << m_maxTables << "tables.";
         }
         insertRows(0, num_tables, current);
 
@@ -333,14 +335,18 @@ void SqlTreeModel::execQuery(const QString &query) const {
     sql_query.exec(query);
 }
 
-bool SqlTreeModel::upload() const {
+bool SqlTreeModel::upload(const QString &path) const {
+    const QUrl url(path);
+    QString upload_path = path;
+    if (url.isLocalFile()) {
+        upload_path = QDir::toNativeSeparators(url.toLocalFile());
+    }
     const QSqlDatabase db = QSqlDatabase::database(QSqlDatabase::connectionNames().at(m_dbId));  // Do not use the default connection (defaultConnection)
     if (not db.isOpen()) {
         qWarning() << "database not open";
         return false;
     }
-    const std::array<double, 13> stats = Utils::DataIO::readSingleStats(
-        R"(E:\Documents\GitHub\ddmodel-octave\stats.csv)");
+    const std::array<double, 13> stats = Utils::DataIO::readSingleStats(upload_path.toStdString());
     QSqlQuery sql_query(db);
     sql_query.prepare(
         "INSERT INTO AI_STATS (JSC_F, VOC_F, MPP_F, EFFICIENCY_F, MPPV_F, FF_F, JSC_R, VOC_R, MPP_R, "
@@ -372,6 +378,14 @@ int SqlTreeModel::dbId() const {
 
 void SqlTreeModel::setDbId(const int dbId) {
     m_dbId = dbId;
+}
+
+int SqlTreeModel::maxTables() const {
+    return m_maxTables;
+}
+
+void SqlTreeModel::setMaxTables(const int maxTables) {
+    m_maxTables = maxTables;
 }
 
 QHash<int, QByteArray> SqlTreeModel::roleNames() const {

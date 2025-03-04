@@ -95,7 +95,7 @@ Dialog {
             }
 
             SelectionRectangle {
-                target: tableView
+                target: devTView
             }
         }
     }

@@ -424,7 +424,7 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
             QList<double> n_list(maxRow - 1);
             QList<double> k_list(maxRow - 1);
             for (int rc = 2; rc <= maxRow; rc++) {
-                const QXlsx::Cell *cell = wsheet->cellAt(rc, fst);
+                auto cell = wsheet->cellAt(rc, fst);
                 // std::shared_ptr<QXlsx::Cell> cell = clList.at(rc * maxCol + cc).cell;
                 if (cell not_eq nullptr) {
                     n_list[rc - 2] = cell->readValue().toDouble();

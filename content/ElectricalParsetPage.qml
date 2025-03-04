@@ -10,6 +10,8 @@ import QtQuick.Layouts
 import content
 
 ElectricalParsetPageForm {
+    property string devConf: ""
+
     ScrollView {
         anchors.fill: parent
 
@@ -148,6 +150,7 @@ ElectricalParsetPageForm {
                         if (status) {
                             devName.text = device.name
                         }
+                        devConf = databasePath
                     }
                 }
             }
