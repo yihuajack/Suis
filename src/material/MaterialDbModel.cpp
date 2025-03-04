@@ -37,12 +37,10 @@ QVariant MaterialDbModel::data(const QModelIndex& index, int role) const {
     switch (role) {
         case NameRole:
             return it.key();
-        case NWlRole:
-            return QVariant::fromValue(it.value()->nWl());
+        case WlRole:
+            return QVariant::fromValue(it.value()->wl());
         case NDataRole:
             return QVariant::fromValue(it.value()->nData());
-        case KWlRole:
-            return QVariant::fromValue(it.value()->kWl());
         case KDataRole:
             return QVariant::fromValue(it.value()->kData());
         default:
@@ -90,9 +88,8 @@ void MaterialDbModel::setPath(const QString &path) {
 QHash<int, QByteArray> MaterialDbModel::roleNames() const {
     QHash<int, QByteArray> roles;
     roles[NameRole] = "name";
-    roles[NWlRole] = "n_wl";
+    roles[WlRole] = "wl";
     roles[NDataRole] = "n_data";
-    roles[KWlRole] = "k_wl";
     roles[KDataRole] = "k_data";
     return roles;
 }

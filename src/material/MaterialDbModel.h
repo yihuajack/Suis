@@ -20,9 +20,8 @@ class MaterialDbModel : public QAbstractListModel {
 public:
     enum ModelRoles {
         NameRole = Qt::UserRole + 1,
-        NWlRole,
+        WlRole,
         NDataRole,
-        KWlRole,
         KDataRole
     };
 

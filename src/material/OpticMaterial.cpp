@@ -19,7 +19,7 @@ template<FloatingList T>
 T OpticMaterial<T>::wl() const {
     if (wl.empty()) {
         try {
-            load_n();
+            load_nk();
         } catch (std::runtime_error& e) {
             qWarning() << "Material" << mat_name << "does not have wl defined." << e.what();
             return {};
@@ -32,7 +32,7 @@ template<FloatingList T>
 T OpticMaterial<T>::nData() const {
     if (n_data.empty()) {
         try {
-            load_n();
+            load_nk();
         } catch (std::runtime_error& e) {
             qWarning() << "Material" << mat_name << "does not have n-data defined." << e.what();
             return {};
@@ -45,7 +45,7 @@ template<FloatingList T>
 T OpticMaterial<T>::kData() const {
     if (k_data.empty()) {
         try {
-            load_k();
+            load_nk();
         } catch (std::runtime_error& e) {
             qWarning() << "Material" << mat_name << "does not have k-data defined." << e.what();
             return {};
