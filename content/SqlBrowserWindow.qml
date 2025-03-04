@@ -44,6 +44,20 @@ ApplicationWindow {
                 SqlTreeModel.dbId = Number.fromLocaleString(Qt.locale(), queryDbIndex.text)
             }
         }
+
+        Text {
+            text: qsTr("Maximum Tables")
+            font.pixelSize: 16
+            anchors.verticalCenter: parent.verticalCenter
+        }
+
+        TextField {
+            id: maxTablesIndex
+            text: "3"
+            onReleased: {
+                SqlTreeModel.maxTables = Number.fromLocaleString(Qt.locale(), maxTablesIndex.text)
+            }
+        }
     }
 
     menuBar: MenuBar {

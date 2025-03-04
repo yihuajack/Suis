@@ -15,6 +15,7 @@ class SqlTreeModel : public QAbstractItemModel {
     QML_ELEMENT
     QML_SINGLETON
     Q_PROPERTY(int dbId READ dbId WRITE setDbId NOTIFY dbIdChanged)
+    Q_PROPERTY(int maxTables READ maxTables WRITE setMaxTables NOTIFY maxTablesChanged)
 
 public:
     Q_DISABLE_COPY_MOVE(SqlTreeModel);
@@ -47,13 +48,16 @@ public:
     Q_INVOKABLE void refresh(const QModelIndex &current);
     Q_INVOKABLE void refreshAll();
     Q_INVOKABLE void execQuery(const QString &query) const;
-    Q_INVOKABLE bool upload() const;
+    Q_INVOKABLE bool upload(const QString &path) const;
 
     [[nodiscard]] int dbId() const;
     void setDbId(int dbId);
+    [[nodiscard]] int maxTables() const;
+    void setMaxTables(int dbId);
 
 signals:
     void dbIdChanged();
+    void maxTablesChanged();
 
 protected:
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
@@ -64,6 +68,7 @@ private:
     std::unique_ptr<SqlTreeItem> rootItem;
 
     int m_dbId = 0;
+    int m_maxTables = 3;
 };
 
 
