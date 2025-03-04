@@ -42,7 +42,7 @@ void Process::start(const QString& program, const QStringList& arguments, OpenMo
         qDebug() << "Failed to start process:" << m_Process->errorString();
     }
 
-    if (not m_Process->waitForFinished()) {
+    if (not m_Process->waitForFinished(60000)) {  // default msecs = 30000
         qDebug() << "Process finished with error:" << m_Process->errorString();
     }
 }

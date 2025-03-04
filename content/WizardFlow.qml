@@ -63,7 +63,6 @@ WizardFlowForm {
 
         onDevConfChanged: {
             devConfPath = electricalParsetPage.devConf
-            console.log(devConfPath)
         }
     }
 

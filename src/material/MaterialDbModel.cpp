@@ -349,7 +349,8 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
     QList<std::pair<double, QList<double>>> wls{{1, QList<double>(maxRow - 1)}};  // header by default
     for (int rc = 2; rc <= maxRow; rc++) {
         // QXlsx::Worksheet::cellAt() uses QMap find
-        if (const QXlsx::Cell *cell = wsheet->cellAt(rc, 1); cell not_eq nullptr) {
+        // QXlsx 1.5.0 uses std::shared_ptr<QXlsx::Cell> instead of QXlsx::Cell* in 1.4.8, use auto for compatibility
+        if (const auto cell = wsheet->cellAt(rc, 1); cell not_eq nullptr) {
             // QXlsx::Cell::readValue() will keep formula text!
             wls.front().second[rc - 2] = cell->value().toDouble() * 1e-9;
         }  // qDebug() << "Empty cell at Row " << rc << " Column " << 0;
@@ -389,7 +390,7 @@ int MaterialDbModel::readDfDb(const QString& db_path) {
             QList<double> n_list(maxRow - 1);
             QList<double> k_list(maxRow - 1);
             for (int rc = 2; rc <= maxRow; rc++) {
-                const QXlsx::Cell *cell = wsheet->cellAt(rc, fst);
+                auto cell = wsheet->cellAt(rc, fst);
                 // std::shared_ptr<QXlsx::Cell> cell = clList.at(rc * maxCol + cc).cell;
                 if (cell not_eq nullptr) {
                     n_list[rc - 2] = cell->readValue().toDouble();

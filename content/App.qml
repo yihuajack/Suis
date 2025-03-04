@@ -15,12 +15,12 @@ QtObject {
 
     property var mainWindow: ApplicationWindow {
         function simStart(scriptPath, devConf) {
-            // Remember to add matlab to path! -nosplash -nodesktop -r is deprecated; use -batch instead
-            console.log(devConf)
+            // Remember to add matlab/octave to path! -nosplash -nodesktop -r is deprecated; use -batch instead
             // simProcess.start("matlab", ["-batch", "try, cd('%1'), %2('%3'), catch me,
             //                  fprintf('%s / %s\n',me.identifier,me.message), end,
             //                  exit".arg(getParentDirectory(scriptPath)).arg(getBaseFileName(scriptPath)).arg(devConf)],
             //     Process.ReadOnly);
+            // "flatpak", ["run", "org.octave.Octave", ...] if octave is installed via flatpak
             simProcess.start("octave", ["--no-gui", "--quiet", "--eval",
                 "cd('%1'), %2('%3')".arg(getParentDirectory(scriptPath)).arg(getBaseFileName(scriptPath)).arg(devConf)],
                 Process.ReadOnly);
