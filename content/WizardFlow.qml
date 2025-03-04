@@ -15,6 +15,7 @@ WizardFlowForm {
     state: "initial"
 
     property string backendPath: ""
+    property string devConfPath: ""
 
     onNextClicked: {
         if (root.state === "initial") {
@@ -59,6 +60,11 @@ WizardFlowForm {
     ElectricalParsetPage {
         id: electricalParsetPage
         visible: false
+
+        onDevConfChanged: {
+            devConfPath = electricalParsetPage.devConf
+            console.log(devConfPath)
+        }
     }
 
     states: [

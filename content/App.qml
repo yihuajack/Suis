@@ -14,11 +14,16 @@ QtObject {
     id: root
 
     property var mainWindow: ApplicationWindow {
-        function simStart(path) {
-            // Remember to add matlab to path!
-            // simProcess.start("matlab", ["-nosplash", "-nodesktop", "-r", "run('E:/Documents/GitHub/ddmodel-octave/demo_ms_pin.m')"], Process.ReadOnly);
-            // simProcess.start("matlab", ["-batch", "run('%1')".arg(urlToPath(path))], Process.ReadOnly);
-            simProcess.start("octave", ["--no-gui", "--quiet", urlToPath(path)], Process.ReadOnly);
+        function simStart(scriptPath, devConf) {
+            // Remember to add matlab to path! -nosplash -nodesktop -r is deprecated; use -batch instead
+            console.log(devConf)
+            // simProcess.start("matlab", ["-batch", "try, cd('%1'), %2('%3'), catch me,
+            //                  fprintf('%s / %s\n',me.identifier,me.message), end,
+            //                  exit".arg(getParentDirectory(scriptPath)).arg(getBaseFileName(scriptPath)).arg(devConf)],
+            //     Process.ReadOnly);
+            simProcess.start("octave", ["--no-gui", "--quiet", "--eval",
+                "cd('%1'), %2('%3')".arg(getParentDirectory(scriptPath)).arg(getBaseFileName(scriptPath)).arg(devConf)],
+                Process.ReadOnly);
         }
 
         height: 480
@@ -82,7 +87,7 @@ QtObject {
                 // let newWindow = windowComponent.createObject(parent)
                 wizardWindow.close();
                 root.mainWindow.show();
-                mainWindow.simStart(urlToPath(backendPath));
+                mainWindow.simStart(urlToPath(backendPath), urlToPath(devConfPath));
             }
         }
 
@@ -108,9 +113,9 @@ QtObject {
 
     function urlToPath(urlString) {
         // https://stackoverflow.com/questions/24927850/get-the-path-from-a-qml-url
-        var s
+        let s
         if (urlString.startsWith("file:///")) {
-            var k = urlString.charAt(9) === ':' ? 8 : 7
+            let k = urlString.charAt(9) === ':' ? 8 : 7
             s = urlString.substring(k)
         } else {
             s = urlString
@@ -119,10 +124,20 @@ QtObject {
     }
 
     function getParentDirectory(path) {
-        var lastSlashIndex = path.lastIndexOf("/");
+        let lastSlashIndex = path.lastIndexOf("/");
         if (lastSlashIndex > 0) {
             return path.substring(0, lastSlashIndex);
         }
         return path; // If no parent directory found, return the original path
+    }
+
+    function getBaseFileName(path) {
+        // > The base name consists of all characters in the file up to (but not including) the first '.' character.
+        // according to QString QFileInfo::baseName() const
+        let lastSlashIndex = path.lastIndexOf("/");
+        let fileName = (lastSlashIndex !== -1) ? path.substring(lastSlashIndex + 1) : path;
+
+        let firstDotIndex = fileName.indexOf("."); // Get first occurrence of '.'
+        return (firstDotIndex > 0) ? fileName.substring(0, firstDotIndex) : fileName;
     }
 }
