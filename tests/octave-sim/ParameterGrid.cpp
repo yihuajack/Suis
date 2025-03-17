@@ -33,7 +33,7 @@ int main() {
         writeCSV(filename, data);
 
         // Run the external program with the modified CSV file as an argument
-        int result = std::system("matlab -batch \"run('E:/Documents/GitHub/ddmodel-octave/demo_ms_pin.m')\"");
+        int result = std::system("matlab -batch \"run('E:/Documents/GitHub/ddmodel-octave/demo_ms_script.m')\"");
 
         if (result) {
             std::cerr << "Error running MATLAB!\n";

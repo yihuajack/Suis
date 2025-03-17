@@ -208,14 +208,14 @@ Q_INVOKABLE void DeviceModel::calcRAT() {
 #ifdef _cpp_lib_ranges_to_container
     const std::vector<std::pair<double, double>> minmax_wls = structure |
             std::views::transform([](const std::pair<OpticMaterial<QList<double>> *, double> &pair) -> std::pair<double, double> {
-        const QList<double> q_wls = pair.first->nWl();
+        const QList<double> q_wls = pair.first->wl();
         const auto [min, max] = std::ranges::minmax_element(q_wls);
         return {*min, *max};  // Warning: do not return dangling or (const) iterators
     }) | std::ranges::to<std::vector<std::pair<double, double>>>();
 #else
     const auto view = structure |
             std::views::transform([](const std::pair<OpticMaterial<QList<double>> *, double> &pair) -> std::pair<double, double> {
-        const QList<double> q_wls = pair.first->nWl();
+        const QList<double> q_wls = pair.first->wl();
         const auto [min, max] = std::ranges::minmax_element(q_wls);
         return {*min, *max};  // Warning: do not return dangling or (const) iterators
                       });

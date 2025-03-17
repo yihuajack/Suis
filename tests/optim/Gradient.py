@@ -18,7 +18,7 @@ def model(p, start_row):
     df.loc[4, 'Nani'] = pow(10, p[4])
     df.to_csv(r'E:\Documents\GitHub\ddmodel-octave\Input_files\spiro_fapbi3_tio2_opt.csv', index=False)
     # Also see https://ww2.mathworks.cn/help/matlab/matlab-engine-for-python.html
-    command = ["matlab", "-batch", "run('E:/Documents/GitHub/ddmodel-octave/demo_ms_pin.m')"]
+    command = ["matlab", "-batch", "run('E:/Documents/GitHub/ddmodel-octave/fast_test.m')"]
 
     try:
         output = subprocess.run(command, capture_output=True, text=True, check=True)

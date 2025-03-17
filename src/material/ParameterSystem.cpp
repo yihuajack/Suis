@@ -20,9 +20,9 @@ ParameterSystem::ParameterSystem(const QMap<QString, QString>& par_map, const QS
             if (not QFileInfo::exists(par_path)) {
                 qWarning() << "File not found: " << par_path;
             } else {
-                boost::property_tree::ptree mat_par_ptree;
                 try {
-                    boost::property_tree::ini_parser::read_ini(par_path.toStdString(), mat_par_ptree);
+                    boost::property_tree::ptree mat_par_ptree;
+                    read_ini(par_path.toStdString(), mat_par_ptree);  // boost::property_tree::ini_parser
                     for (const std::pair<const std::string, boost::property_tree::basic_ptree<std::string, std::string>>& section : mat_par_ptree) {
                         const QString group = QString::fromStdString(section.first);
                         par_settings.beginGroup(group);
@@ -42,3 +42,6 @@ ParameterSystem::ParameterSystem(const QMap<QString, QString>& par_map, const QS
 bool ParameterSystem::isComposition(const QString &mat_name, const QString& key) const {
     return par_settings.contains(mat_name + "/" + key);
 }
+
+ParameterSystem *ParameterSystem::pinstance_{nullptr};
+std::mutex ParameterSystem::mutex_;

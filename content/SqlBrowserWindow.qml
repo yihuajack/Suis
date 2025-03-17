@@ -21,6 +21,8 @@ ApplicationWindow {
 
     property var currentSqlTableModel
 
+    property string backendDir: ""
+
     height: 600
     width: 800
     title: qsTr("SQL Browser")
@@ -65,6 +67,7 @@ ApplicationWindow {
             title: qsTr("File")
 
             MenuItem {
+                id: addConnMenuItem
                 text: qsTr("Add Connection...")
 
                 onTriggered: {
@@ -73,8 +76,24 @@ ApplicationWindow {
                     dialogLoader.active = true;
                 }
             }
+
             MenuItem {
+                id: importMenuItem
+                text: qsTr("Import")
+                enabled: false
+
+                onTriggered: {
+                    let read = SqlTreeModel.readGclDb(backendDir)
+                    if (!read) {
+                        console.log("Failed to read GCL database")
+                    }
+                }
+            }
+
+            MenuItem {
+                id: refreshAllMenuItem
                 text: qsTr("Refresh All")
+                enabled: false
 
                 onTriggered: {
                     SqlTreeModel.refreshAll();
@@ -104,7 +123,16 @@ ApplicationWindow {
 
         asynchronous: true
 
-        onLoaded: item.open()
+        onLoaded: {
+            if (item) {
+                item.open()
+
+                item.accepted.connect(function() {
+                    importMenuItem.enabled = true
+                    refreshAllMenuItem.enabled = true
+                })
+            }
+        }
     }
 
     // https://stackoverflow.com/questions/69845356/what-is-the-qmessageboxaboutqt-equivalent-in-qml

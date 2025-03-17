@@ -48,7 +48,8 @@ public:
     Q_INVOKABLE void refresh(const QModelIndex &current);
     Q_INVOKABLE void refreshAll();
     Q_INVOKABLE void execQuery(const QString &query) const;
-    Q_INVOKABLE bool upload(const QString &path) const;
+    Q_INVOKABLE [[nodiscard]] bool upload(const QString &path) const;
+    Q_INVOKABLE [[nodiscard]] bool readGclDb(const QString &path) const;
 
     [[nodiscard]] int dbId() const;
     void setDbId(int dbId);

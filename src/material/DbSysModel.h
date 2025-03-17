@@ -22,6 +22,8 @@ public:
         ModelRole
     };
 
+    QList<MaterialDbModel *> m_db;
+
     explicit DbSysModel(QObject *parent = nullptr);
     // https://stackoverflow.com/questions/50073626/reference-to-qml-singleton-class-instance
     static DbSysModel *instance();
@@ -41,8 +43,6 @@ public slots:
     void onProgressChanged();
 
 private:
-    QList<MaterialDbModel *> m_db;
-
     static DbSysModel *m_instance;
 };
 

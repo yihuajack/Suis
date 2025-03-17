@@ -5,7 +5,6 @@
 #ifndef SUISAPP_DEVSYSMODEL_H
 #define SUISAPP_DEVSYSMODEL_H
 
-#include <QAbstractListModel>
 #include <QQmlEngine>
 
 #include "DeviceModel.h"
@@ -30,6 +29,8 @@ public:
 
     Q_INVOKABLE void addDevice();
     Q_INVOKABLE void removeDevice(const int &row);
+
+    Q_INVOKABLE void addDeviceFromDb();
 
 protected:
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;

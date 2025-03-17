@@ -53,3 +53,9 @@ void DevSysModel::removeDevice(const int &row) {
     endRemoveRows();
     // emit dataChanged(index(0), index(static_cast<int>(m_list.size() - 1)));
 }
+
+void DevSysModel::addDeviceFromDb() {
+    beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
+    m_list.emplace_back(new DeviceModel());
+    endInsertRows();
+}

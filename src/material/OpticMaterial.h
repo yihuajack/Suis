@@ -43,6 +43,7 @@ public:
                                                                           path(std::move(path)) {}
 
     [[nodiscard]] QString name() const;
+    // The three member functions below are const so do not try to remedy loading n/k data in these functions.
     [[nodiscard]] T wl() const;
     [[nodiscard]] T nData() const;
     [[nodiscard]] T kData() const;

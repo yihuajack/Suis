@@ -17,6 +17,8 @@ OpticalParsetPageForm {
     // It is not a good idea to initialize ListElement in a QML ListModel and put matDbModel in optLView delegates
     // because matDbModel will not persist data.
 
+    property string backendPath: ""
+
     ListView {
         id: optLView
         // Warning: be careful when you write anchors.fill: parent
@@ -93,7 +95,7 @@ OpticalParsetPageForm {
                             // line 544
                             // https://stackoverflow.com/questions/38699293/qml-button-that-opens-a-window-from-applicationwindow
                             let component = Qt.createComponent("SqlBrowserWindow.qml")
-                            let appWindow = component.createObject(root)
+                            let appWindow = component.createObject(root, {backendDir: backendPath})
                             appWindow.show()
                         } else {
                             if (model.name === "Solcore") {

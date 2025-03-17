@@ -19,10 +19,14 @@ Dialog {
         standardButtons: DialogButtonBox.Ok | DialogButtonBox.Cancel  // buttons: []
         onAccepted: {
             model.path = urlField.text
-            SqlTreeModel.addConnection("QOCI", urlField.text, usernameField.text, passwordField.text)
+            let connected = SqlTreeModel.addConnection("QOCI", urlField.text, usernameField.text, passwordField.text)
             // Injection of parameters into signal handlers is deprecated.
             // Use JavaScript functions with formal parameters instead.
-            dbLoginDialog.accept()
+            if (connected) {
+                dbLoginDialog.accept()
+            } else {
+                dbLoginDialog.reject()
+            }
         }
         onRejected: {
             dbLoginDialog.reject()
