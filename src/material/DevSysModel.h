@@ -15,6 +15,8 @@ class DevSysModel : public QAbstractListModel {
     Q_OBJECT
     QML_SINGLETON
     QML_ELEMENT
+    Q_PROPERTY(QList<int> devId READ devId NOTIFY devIdChanged)
+    Q_PROPERTY(QStringList devList READ devList NOTIFY devListChanged)
 
 public:
     enum DevSysRoles {
@@ -27,16 +29,25 @@ public:
     [[nodiscard]] int rowCount(const QModelIndex &parent) const override;
     [[nodiscard]] QVariant data(const QModelIndex &index, int role) const override;
 
+    [[nodiscard]] QList<int> devId() const;
+    [[nodiscard]] QStringList devList() const;
+
     Q_INVOKABLE void addDevice();
     Q_INVOKABLE void removeDevice(const int &row);
-
     Q_INVOKABLE void addDeviceFromDb();
+
+signals:
+    void devIdChanged();
+    void devListChanged();
 
 protected:
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
 
 private:
     QList<DeviceModel *> m_list;
+
+    QList<int> m_devIds;
+    QStringList m_devList;
 };
 
 

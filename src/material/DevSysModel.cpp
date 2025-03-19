@@ -27,6 +27,14 @@ QVariant DevSysModel::data(const QModelIndex &index, int role) const {
     }
 }
 
+QList<int> DevSysModel::devId() const {
+    return m_devIds;
+}
+
+QStringList DevSysModel::devList() const {
+    return m_devList;
+}
+
 QHash<int, QByteArray> DevSysModel::roleNames() const {
     QHash<int, QByteArray> roles;
     roles[NameRole] = "name";
@@ -54,8 +62,44 @@ void DevSysModel::removeDevice(const int &row) {
     // emit dataChanged(index(0), index(static_cast<int>(m_list.size() - 1)));
 }
 
+// Db to be added in this way cannot be modified by any QML functions in ElectricalParsetPage.qml
 void DevSysModel::addDeviceFromDb() {
-    beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
-    m_list.emplace_back(new DeviceModel());
-    endInsertRows();
+    const QObject *sqlTreeModel = qmlEngine(this)->singletonInstance<QObject*>("content", "SqlTreeModel");
+    if (not sqlTreeModel) {
+        qWarning("SqlTreeModel singleton not found.");
+        return;
+    }
+    const QVariant ids = sqlTreeModel->property("devId");
+    if (const QVariant data = sqlTreeModel->property("devList"); ids.canConvert<QList<int>>() and data.canConvert<QStringList>()) {
+        int id;
+        QList<QVariant> devId = ids.toList();
+        QStringList devList = data.toStringList();
+#ifdef __cpp_lib_ranges_zip
+        for (const auto [idVar, devPath] : std::views::zip(devId, devList)) {
+#else
+        for (qsizetype i = 0; i < devId.size(); i++) {
+            if (devId.size() not_eq devList.size()) {
+                qWarning("IDs size differ from data size.");
+                return;
+            }
+            const QVariant& idVar = devId.at(i);
+            const QString& devPath = devList.at(i);
+#endif
+            if (not idVar.canConvert<int>()) {
+                qWarning("IDs cannot be converted to QList<int>.");
+                return;
+            }
+            id = idVar.toInt();
+            beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
+            DeviceModel *model = new DeviceModel();
+            model->setId(id);
+            model->readDfDev(devPath);
+            m_list.emplace_back(model);
+            m_devIds.emplace_back(id);
+            m_devList.emplace_back(devPath);
+        }
+        endInsertRows();
+    } else {
+        qWarning("IDs cannot be converted to QList<int> or data cannot be converted to QStringList.");
+    }
 }

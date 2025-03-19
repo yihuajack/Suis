@@ -6,6 +6,7 @@
 import QtQuick
 import QtQuick.Controls
 import Suis
+import content
 
 WizardFlowForm {
     id: root
@@ -13,19 +14,20 @@ WizardFlowForm {
     height: Constants.height
 
     state: "initial"
-
-    property string devConfPath: ""
+    property string backendPath: ""
 
     onNextClicked: {
         if (root.state === "initial") {
             root.state = "parSetOptical"
             stackView.push(opticalParsetPage)
             opticalParsetPage.backendPath = welcomePage.backendPath
+            backendPath = welcomePage.backendPath
         } else if (root.state === "parSetOptical") {
             root.state = "parSetElectrical"
             // opticalParsetPage.getOptMat("Ag")
             // stackView.push(electricalParsetPage, {elecDbPaths: opticalParsetPage.addDbPath()})
             stackView.push(electricalParsetPage)
+            DevSysModel.addDeviceFromDb()
         }
     }
 
@@ -59,10 +61,6 @@ WizardFlowForm {
     ElectricalParsetPage {
         id: electricalParsetPage
         visible: false
-
-        onDevConfChanged: {
-            devConfPath = electricalParsetPage.devConf
-        }
     }
 
     states: [

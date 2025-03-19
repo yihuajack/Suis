@@ -12,7 +12,10 @@
 class DeviceModel : public QAbstractTableModel {
     Q_OBJECT
     QML_ELEMENT
-    Q_PROPERTY(QString name READ name)
+    Q_PROPERTY(QString name READ name CONSTANT)
+    Q_PROPERTY(int id READ id WRITE setId NOTIFY idChanged)
+    Q_PROPERTY(QString path READ path CONSTANT)
+    Q_PROPERTY(bool isImported READ isImported NOTIFY importChanged)
     // Use properties for wl & RAT because they are not expected to be accessed by model.R/A/T but device.R/A/T!
     Q_PROPERTY(QList<double> wavelength READ wavelength CONSTANT)
     Q_PROPERTY(QList<double> R READ readR CONSTANT)
@@ -23,6 +26,10 @@ class DeviceModel : public QAbstractTableModel {
     Q_PROPERTY(QList<double> d READ readD CONSTANT)
     Q_PROPERTY(QList<double> CBM READ readCBM CONSTANT)
     Q_PROPERTY(QList<double> VBM READ readVBM CONSTANT)
+
+signals:
+    void idChanged();
+    void importChanged();
 
 public:
     explicit DeviceModel(QObject *parent = nullptr);
@@ -38,6 +45,10 @@ public:
     [[nodiscard]] Qt::ItemFlags flags(const QModelIndex &index) const override;
 
     [[nodiscard]] QString name() const;
+    [[nodiscard]] int id() const;
+    void setId(int id);
+    [[nodiscard]] QString path() const;
+    [[nodiscard]] bool isImported() const;
     [[nodiscard]] QList<double> wavelength() const;
     [[nodiscard]] QList<double> readR() const;
     [[nodiscard]] QList<double> readA() const;
@@ -52,12 +63,15 @@ public:
     // Q_INVOKABLE void copyToClipboard(const QModelIndexList &indexes) const;
     // Q_INVOKABLE bool pasteFromClipboard(const QModelIndex &targetIndex);
 
-    Q_INVOKABLE bool readDfDev(const QString &db_path);
+    Q_INVOKABLE void readDfDev(const QString &db_path);
     Q_INVOKABLE void calcRAT();
 
 private:
     std::unique_ptr<ParameterClass<QList, double, QString>> par;  // by column
     QString m_name;
+    int m_id = 0;
+    QString m_path;
+    bool imported = false;  // readDfDev does not return a bool because it may be called from the C++ side
 
     // for calcRAT()
     QList<QString> opt_material;

@@ -13,7 +13,7 @@ Page {
     id: root
     anchors.fill: parent
 
-    property string path: "init"
+    property string path: ""
     signal buttonClicked(path: string)
 
     footer: RowLayout {
@@ -38,11 +38,11 @@ Page {
             text: "Upload"
             onClicked: {
                 buttonClicked(path)
-                let uploaded = SqlTreeModel.upload(path)
+                let uploaded = SqlTreeModel.upload(path, DevSysModel.devId[0])
                 if (!uploaded) {
-                    term.text += ("\nFailed to upload!")
+                    term.text += ("\nFailed to upload!\n")
                 } else {
-                    term.text += ("\nSuccessfully uploaded!")
+                    term.text += ("\nSuccessfully uploaded!\n")
                 }
             }
         }

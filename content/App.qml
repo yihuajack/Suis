@@ -20,8 +20,9 @@ QtObject {
             //                  fprintf('%s / %s\n',me.identifier,me.message), end,
             //                  exit".arg(getParentDirectory(scriptPath)).arg(getBaseFileName(scriptPath)).arg(devConf)],
             //     Process.ReadOnly);
-            // "flatpak", ["run", "org.octave.Octave", ...] if octave is installed via flatpak
-            simProcess.start("octave", ["--no-gui", "--quiet", "--eval",
+            // "flatpak", ["run", "org.octave.Octave", ...]
+            simProcess.start("flatpak", ["run", "org.octave.Octave", "--no-gui", "--quiet", "--eval",
+            // simProcess.start("octave", ["--no-gui", "--quiet", "--eval",
                 "cd('%1'), %2('%3')".arg(getParentDirectory(scriptPath)).arg(getBaseFileName(scriptPath)).arg(devConf)],
                 Process.ReadOnly);
         }
@@ -63,11 +64,13 @@ QtObject {
             }
         }
     }
+
     property var splashWindow: Splash {
         visible: true
 
         onTimeout: wizardWindow.visibility = Window.Windowed
     }
+
     property var wizardWindow: Window {
         height: Constants.height
         title: qsTr("Suis Parameter Wizard")
@@ -87,7 +90,7 @@ QtObject {
                 // let newWindow = windowComponent.createObject(parent)
                 wizardWindow.close();
                 root.mainWindow.show();
-                mainWindow.simStart(urlToPath(backendPath), urlToPath(devConfPath));
+                mainWindow.simStart(urlToPath(backendPath), urlToPath(DevSysModel.devList[0]));  // only allow processing the first device
             }
         }
 

@@ -9,6 +9,8 @@
 #include <QtSql/QSqlRelationalTableModel>
 
 #include "SqlTreeModel.h"
+
+#include "DevSysModel.h"
 #include "utils/DataIO.h"
 
 SqlTreeModel::SqlTreeModel(QObject *parent) : QAbstractItemModel(parent), rootItem(std::make_unique<SqlTreeItem>(QVariantList(1))) {
@@ -335,7 +337,7 @@ void SqlTreeModel::execQuery(const QString &query) const {
     sql_query.exec(query);
 }
 
-bool SqlTreeModel::upload(const QString &path) const {
+bool SqlTreeModel::upload(const QString &path, const int id) const {
     const QUrl url(path);
     QString upload_path = path;
     if (url.isLocalFile()) {
@@ -349,9 +351,10 @@ bool SqlTreeModel::upload(const QString &path) const {
     const std::array<double, 13> stats = Utils::DataIO::readSingleStats(upload_path.toStdString());
     QSqlQuery sql_query(db);
     sql_query.prepare(
-        "INSERT INTO AI_STATS (JSC_F, VOC_F, MPP_F, EFFICIENCY_F, MPPV_F, FF_F, JSC_R, VOC_R, MPP_R, "
-        "EFFICIENCY_R, MPPV_R, FF_R, HF) VALUES (:JSC_F, :VOC_F, :MPP_F, :EFFICIENCY_F, :MPPV_F, :FF_F, :JSC_R, "
-        ":VOC_R, :MPP_R, :EFFICIENCY_R, :MPPV_R, :FF_R, :HF)");
+        "INSERT INTO AI_STATS (DEVICE_ID, JSC_F, VOC_F, MPP_F, EFFICIENCY_F, MPPV_F, FF_F, JSC_R, VOC_R, MPP_R, "
+        "EFFICIENCY_R, MPPV_R, FF_R, HF) VALUES (:DEVICE_ID, :JSC_F, :VOC_F, :MPP_F, :EFFICIENCY_F, :MPPV_F, :FF_F,"
+        ":JSC_R, :VOC_R, :MPP_R, :EFFICIENCY_R, :MPPV_R, :FF_R, :HF)");
+    sql_query.bindValue(":DEVICE_ID", id);
     sql_query.bindValue(":JSC_F", stats.front());
     sql_query.bindValue(":VOC_F", stats.at(2));
     sql_query.bindValue(":MPP_F", stats.at(3));
@@ -372,7 +375,7 @@ bool SqlTreeModel::upload(const QString &path) const {
     return true;
 }
 
-bool SqlTreeModel::readGclDb(const QString &path) const {
+bool SqlTreeModel::readGclDb(const QString &path) {
     const QUrl url(path);
     QString import_path = path;
     if (url.isLocalFile()) {
@@ -394,22 +397,22 @@ bool SqlTreeModel::readGclDb(const QString &path) const {
     // Query the device table
     QSqlQuery query(db);
     query.setForwardOnly(true);  // Hope this can make it faster
-    query.prepare(QString("SELECT DEVICE_NAME, ETL_MATERIAL_ID, HTL_MATERIAL_ID, PVK_MATERIAL_ID, INT1_MATERIAL_ID, "
+    query.prepare(QString("SELECT ID, DEVICE_NAME, ETL_MATERIAL_ID, HTL_MATERIAL_ID, PVK_MATERIAL_ID, INT1_MATERIAL_ID, "
                   "INT2_MATERIAL_ID, ETL_THICKNESS, HTL_THICKNESS, PVK_THICKNESS, INT1_THICKNESS, INT2_THICKNESS, "
                   "ETL_LAYER_POINT, HTL_LAYER_POINT, PVK_LAYER_POINT, INT1_LAYER_POINT, INT2_LAYER_POINT, "
-                  "ETL_XMESH_COEFF, HTL_XMESH_COEFF, PVK_XMESH_COEFF, INT1_XMESH_COEFF, INT2_XMESH_COEFF, INT0_SN, "
-                  "INT0_SP, INT1_SN, INT1_SP, INT2_SN, INT2_SP, INT3_SN, INT3_SP, INT1_VSR_ZONE_LOC, "
-                  "INT2_VSR_ZONE_LOC, XMESH_TYPE, OPTICAL_MODEL, SIDE, N_IONIC_SPECIES FROM %1").arg(deviceTable));  // Table names cannot be bound as query parameters using bindValue()!
+                  "ETL_XMESH_COEFF, HTL_XMESH_COEFF, PVK_XMESH_COEFF, INT1_XMESH_COEFF, INT2_XMESH_COEFF, "
+                  "ELECTRODE0_EF0, ELECTRODE1_EF0, ELECTRODE0_SN, ELECTRODE0_SP, INT1_SN, INT1_SP, INT2_SN, INT2_SP, "
+                  "ELECTRODE1_SN, ELECTRODE1_SP, INT1_VSR_ZONE_LOC, INT2_VSR_ZONE_LOC, XMESH_TYPE, OPTICAL_MODEL, "
+                  "SIDE, N_IONIC_SPECIES FROM %1").arg(deviceTable));  // Table names cannot be bound as query parameters using bindValue()!
     QString deviceName;
-    int ETL_materialId, HTL_materialId, PVK_materialId, INT1_materialId, INT2_materialId;
+    int deviceId, ETL_materialId, HTL_materialId, PVK_materialId, INT1_materialId, INT2_materialId;
     double ETL_thickness, HTL_thickness, PVK_thickness, INT1_thickness, INT2_thickness;
     int ETL_layerPoint, HTL_layerPoint, PVK_layerPoint, INT1_layerPoint, INT2_layerPoint;
-    double ETL_xmeshCoeff, HTL_xmeshCoeff, PVK_xmeshCoeff, INT1_xmeshCoeff, INT2_xmeshCoeff;
-    // double INT1_mun, INT2_mun, INT1_mup, INT2_mup;
-    double INT0_sn, INT0_sp, INT1_sn, INT1_sp, INT2_sn, INT2_sp, INT3_sn, INT3_sp;
+    double ETL_xmeshCoeff, HTL_xmeshCoeff, PVK_xmeshCoeff, INT1_xmeshCoeff, INT2_xmeshCoeff, ELECTRODE0_EF0, ELECTRODE1_EF0;
+    double ELECTRODE0_sn, ELECTRODE0_sp, INT1_sn, INT1_sp, INT2_sn, INT2_sp, ELECTRODE1_sn, ELECTRODE1_sp;
     QString INT1_vsrZoneLoc, INT2_vsrZoneLoc, xmeshType;
-    bool opticalModel, side;
-    int NIonicSpecies;
+    bool opticalModel;
+    int side, NIonicSpecies;
     if (not query.exec()) {
         qDebug() << "Query execution failed:" << query.lastError().text();
         return false;
@@ -425,6 +428,7 @@ bool SqlTreeModel::readGclDb(const QString &path) const {
     double MUN, MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP;
 
     while (query.next()) {
+        deviceId = query.value("ID").toInt();
         deviceName = query.value("DEVICE_NAME").toString();
         ETL_materialId = query.value("ETL_MATERIAL_ID").toInt();
         HTL_materialId = query.value("HTL_MATERIAL_ID").toInt();
@@ -446,14 +450,16 @@ bool SqlTreeModel::readGclDb(const QString &path) const {
         PVK_xmeshCoeff = query.value("PVK_XMESH_COEFF").toDouble();
         INT1_xmeshCoeff = query.value("INT1_XMESH_COEFF").toDouble();
         INT2_xmeshCoeff = query.value("INT2_XMESH_COEFF").toDouble();
-        INT0_sn = query.value("INT0_SN").toDouble();
-        INT0_sp = query.value("INT0_SP").toDouble();
+        ELECTRODE0_EF0 = query.value("ELECTRODE0_EF0").toDouble();
+        ELECTRODE1_EF0 = query.value("ELECTRODE1_EF0").toDouble();
+        ELECTRODE0_sn = query.value("ELECTRODE0_SN").toDouble();
+        ELECTRODE0_sp = query.value("ELECTRODE0_SP").toDouble();
         INT1_sn = query.value("INT1_SN").toDouble();
         INT1_sp = query.value("INT1_SP").toDouble();
         INT2_sn = query.value("INT2_SN").toDouble();
         INT2_sp = query.value("INT2_SP").toDouble();
-        INT3_sn = query.value("INT3_SN").toDouble();
-        INT3_sp = query.value("INT3_SP").toDouble();
+        ELECTRODE1_sn = query.value("ELECTRODE1_SN").toDouble();
+        ELECTRODE1_sp = query.value("ELECTRODE1_SP").toDouble();
         INT1_vsrZoneLoc = query.value("INT1_VSR_ZONE_LOC").toString();
         INT2_vsrZoneLoc = query.value("INT2_VSR_ZONE_LOC").toString();
         xmeshType = query.value("XMESH_TYPE").toString();
@@ -463,7 +469,7 @@ bool SqlTreeModel::readGclDb(const QString &path) const {
 
         // Open CSV file for writing
         QFileInfo scriptInfo(import_path);
-        QString devConfPath = scriptInfo.absolutePath() + "/Input_files" + deviceName + ".csv";
+        QString devConfPath = scriptInfo.absolutePath() + "/Input_files/" + deviceName + ".csv";
         QFile file(devConfPath);
         if (not file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
             qDebug() << "Failed to create file:" << devConfPath << file.errorString();
@@ -474,6 +480,9 @@ bool SqlTreeModel::readGclDb(const QString &path) const {
         out << "layer_type,material,thickness,layer_points,xmesh_coeff,Phi_EA,Phi_IP,EF0,Et,Nc,Nv,Ncat,Nani,c_max,a_max,"
                "mu_n,mu_p,mu_c,mu_a,epp,g0,B,taun,taup,sn,sp,vsr_zone_loc,Red,Green,Blue,optical_model,xmesh_type,side,"
                "N_ionic_species\n";
+
+        out << "electrode,,,,,,," << ELECTRODE0_EF0 <<",,,,,,,,,,,,,,,,," << ELECTRODE0_sn << ',' << ELECTRODE0_sp <<
+            ",,,,," << opticalModel << ',' << xmeshType << ',' << side << ',' << NIonicSpecies << "\n";
 
         // Clazy: Use multi-arg instead
         query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, "
@@ -512,19 +521,16 @@ bool SqlTreeModel::readGclDb(const QString &path) const {
             return false;
         }
 
-        out << "electrode,,,,,,," << EF0 <<",,,,,,,,,,,,,,,,," << INT0_sn << "," << INT0_sp <<",,,,," << opticalModel <<
-            "," << xmeshType << "," << side << NIonicSpecies << "\n";
-
         if (side == 1) {
-            out << "layer," << materialSn << "," << ETL_thickness << "," << ETL_layerPoint << "," << ETL_xmeshCoeff << "," << Phi_EA << ","
-                << Phi_IP << "," << EF0 << "," << ET << "," << NC << "," << NV << "," << NCAT << "," << NANI << "," << CMAX << ","
-                << AMAX << "," << MUN << "," << MUP << "," << MUC << "," << MUA << "," << EPP << "," << G0 << "," << B << ","
-                << TAUN << "," << TAUP << ",,,,0.85,0.95,0.7,,,,\n";
+            out << "layer," << materialSn << ',' << ETL_thickness << ',' << ETL_layerPoint << ',' << ETL_xmeshCoeff << ',' << Phi_EA << ','
+                << Phi_IP << ',' << EF0 << ',' << ET << ',' << NC << ',' << NV << ',' << NCAT << ',' << NANI << ',' << CMAX << ','
+                << AMAX << ',' << MUN << ',' << MUP << ',' << MUC << ',' << MUA << ',' << EPP << ',' << G0 << ',' << B << ','
+                << TAUN << ',' << TAUP << ",,,,0.85,0.95,0.7,,,,\n";
         } else {
-            out << "layer," << materialSn << "," << HTL_thickness << "," << HTL_layerPoint << "," << HTL_xmeshCoeff << "," << Phi_EA << ","
-                << Phi_IP << "," << EF0 << "," << ET << "," << NC << "," << NV << "," << NCAT << "," << NANI << "," << CMAX << ","
-                << AMAX << "," << MUN << "," << MUP << "," << MUC << "," << MUA << "," << EPP << "," << G0 << "," << B << ","
-                << TAUN << "," << TAUP << ",,,,0.85,0.95,0.7,,,,\n";
+            out << "layer," << materialSn << ',' << HTL_thickness << ',' << HTL_layerPoint << ',' << HTL_xmeshCoeff << ',' << Phi_EA << ','
+                << Phi_IP << ',' << EF0 << ',' << ET << ',' << NC << ',' << NV << ',' << NCAT << ',' << NANI << ',' << CMAX << ','
+                << AMAX << ',' << MUN << ',' << MUP << ',' << MUC << ',' << MUA << ',' << EPP << ',' << G0 << ',' << B << ','
+                << TAUN << ',' << TAUP << ",,,,0.85,0.95,0.7,,,,\n";
         }
 
         // Maximize degree of freedom
@@ -560,10 +566,11 @@ bool SqlTreeModel::readGclDb(const QString &path) const {
             return false;
         }
 
-        out << "interface," << materialSn << INT1_thickness << "," << INT1_layerPoint << "," << INT1_xmeshCoeff << "," << Phi_EA << ","
-            << Phi_IP << "," << EF0 << "," << ET << "," << NC << "," << NV << "," << NCAT << "," << NANI << "," << CMAX << ","
-            << AMAX << "," << MUN << "," << MUP << "," << MUC << "," << MUA << "," << EPP << "," << G0 << "," << B
-            << ",,," <<  INT1_sn << "," << INT1_sp << "," << INT1_vsrZoneLoc << ",1,0.9,0.7,,,,\n";
+        out << "interface," << materialSn << ',' << INT1_thickness << ',' << INT1_layerPoint << ',' << INT1_xmeshCoeff
+            << ',' << Phi_EA << ',' << Phi_IP << ',' << EF0 << ',' << ET << ',' << NC << ',' << NV << ',' << NCAT << ','
+            << NANI << ',' << CMAX << ',' << AMAX << ',' << MUN << ',' << MUP << ',' << MUC << ',' << MUA << ',' << EPP
+            << ',' << G0 << ',' << B << ",,," <<  INT1_sn << ',' << INT1_sp << ',' << INT1_vsrZoneLoc
+            << ",1,0.9,0.7,,,,\n";
 
         query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, CMAX, AMAX, MUN,"
                                   "MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP FROM %1 WHERE %2 = :idValue").arg(electricalPropertyTable, "ID"));
@@ -599,10 +606,10 @@ bool SqlTreeModel::readGclDb(const QString &path) const {
             return false;
         }
 
-        out << "active," << materialSn << "," << PVK_thickness << "," << PVK_layerPoint << "," << PVK_xmeshCoeff << "," << Phi_EA << ","
-            << Phi_IP << "," << EF0 << "," << ET << "," << NC << "," << NV << "," << NCAT << "," << NANI << "," << CMAX << ","
-            << AMAX << "," << MUN << "," << MUP << "," << MUC << "," << MUA << "," << EPP << "," << G0 << "," << B << ","
-            << TAUN << "," << TAUP << ",,,,1,1,1,,,,\n";
+        out << "active," << materialSn << ',' << PVK_thickness << ',' << PVK_layerPoint << ',' << PVK_xmeshCoeff << ',' << Phi_EA << ','
+            << Phi_IP << ',' << EF0 << ',' << ET << ',' << NC << ',' << NV << ',' << NCAT << ',' << NANI << ',' << CMAX << ','
+            << AMAX << ',' << MUN << ',' << MUP << ',' << MUC << ',' << MUA << ',' << EPP << ',' << G0 << ',' << B << ','
+            << TAUN << ',' << TAUP << ",,,,1,1,1,,,,\n";
 
         query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, CMAX, AMAX, MUN,"
                                   "MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP FROM %1 WHERE %2 = :idValue").arg(electricalPropertyTable, "ID"));
@@ -636,10 +643,11 @@ bool SqlTreeModel::readGclDb(const QString &path) const {
             return false;
         }
 
-        out << "interface," << materialSn << INT2_thickness << "," << INT2_layerPoint << "," << INT2_xmeshCoeff << "," << Phi_EA << ","
-            << Phi_IP << "," << EF0 << "," << ET << "," << NC << "," << NV << "," << NCAT << "," << NANI << "," << CMAX << ","
-            << AMAX << "," << MUN << "," << MUP << "," << MUC << "," << MUA << "," << EPP << "," << G0 << "," << B
-            << ",,," <<  INT2_sn << "," << INT2_sp << "," << INT2_vsrZoneLoc << ",1,0.9,0.7,,,,\n";
+        out << "interface," << materialSn << ',' << INT2_thickness << ',' << INT2_layerPoint << ',' << INT2_xmeshCoeff
+            << ',' << Phi_EA << ',' << Phi_IP << ',' << EF0 << ',' << ET << ',' << NC << ',' << NV << ',' << NCAT << ','
+            << NANI << ',' << CMAX << ',' << AMAX << ',' << MUN << ',' << MUP << ',' << MUC << ',' << MUA << ',' << EPP
+            << ',' << G0 << ',' << B << ",,," <<  INT2_sn << ',' << INT2_sp << ',' << INT2_vsrZoneLoc
+            << ",1,0.9,0.7,,,,\n";
 
         query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, "
                               "CMAX, AMAX, MUN, MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP FROM %1 "
@@ -677,20 +685,24 @@ bool SqlTreeModel::readGclDb(const QString &path) const {
         }
 
         if (side == 1) {
-            out << "layer," << materialSn << "," << HTL_thickness << "," << HTL_layerPoint << "," << HTL_xmeshCoeff << "," << Phi_EA << ","
-                << Phi_IP << "," << EF0 << "," << ET << "," << NC << "," << NV << "," << NCAT << "," << NANI << "," << CMAX << ","
-                << AMAX << "," << MUN << "," << MUP << "," << MUC << "," << MUA << "," << EPP << "," << G0 << "," << B << ","
-                << TAUN << "," << TAUP << ",,,,0.85,0.9,1,,,,\n";
+            out << "layer," << materialSn << ',' << HTL_thickness << ',' << HTL_layerPoint << ',' << HTL_xmeshCoeff
+                << ',' << Phi_EA << ',' << Phi_IP << ',' << EF0 << ',' << ET << ',' << NC << ',' << NV << ',' << NCAT
+                << ',' << NANI << ',' << CMAX << ',' << AMAX << ',' << MUN << ',' << MUP << ',' << MUC << ',' << MUA
+                << ',' << EPP << ',' << G0 << ',' << B << ',' << TAUN << ',' << TAUP << ",,,,0.8,0.9,1,,,,\n";
         } else {
-            out << "layer," << materialSn << "," << ETL_thickness << "," << ETL_layerPoint << "," << ETL_xmeshCoeff << "," << Phi_EA << ","
-                << Phi_IP << "," << EF0 << "," << ET << "," << NC << "," << NV << "," << NCAT << "," << NANI << "," << CMAX << ","
-                << AMAX << "," << MUN << "," << MUP << "," << MUC << "," << MUA << "," << EPP << "," << G0 << "," << B << ","
-                << TAUN << "," << TAUP << ",,,,0.85,0.9,1,,,,\n";
+            out << "layer," << materialSn << ',' << ETL_thickness << ',' << ETL_layerPoint << ',' << ETL_xmeshCoeff
+                << ',' << Phi_EA << ',' << Phi_IP << ',' << EF0 << ',' << ET << ',' << NC << ',' << NV << ',' << NCAT
+                << ',' << NANI << ',' << CMAX << ',' << AMAX << ',' << MUN << ',' << MUP << ',' << MUC << ',' << MUA
+                << ',' << EPP << ',' << G0 << ',' << B << ',' << TAUN << ',' << TAUP << ",,,,0.8,0.9,1,,,,\n";
         }
 
-        out << "electrode,,,,,,," << EF0 << ",,,,,,,,,,,,,,,,," << INT3_sn << "," << INT3_sp <<",,,,,,,,\n";
+        out << "electrode,,,,,,," << ELECTRODE1_EF0 << ",,,,,,,,,,,,,,,,," << ELECTRODE1_sn << ',' << ELECTRODE1_sp
+            <<",,,,,,,,\n";
 
         file.close();
+        m_devId.emplace_back(deviceId);
+        m_devList.emplace_back(devConfPath);
+        emit devListChanged();
     }
     return true;
 }
@@ -709,6 +721,14 @@ int SqlTreeModel::maxTables() const {
 
 void SqlTreeModel::setMaxTables(const int maxTables) {
     m_maxTables = maxTables;
+}
+
+QList<int> SqlTreeModel::devId() const {
+    return m_devId;
+}
+
+QStringList SqlTreeModel::devList() const {
+    return m_devList;
 }
 
 QHash<int, QByteArray> SqlTreeModel::roleNames() const {

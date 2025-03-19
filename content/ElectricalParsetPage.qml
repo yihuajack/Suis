@@ -10,7 +10,8 @@ import QtQuick.Layouts
 import content
 
 ElectricalParsetPageForm {
-    property string devConf: ""
+    // property list<int> devId: []
+    // property list<string> devConfPath: []
 
     ScrollView {
         anchors.fill: parent
@@ -37,7 +38,6 @@ ElectricalParsetPageForm {
                     width: devLView.width
                     height: 150
 
-                    property string databasePath: ""
                     // Warning: it is a one-way binding rather than two-way binding!
                     property var device: model.device
 
@@ -56,7 +56,7 @@ ElectricalParsetPageForm {
                                 // QML Row: possible QQuickItem::polish() loop
                                 // QML Row: Row called polish() inside updatePolish() of Row
                                 placeholderText: "Enter the Device Path"
-                                text: databasePath
+                                text: device.path
                                 onEditingFinished: {
                                     if (text.length > 0) {
                                         importDev(text)
@@ -66,7 +66,7 @@ ElectricalParsetPageForm {
 
                             Text {
                                 id: devName
-                                text: ""
+                                text: model.name
                             }
                         }
 
@@ -85,7 +85,7 @@ ElectricalParsetPageForm {
                             Button {
                                 id: editTableButton
                                 text: "Edit Table"
-                                enabled: false
+                                enabled: device.isImported
                                 onClicked: {
                                     loader.active = false
                                     loader.source = "DeviceTableDialog.qml"
@@ -142,15 +142,11 @@ ElectricalParsetPageForm {
                     }
 
                     function importDev(dbPath) {
-                        if (dbPath !== databasePath) {
-                            databasePath = dbPath.toString()
+                        device.readDfDev(dbPath)
+                        if (device.isImported) {
+                            model.devId.push(device.id)
+                            model.devConf.push(device.path)
                         }
-                        let status = device.readDfDev(databasePath)
-                        editTableButton.enabled = status === true
-                        if (status) {
-                            devName.text = device.name
-                        }
-                        devConf = databasePath
                     }
                 }
             }

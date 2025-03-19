@@ -139,7 +139,7 @@ ApplicationWindow {
     MessageDialog {
         id: aboutDialog
 
-        text: qsTr("The SQL Browser shows how a data browser can be used to visualize the results of SQL statements on a live database")
+        text: qsTr("The SQL Browser shows how a data browser can be used to visualize the results of SQL statements on a live database.")
         title: qsTr("About")
     }
 

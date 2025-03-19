@@ -62,6 +62,22 @@ QString DeviceModel::name() const {
     return m_name;
 }
 
+int DeviceModel::id() const {
+    return m_id;
+}
+
+void DeviceModel::setId(const int id) {
+    m_id = id;
+}
+
+QString DeviceModel::path() const {
+    return m_path;
+}
+
+bool DeviceModel::isImported() const {
+    return imported;
+}
+
 QList<double> DeviceModel::wavelength() const {
     return wavelengths;
 }
@@ -101,16 +117,17 @@ Q_INVOKABLE QVariant DeviceModel::headerData(const int section, const Qt::Orient
     return orientation == Qt::Horizontal ? par->layer_type.at(section) : par->headers.at(section);
 }
 
-Q_INVOKABLE bool DeviceModel::readDfDev(const QString &db_path) {
+Q_INVOKABLE void DeviceModel::readDfDev(const QString &db_path) {
     const QUrl url(db_path);
     QString db_path_imported = db_path;
     if (url.isLocalFile()) {
         db_path_imported = QDir::toNativeSeparators(url.toLocalFile());
     }
+    m_path = db_path_imported;
     QFile doc(db_path_imported);
     if (not doc.open(QIODevice::ReadOnly | QIODevice::Text)) {
         qWarning("Cannot load DriftFusion's device data file %s ", qUtf8Printable(db_path));
-        return false;
+        return;
     }
     m_name = QFileInfo(doc).baseName();
     QList<QStringList> csv_data;
@@ -133,14 +150,13 @@ Q_INVOKABLE bool DeviceModel::readDfDev(const QString &db_path) {
         opt_material = ParameterClass<QList, double, QString>::import_single_property<QString>(csv_data, properties, {"material", "stack"}, 1, csv_data.size() - 1);
         opt_d = ParameterClass<QList, double, QString>::import_single_property<double>(csv_data, properties, {"dcell", "d", "thickness"}, 1, csv_data.size() - 1);
         par = std::make_unique<ParameterClass<QList, double, QString>>(csv_data, properties);
+        imported = true;
     } catch (std::out_of_range &e) {
         // DEBUG -> INFO -> WARNING -> CRITICAL -> FATAL in <QtGlobal>
         qWarning() << "Out of range in readDfDev" << e.what();
-        return false;
     } catch (std::runtime_error &e) {
         qWarning() << "Runtime error in initializing PC" << e.what();
     }
-    return true;
 }
 
 Q_INVOKABLE void DeviceModel::calcRAT() {

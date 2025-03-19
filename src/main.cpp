@@ -1,16 +1,13 @@
 // Copyright (C) 2021 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
 
-#include <QGuiApplication>
 #include <QQmlApplicationEngine>
 
 #include "app_environment.h"
-#include "import_qml_components_plugins.h"
 #include "import_qml_plugins.h"
 
 #include "Application.h"
 #include "material/DbSysModel.h"
-#include "sql/SqlTreeModel.h"
 
 int main(int argc, char *argv[]) {
     set_qt_environment();
@@ -48,7 +45,7 @@ int main(int argc, char *argv[]) {
      */
     qmlRegisterSingletonType<DbSysModel>("com.github.yihuajack.DbSysModel", 1, 0,
                                          "DbSysModel",
-                                         [](QQmlEngine *engine, QJSEngine *scriptEngine) -> QObject * {
+                                         [](const QQmlEngine *engine, const QJSEngine *scriptEngine) -> QObject * {
         Q_UNUSED(engine)  // qobject_singletontype_provider
         Q_UNUSED(scriptEngine)
 
