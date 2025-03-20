@@ -2,7 +2,10 @@
 // Created by Yihua Liu on 2024/3/31.
 //
 
+#ifdef __cpp_lib_format
 #include <format>
+#endif
+
 #include <QDirIterator>
 #include <QFile>
 #include <QRegularExpression>
@@ -219,13 +222,21 @@ void OpticMaterial<T>::load_nk() {
             // error C2039: "parse" is not a member of "std::formatter<
             //  std::__p2286::_Compile_time_parse_format_specs::_FormattedType,
             //  std::__p2286::_Compile_time_parse_format_specs::_CharT>"
+#ifdef __cpp_lib_format
             throw std::runtime_error(std::format("Cannot load DriftFusion's material data file {}", path.toStdString()));
+#else
+            throw std::runtime_error("Cannot load DriftFusion's material data file " + path.toStdString());
+#endif
         }
         doc.selectSheet("data");
         // QXlsx::AbstractSheet is not a derived class of QObject
         const QXlsx::AbstractSheet *data_sheet = doc.sheet("data");
         if (data_sheet == nullptr) {
+#ifdef __cpp_lib_format
             throw std::runtime_error(std::format("Data sheet in data file {} does not exist!", path.toStdString()));
+#else
+            throw std::runtime_error("Data sheet in data file " + path.toStdString() + " does not exist!");
+#endif
         }
         data_sheet->workbook()->setActiveSheet(0);
         const auto *wsheet = dynamic_cast<QXlsx::Worksheet*>(data_sheet->workbook()->activeSheet());
