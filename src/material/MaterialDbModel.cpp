@@ -22,7 +22,7 @@
 #include "ParameterSystem.h"
 
 MaterialDbModel::MaterialDbModel(QObject *parent, QString name) : QAbstractListModel(parent), m_progress(0),
-                                                                  m_name(std::move(name)), m_checked(false) {}
+                                                                  m_name(std::move(name)) {}
 
 int MaterialDbModel::rowCount(const QModelIndex& parent) const {
     Q_UNUSED(parent)

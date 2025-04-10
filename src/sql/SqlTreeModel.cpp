@@ -405,7 +405,8 @@ bool SqlTreeModel::readGclDb(const QString &path) {
                   "ELECTRODE1_SN, ELECTRODE1_SP, INT1_VSR_ZONE_LOC, INT2_VSR_ZONE_LOC, XMESH_TYPE, OPTICAL_MODEL, "
                   "SIDE, N_IONIC_SPECIES FROM %1").arg(deviceTable));  // Table names cannot be bound as query parameters using bindValue()!
     QString deviceName;
-    int deviceId, ETL_materialId, HTL_materialId, PVK_materialId, INT1_materialId, INT2_materialId;
+    int deviceId;
+    unsigned long long ETL_materialId, HTL_materialId, PVK_materialId, INT1_materialId, INT2_materialId;
     double ETL_thickness, HTL_thickness, PVK_thickness, INT1_thickness, INT2_thickness;
     int ETL_layerPoint, HTL_layerPoint, PVK_layerPoint, INT1_layerPoint, INT2_layerPoint;
     double ETL_xmeshCoeff, HTL_xmeshCoeff, PVK_xmeshCoeff, INT1_xmeshCoeff, INT2_xmeshCoeff, ELECTRODE0_EF0, ELECTRODE1_EF0;
@@ -430,11 +431,11 @@ bool SqlTreeModel::readGclDb(const QString &path) {
     while (query.next()) {
         deviceId = query.value("ID").toInt();
         deviceName = query.value("DEVICE_NAME").toString();
-        ETL_materialId = query.value("ETL_MATERIAL_ID").toInt();
-        HTL_materialId = query.value("HTL_MATERIAL_ID").toInt();
-        PVK_materialId = query.value("PVK_MATERIAL_ID").toInt();
-        INT1_materialId = query.value("INT1_MATERIAL_ID").toInt();
-        INT2_materialId = query.value("INT2_MATERIAL_ID").toInt();
+        ETL_materialId = query.value("ETL_MATERIAL_ID").toULongLong();
+        HTL_materialId = query.value("HTL_MATERIAL_ID").toULongLong();
+        PVK_materialId = query.value("PVK_MATERIAL_ID").toULongLong();
+        INT1_materialId = query.value("INT1_MATERIAL_ID").toULongLong();
+        INT2_materialId = query.value("INT2_MATERIAL_ID").toULongLong();
         ETL_thickness = query.value("ETL_THICKNESS").toDouble();
         HTL_thickness = query.value("HTL_THICKNESS").toDouble();
         PVK_thickness = query.value("PVK_THICKNESS").toDouble();
