@@ -46,7 +46,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTORCC ON)
 # use ppa:mhier/libboost-latest and install libboost1.83-all-dev in jammy ubuntu
-find_package(Boost 1.83.0 REQUIRED)
+find_package(Boost 1.83.0 CONFIG REQUIRED)  # CMake Policy CMP0167
 # Check default CMAKE_FIND_LIBRARY_SUFFIXES in Modules/CMakeGenericSystem.cmake ("lib"/[".so" ".a"]) and
 # Modules/Platform/Windows.cmake (["" "lib"]/["dll.lib" ".lib" ".a"]) for MSVC
 # SET(CMAKE_FIND_LIBRARY_PREFIXES "lib")
