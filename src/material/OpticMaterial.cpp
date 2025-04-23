@@ -176,8 +176,8 @@ void OpticMaterial<T>::load_nk() {
                 }
             }
         } else {
-            QFile n_file = mat_dir.filePath("n.txt");
-            QFile k_file = mat_dir.filePath("k.txt");
+            QFile n_file(mat_dir.filePath("n.txt"));
+            QFile k_file(mat_dir.filePath("k.txt"));
             if (not n_file.open(QIODevice::ReadOnly)) {
                 throw std::runtime_error("Cannot open file " + n_file.fileName().toStdString());
             }

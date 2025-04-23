@@ -91,7 +91,7 @@ void DevSysModel::addDeviceFromDb() {
             }
             id = idVar.toInt();
             beginInsertRows(QModelIndex(), static_cast<int>(m_list.size()), static_cast<int>(m_list.size()));
-            DeviceModel *model = new DeviceModel();
+            auto model = new DeviceModel();
             model->setId(id);
             model->readDfDev(devPath);
             m_list.emplace_back(model);

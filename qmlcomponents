@@ -9,7 +9,10 @@ include(FetchContent)
 FetchContent_Declare(
     ds
     GIT_TAG qds-4.7
-    # https://github.com/qt-labs/qtquickdesigner-components
+    # Since qds-4.7 QDS removes flowview & multitext!
+    # https://github.com/qt-labs/qtquickdesigner-components/issues/9
+    # https://bugreports.qt.io/browse/QDS-13931 QDS-15019
+    # https://codereview.qt-project.org/c/qt-creator/qt-creator/+/603679
     GIT_REPOSITORY https://code.qt.io/qt-labs/qtquickdesigner-components.git
 )
 
@@ -27,9 +30,7 @@ target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE
     QuickStudioComponentsplugin
     QuickStudioEffectsplugin
     QuickStudioApplicationplugin
-    FlowViewplugin
     QuickStudioLogicHelperplugin
-    QuickStudioMultiTextplugin
     QuickStudioEventSimulatorplugin
     QuickStudioEventSystemplugin
 )

@@ -206,7 +206,7 @@ int MaterialDbModel::readSolcoreDb(const QString& db_path) {
 // Optical Data from Sopra SA http://www.sspectra.com/sopra.html
 int MaterialDbModel::readSopraDb(const QString& db_path) {
     const QDir sopra_dir(db_path);
-    QFile sopra_db = sopra_dir.filePath("SOPRA_DB_Updated.csv");
+    QFile sopra_db(sopra_dir.filePath("SOPRA_DB_Updated.csv"));  // no operator= conversion
     try {
         if (not sopra_db.open(QIODevice::ReadOnly)) {
             throw std::runtime_error("Cannot open file " + QFileInfo(sopra_db).filePath().toStdString());

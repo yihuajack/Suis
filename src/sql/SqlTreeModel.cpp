@@ -261,7 +261,7 @@ void SqlTreeModel::refresh(const QModelIndex &current) {
         const QString table_name = parent.data().toString();
         // const QSharedPointer<QSqlRelationalTableModel> table_model = QSharedPointer<QSqlRelationalTableModel>(new QSqlRelationalTableModel(
         //                                                                                     nullptr, db), &QSqlRelationalTableModel::deleteLater);
-        QSqlRelationalTableModel *table_model = new QSqlRelationalTableModel(nullptr, db);
+        auto *table_model = new QSqlRelationalTableModel(nullptr, db);
         table_model->setTable(table_name);
         table_model->setEditStrategy(QSqlRelationalTableModel::OnManualSubmit);
         table_model->select();
@@ -273,9 +273,11 @@ void SqlTreeModel::refresh(const QModelIndex &current) {
         // For the test database, there will be 35610 tables queried!
         // const QStringList tables = db.tables();
         QSqlQuery table_query(db);
-        // table_query.setForwardOnly(true);
+        // qsqlquery will check driver() is not empty, open, no open error, and query is not empty
         // table_query.exec("SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER=%1"_L1 % db.userName().toUpper());
         // Prepared statement
+        // https://forum.qt.io/topic/161859/access-violation-at-qsql_oci-when-executing-preparing-qsqlquery
+        // https://bugreports.qt.io/browse/QTBUG-136024
         if (const bool prepared = table_query.prepare("SELECT TABLE_NAME FROM ALL_TABLES WHERE OWNER=:owner"_L1); not prepared) {
             qWarning() << "Failed to prepare SELECT TABLE_NAME query:" << table_query.lastError();
         }
