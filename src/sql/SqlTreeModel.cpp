@@ -398,8 +398,9 @@ bool SqlTreeModel::readGclDb(const QString &path) {
     } */
     // Query the device table
     QSqlQuery query(db);
-    query.setForwardOnly(true);  // Hope this can make it faster
-    query.prepare(QString("SELECT ID, DEVICE_NAME, ETL_MATERIAL_ID, HTL_MATERIAL_ID, TO_CHAR(PVK_MATERIAL_ID) AS PVK_MATERIAL_ID_CHAR, INT1_MATERIAL_ID, "
+    query.setForwardOnly(true);  // Hope this can make it faster, property since Qt 6.8
+    query.setNumericalPrecisionPolicy(QSql::HighPrecision);  // Default precision policy, property since Qt 6.8
+    query.prepare(QString("SELECT ID, DEVICE_NAME, ETL_MATERIAL_ID, HTL_MATERIAL_ID, PVK_MATERIAL_ID, INT1_MATERIAL_ID, "
                   "INT2_MATERIAL_ID, ETL_THICKNESS, HTL_THICKNESS, PVK_THICKNESS, INT1_THICKNESS, INT2_THICKNESS, "
                   "ETL_LAYER_POINT, HTL_LAYER_POINT, PVK_LAYER_POINT, INT1_LAYER_POINT, INT2_LAYER_POINT, "
                   "ETL_XMESH_COEFF, HTL_XMESH_COEFF, PVK_XMESH_COEFF, INT1_XMESH_COEFF, INT2_XMESH_COEFF, "
@@ -435,7 +436,7 @@ bool SqlTreeModel::readGclDb(const QString &path) {
         deviceName = query.value("DEVICE_NAME").toString();
         ETL_materialId = query.value("ETL_MATERIAL_ID").toULongLong();
         HTL_materialId = query.value("HTL_MATERIAL_ID").toULongLong();
-        PVK_materialId = query.value("PVK_MATERIAL_ID_CHAR").toULongLong();
+        PVK_materialId = query.value("PVK_MATERIAL_ID").toULongLong();
         INT1_materialId = query.value("INT1_MATERIAL_ID").toULongLong();
         INT2_materialId = query.value("INT2_MATERIAL_ID").toULongLong();
         ETL_thickness = query.value("ETL_THICKNESS").toDouble();
