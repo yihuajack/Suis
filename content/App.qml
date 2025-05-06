@@ -19,8 +19,11 @@ QtObject {
             // simProcess.start("matlab", ["-batch", "cd('%1'), %2('%3')".arg(getParentDirectory(scriptPath)).arg(getBaseFileName(scriptPath)).arg(devConf)],
             //     Process.ReadOnly);
             // simProcess.start("octave", ["--no-gui", "--quiet", "--eval", ...]
+            let fileName = devConf.split("/").pop().replace(".csv", ".xlsx");
+            let parentDir = devConf.substring(0, devConf.lastIndexOf("/Input_files"));
+            let refrLib = parentDir + "/Libraries/" + fileName;
             simProcess.start("flatpak", ["run", "org.octave.Octave", "--no-gui", "--quiet", "--eval",
-                "cd('%1'), %2('%3')".arg(getParentDirectory(scriptPath)).arg(getBaseFileName(scriptPath)).arg(devConf)],
+                "cd('%1'), %2('%3', '%4')".arg(getParentDirectory(scriptPath)).arg(getBaseFileName(scriptPath)).arg(devConf).arg(refrLib)],
                 Process.ReadOnly);
         }
 
