@@ -55,7 +55,7 @@ target_sources(SuisApp PRIVATE
         Profile.h
         ProfilePrivate.h
         SettingsStorage.h
-        # top sources% num_layers
+        # top sources
         Application.cpp
         CommandLineParseResult.cpp
         Parameter.cpp

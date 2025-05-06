@@ -72,7 +72,7 @@ protected:
 private:
     [[nodiscard]] SqlTreeItem *getItem(const QModelIndex &index) const;
 
-    std::unique_ptr<SqlTreeItem> rootItem;
+    std::unique_ptr<SqlTreeItem> rootItem{};
 
     int m_dbId = 0;
     int m_maxTables = 3;

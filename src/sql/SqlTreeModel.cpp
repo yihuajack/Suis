@@ -3,13 +3,15 @@
 //
 
 #include <QDir>
+#include <QRegularExpression>
 #include <QtSql/QSqlDriver>
 #include <QtSql/QSqlError>
 #include <QtSql/QSqlQuery>
 #include <QtSql/QSqlRelationalTableModel>
 
+#include "xlsxdocument.h"
+#include "xlsxworkbook.h"
 #include "SqlTreeModel.h"
-
 #include "DevSysModel.h"
 #include "utils/DataIO.h"
 
@@ -19,8 +21,7 @@ SqlTreeModel::SqlTreeModel(QObject *parent) : QAbstractItemModel(parent), rootIt
     if (const QStringList drivers = QSqlDatabase::drivers(); drivers.empty()) {
         qWarning() << tr("No database drivers found.")
                    << tr("This part requires at least one Qt database driver. "
-                         "Please check the documentation how to build the "
-                         "Qt SQL plugins.");
+                         "Please check the documentation how to build the Qt SQL plugins.");
     } else if (not drivers.contains("QOCI")) {
         qWarning() << tr("QOCI driver not available.");
     }
@@ -306,7 +307,7 @@ void SqlTreeModel::refresh(const QModelIndex &current) {
         insertRows(0, num_tables, current);
 
         for (int t = 0; t < num_tables; t++) {
-            QSqlRelationalTableModel *table_model = new QSqlRelationalTableModel(nullptr, db);
+            auto *table_model = new QSqlRelationalTableModel(nullptr, db);
             table_model->setTable(tables.at(t));
             table_model->setEditStrategy(QSqlRelationalTableModel::OnManualSubmit);
             table_model->select();
@@ -377,6 +378,59 @@ bool SqlTreeModel::upload(const QString &path, const int id) const {
     return true;
 }
 
+void readRefrLib(QSqlQuery& query, QXlsx::Document& doc, const unsigned long long id) {
+    const QString opticalPropertyTable = "X_OPTICAL_PROPERTY";
+    const QString opticalRelateTable = "X_OPTICAL_PROPERTY_RELATE";
+    query.prepare(QString("SELECT ID, REMARK, MATERIAL_SN FROM %1 WHERE ATTRIBUTE_ID = :idValue").arg(opticalPropertyTable));
+    query.bindValue(":idValue", id);
+    if (not query.exec()) {
+        qDebug() << "Query execution failed:" << query.lastError().text();
+    }
+    const int maxCol = doc.dimension().columnCount();
+
+    if (query.next()) {
+        QList<std::array<QString, 3>> nkTable;
+        const unsigned long long opticalId = query.value("ID").toULongLong();
+        const QString remark = query.value("REMARK").toString();
+        const QString sn = query.value("MATERIAL_SN").toString();
+        if (not remark.isEmpty()) {
+            const QStringList lines = remark.split(QRegularExpression("[\r\n]+"), Qt::SkipEmptyParts);
+            for (qsizetype i = 1; i < lines.size(); ++i) {  // Skip the first line
+                const QString& line = lines.at(i);
+                const QStringList lineData = line.split(QRegularExpression("\\s+"));
+                if (lineData.size() == 3) {
+                    nkTable.append({lineData.front(), lineData.at(2), lineData.back()});
+                } else {
+                    qWarning() << lineData << "does not have 3 columns!";
+                }
+            }
+        } else {
+            QSqlQuery relateQuery(query);
+            relateQuery.prepare(QString("SELECT OPTICAL_ID, WAVELENGTH, N, K FROM %1 WHERE OPTICAL_ID = :idValue").arg(opticalRelateTable));
+            relateQuery.bindValue(":idValue", opticalId);
+            if (not relateQuery.exec()) {
+                qDebug() << "Query execution failed:" << relateQuery.lastError().text();
+            }
+            while (relateQuery.next()) {
+                const double wavelength = relateQuery.value("WAVELENGTH").toDouble();
+                const double n = relateQuery.value("N").toDouble();
+                const double k = relateQuery.value("K").toDouble();
+                nkTable.append({QString::number(wavelength), QString::number(n), QString::number(k)});
+            }
+        }
+        doc.write(1, maxCol + 1, "Wavelength (nm)");
+        doc.write(1, maxCol + 2, sn + "_n");
+        doc.write(1, maxCol + 3, sn + "_k");
+        int row = 2;
+        for (const std::array<QString, 3>& columns : nkTable) {
+            doc.write(row, maxCol + 1, columns.front().toDouble());
+            doc.write(row, maxCol + 2, columns.at(2).toDouble());
+            doc.write(row, maxCol + 3, columns.back().toDouble());
+            ++row;
+        }
+    }
+}
+
 bool SqlTreeModel::readGclDb(const QString &path) {
     const QUrl url(path);
     QString import_path = path;
@@ -391,11 +445,7 @@ bool SqlTreeModel::readGclDb(const QString &path) {
 
     // Do not try to check if the device table exists because tables() is extremely slow
     const QString deviceTable = "X_DEVICE";
-    /* const QStringList tables = db.tables();
-    if (not tables.contains(deviceTable, Qt::CaseInsensitive)) {
-        qDebug() << "Table" << deviceTable << "not found!";
-        return false;
-    } */
+    const QString electricalPropertyTable = "X_ELECTRICAL_PROPERTY_ALL";
     // Query the device table
     QSqlQuery query(db);
     query.setForwardOnly(true);  // Hope this can make it faster, property since Qt 6.8
@@ -422,11 +472,6 @@ bool SqlTreeModel::readGclDb(const QString &path) {
         return false;
     }
 
-    const QString electricalPropertyTable = "X_ELECTRICAL_PROPERTY_ALL";
-    /* if (not tables.contains(electricalPropertyTable, Qt::CaseInsensitive)) {
-        qDebug() << "Table" << electricalPropertyTable << "not found!";
-        return false;
-    } */
     QString materialSn;
     double Phi_EA, Phi_IP, EF0, ET, NC, NV, NCAT, NANI, CMAX, AMAX;
     double MUN, MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP;
@@ -473,9 +518,14 @@ bool SqlTreeModel::readGclDb(const QString &path) {
 
         // Open CSV file for writing
         QFileInfo scriptInfo(import_path);
+        QString optPropPath = scriptInfo.absolutePath() + "/Libraries/" + deviceName + ".xlsx";
+        QXlsx::Document doc;
+        readRefrLib(query, doc, side == 1 ? ETL_materialId : HTL_materialId);
+
         QString devConfPath = scriptInfo.absolutePath() + "/Input_files/" + deviceName + ".csv";
         QFile file(devConfPath);
-        if (not file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        // WriteOnly implies Truncate unless combined with ReadOnly, Append or NewOnly
+        if (not file.open(QIODevice::WriteOnly)) {
             qDebug() << "Failed to create file:" << devConfPath << file.errorString();
             return false;
         }
@@ -576,6 +626,8 @@ bool SqlTreeModel::readGclDb(const QString &path) {
             << ',' << G0 << ',' << B << ",,," <<  INT1_sn << ',' << INT1_sp << ',' << INT1_vsrZoneLoc
             << ",1,0.9,0.7,,,,\n";
 
+        readRefrLib(query, doc, PVK_materialId);
+
         query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, CMAX, AMAX, MUN,"
                                   "MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP FROM %1 WHERE %2 = :idValue").arg(electricalPropertyTable, "ID"));
         query.bindValue(":idValue", PVK_materialId);
@@ -652,6 +704,9 @@ bool SqlTreeModel::readGclDb(const QString &path) {
             << NANI << ',' << CMAX << ',' << AMAX << ',' << MUN << ',' << MUP << ',' << MUC << ',' << MUA << ',' << EPP
             << ',' << G0 << ',' << B << ",,," <<  INT2_sn << ',' << INT2_sp << ',' << INT2_vsrZoneLoc
             << ",1,0.9,0.7,,,,\n";
+
+        readRefrLib(query, doc, side == 1 ? HTL_materialId : ETL_materialId);
+        doc.saveAs(optPropPath);
 
         query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, "
                               "CMAX, AMAX, MUN, MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP FROM %1 "
