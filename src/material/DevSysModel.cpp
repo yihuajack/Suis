@@ -35,10 +35,25 @@ QStringList DevSysModel::devList() const {
     return m_devList;
 }
 
+int DevSysModel::selectedIndex() const {
+    return m_selectedIndex;
+}
+
+void DevSysModel::setSelectedIndex(const int selectedIndex) {
+    if (m_selectedIndex not_eq selectedIndex) {
+        const int oldIndex = m_selectedIndex;
+        m_selectedIndex = selectedIndex;
+        emit dataChanged(this->index(oldIndex), this->index(oldIndex), {SelectedRole});
+        emit dataChanged(this->index(m_selectedIndex), this->index(m_selectedIndex), {SelectedRole});
+        emit selectedIndexChanged();
+    }
+}
+
 QHash<int, QByteArray> DevSysModel::roleNames() const {
     QHash<int, QByteArray> roles;
     roles[NameRole] = "name";
     roles[DeviceRole] = "device";
+    roles[SelectedRole] = "selected";
     return roles;
 }
 
@@ -97,8 +112,8 @@ void DevSysModel::addDeviceFromDb() {
             m_list.emplace_back(model);
             m_devIds.emplace_back(id);
             m_devList.emplace_back(devPath);
+            endInsertRows();
         }
-        endInsertRows();
     } else {
         qWarning("IDs cannot be converted to QList<int> or data cannot be converted to QStringList.");
     }

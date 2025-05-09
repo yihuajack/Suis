@@ -423,7 +423,7 @@ void readRefrLib(QSqlQuery& query, QXlsx::Document& doc, const unsigned long lon
         doc.write(1, maxCol + 3, sn + "_k");
         int row = 2;
         for (const std::array<QString, 3>& columns : nkTable) {
-            doc.write(row, maxCol + 1, columns.front().toDouble());
+            doc.write(row, maxCol + 1, columns.front().toDouble());  // if not double QXlsx will write as text
             doc.write(row, maxCol + 2, columns.at(2).toDouble());
             doc.write(row, maxCol + 3, columns.back().toDouble());
             ++row;
@@ -520,7 +520,8 @@ bool SqlTreeModel::readGclDb(const QString &path) {
         QFileInfo scriptInfo(import_path);
         QString optPropPath = scriptInfo.absolutePath() + "/Libraries/" + deviceName + ".xlsx";
         QXlsx::Document doc;
-        readRefrLib(query, doc, side == 1 ? ETL_materialId : HTL_materialId);
+        QSqlQuery property_query(db);  // Do not use the device query! Otherwise, the while loop only executes once.
+        readRefrLib(property_query, doc, side == 1 ? ETL_materialId : HTL_materialId);
 
         QString devConfPath = scriptInfo.absolutePath() + "/Input_files/" + deviceName + ".csv";
         QFile file(devConfPath);
@@ -539,37 +540,37 @@ bool SqlTreeModel::readGclDb(const QString &path) {
             ",,,,," << opticalModel << ',' << xmeshType << ',' << side << ',' << NIonicSpecies << "\n";
 
         // Clazy: Use multi-arg instead
-        query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, "
+        property_query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, "
                               "CMAX, AMAX, MUN, MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP FROM %1 "
                               "WHERE %2 = :idValue").arg(electricalPropertyTable, "ID"));
-        query.bindValue(":idValue", side == 1 ? ETL_materialId : HTL_materialId);
-        if (not query.exec()) {
-            qDebug() << "Query execution failed:" << query.lastError().text();
+        property_query.bindValue(":idValue", side == 1 ? ETL_materialId : HTL_materialId);
+        if (not property_query.exec()) {
+            qDebug() << "Query execution failed:" << property_query.lastError().text();
             return false;
         }
 
-        if (query.next()) {
-            // materialName = query.value("MATERIAL_NAME").toString();
-            materialSn = query.value("MATERIAL_SN").toString();
-            Phi_EA = query.value("PHI_EA").toDouble();
-            Phi_IP = query.value("PHI_IP").toDouble();
-            EF0 = query.value("EF0").toDouble();
-            ET = query.value("ET").toDouble();
-            NC = query.value("NC").toDouble();
-            NV = query.value("NV").toDouble();
-            NCAT = query.value("NCAT").toDouble();
-            NANI = query.value("NANI").toDouble();
-            CMAX = query.value("CMAX").toDouble();
-            AMAX = query.value("AMAX").toDouble();
-            MUN = query.value("MUN").toDouble();
-            MUP = query.value("MUP").toDouble();
-            MUC = query.value("MUC").toDouble();
-            MUA = query.value("MUA").toDouble();
-            EPP = query.value("EPP").toDouble();
-            G0 = query.value("G0").toDouble();
-            B = query.value("B").toDouble();
-            TAUN = query.value("TAUN").toDouble();
-            TAUP = query.value("TAUP").toDouble();
+        if (property_query.next()) {
+            // materialName = property_query.value("MATERIAL_NAME").toString();
+            materialSn = property_query.value("MATERIAL_SN").toString();
+            Phi_EA = property_query.value("PHI_EA").toDouble();
+            Phi_IP = property_query.value("PHI_IP").toDouble();
+            EF0 = property_query.value("EF0").toDouble();
+            ET = property_query.value("ET").toDouble();
+            NC = property_query.value("NC").toDouble();
+            NV = property_query.value("NV").toDouble();
+            NCAT = property_query.value("NCAT").toDouble();
+            NANI = property_query.value("NANI").toDouble();
+            CMAX = property_query.value("CMAX").toDouble();
+            AMAX = property_query.value("AMAX").toDouble();
+            MUN = property_query.value("MUN").toDouble();
+            MUP = property_query.value("MUP").toDouble();
+            MUC = property_query.value("MUC").toDouble();
+            MUA = property_query.value("MUA").toDouble();
+            EPP = property_query.value("EPP").toDouble();
+            G0 = property_query.value("G0").toDouble();
+            B = property_query.value("B").toDouble();
+            TAUN = property_query.value("TAUN").toDouble();
+            TAUP = property_query.value("TAUP").toDouble();
         } else {
             qDebug() << "No data found in table" << electricalPropertyTable;
             return false;
@@ -588,33 +589,33 @@ bool SqlTreeModel::readGclDb(const QString &path) {
         }
 
         // Maximize degree of freedom
-        query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, CMAX, AMAX, MUN,"
+        property_query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, CMAX, AMAX, MUN,"
                                   "MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP FROM %1 WHERE %2 = :idValue").arg(electricalPropertyTable, "ID"));
-        query.bindValue(":idValue", INT1_materialId);
-        if (not query.exec()) {
-            qDebug() << "Query execution failed:" << query.lastError().text();
+        property_query.bindValue(":idValue", INT1_materialId);
+        if (not property_query.exec()) {
+            qDebug() << "Query execution failed:" << property_query.lastError().text();
             return false;
         }
 
-        if (query.next()) {
-            materialSn = query.value("MATERIAL_SN").toString();
-            Phi_EA = query.value("PHI_EA").toDouble();
-            Phi_IP = query.value("PHI_IP").toDouble();
-            EF0 = query.value("EF0").toDouble();
-            ET = query.value("ET").toDouble();
-            NC = query.value("NC").toDouble();
-            NV = query.value("NV").toDouble();
-            NCAT = query.value("NCAT").toDouble();
-            NANI = query.value("NANI").toDouble();
-            CMAX = query.value("CMAX").toDouble();
-            AMAX = query.value("AMAX").toDouble();
-            MUN = query.value("MUN").toDouble();
-            MUP = query.value("MUP").toDouble();
-            MUC = query.value("MUC").toDouble();
-            MUA = query.value("MUA").toDouble();
-            EPP = query.value("EPP").toDouble();
-            G0 = query.value("G0").toDouble();
-            B = query.value("B").toDouble();
+        if (property_query.next()) {
+            materialSn = property_query.value("MATERIAL_SN").toString();
+            Phi_EA = property_query.value("PHI_EA").toDouble();
+            Phi_IP = property_query.value("PHI_IP").toDouble();
+            EF0 = property_query.value("EF0").toDouble();
+            ET = property_query.value("ET").toDouble();
+            NC = property_query.value("NC").toDouble();
+            NV = property_query.value("NV").toDouble();
+            NCAT = property_query.value("NCAT").toDouble();
+            NANI = property_query.value("NANI").toDouble();
+            CMAX = property_query.value("CMAX").toDouble();
+            AMAX = property_query.value("AMAX").toDouble();
+            MUN = property_query.value("MUN").toDouble();
+            MUP = property_query.value("MUP").toDouble();
+            MUC = property_query.value("MUC").toDouble();
+            MUA = property_query.value("MUA").toDouble();
+            EPP = property_query.value("EPP").toDouble();
+            G0 = property_query.value("G0").toDouble();
+            B = property_query.value("B").toDouble();
         } else {
             qDebug() << "No data found in table" << electricalPropertyTable;
             return false;
@@ -626,37 +627,37 @@ bool SqlTreeModel::readGclDb(const QString &path) {
             << ',' << G0 << ',' << B << ",,," <<  INT1_sn << ',' << INT1_sp << ',' << INT1_vsrZoneLoc
             << ",1,0.9,0.7,,,,\n";
 
-        readRefrLib(query, doc, PVK_materialId);
+        readRefrLib(property_query, doc, PVK_materialId);
 
-        query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, CMAX, AMAX, MUN,"
+        property_query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, CMAX, AMAX, MUN,"
                                   "MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP FROM %1 WHERE %2 = :idValue").arg(electricalPropertyTable, "ID"));
-        query.bindValue(":idValue", PVK_materialId);
-        if (not query.exec()) {
-            qDebug() << "Query execution failed:" << query.lastError().text();
+        property_query.bindValue(":idValue", PVK_materialId);
+        if (not property_query.exec()) {
+            qDebug() << "Query execution failed:" << property_query.lastError().text();
             return false;
         }
 
-        if (query.next()) {
-            materialSn = query.value("MATERIAL_SN").toString();
-            Phi_EA = query.value("PHI_EA").toDouble();
-            Phi_IP = query.value("PHI_IP").toDouble();
-            EF0 = query.value("EF0").toDouble();
-            ET = query.value("ET").toDouble();
-            NC = query.value("NC").toDouble();
-            NV = query.value("NV").toDouble();
-            NCAT = query.value("NCAT").toDouble();
-            NANI = query.value("NANI").toDouble();
-            CMAX = query.value("CMAX").toDouble();
-            AMAX = query.value("AMAX").toDouble();
-            MUN = query.value("MUN").toDouble();
-            MUP = query.value("MUP").toDouble();
-            MUC = query.value("MUC").toDouble();
-            MUA = query.value("MUA").toDouble();
-            EPP = query.value("EPP").toDouble();
-            G0 = query.value("G0").toDouble();
-            B = query.value("B").toDouble();
-            TAUN = query.value("TAUN").toDouble();
-            TAUP = query.value("TAUP").toDouble();
+        if (property_query.next()) {
+            materialSn = property_query.value("MATERIAL_SN").toString();
+            Phi_EA = property_query.value("PHI_EA").toDouble();
+            Phi_IP = property_query.value("PHI_IP").toDouble();
+            EF0 = property_query.value("EF0").toDouble();
+            ET = property_query.value("ET").toDouble();
+            NC = property_query.value("NC").toDouble();
+            NV = property_query.value("NV").toDouble();
+            NCAT = property_query.value("NCAT").toDouble();
+            NANI = property_query.value("NANI").toDouble();
+            CMAX = property_query.value("CMAX").toDouble();
+            AMAX = property_query.value("AMAX").toDouble();
+            MUN = property_query.value("MUN").toDouble();
+            MUP = property_query.value("MUP").toDouble();
+            MUC = property_query.value("MUC").toDouble();
+            MUA = property_query.value("MUA").toDouble();
+            EPP = property_query.value("EPP").toDouble();
+            G0 = property_query.value("G0").toDouble();
+            B = property_query.value("B").toDouble();
+            TAUN = property_query.value("TAUN").toDouble();
+            TAUP = property_query.value("TAUP").toDouble();
         } else {
             qDebug() << "No data found in table" << electricalPropertyTable;
             return false;
@@ -667,33 +668,33 @@ bool SqlTreeModel::readGclDb(const QString &path) {
             << AMAX << ',' << MUN << ',' << MUP << ',' << MUC << ',' << MUA << ',' << EPP << ',' << G0 << ',' << B << ','
             << TAUN << ',' << TAUP << ",,,,1,1,1,,,,\n";
 
-        query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, CMAX, AMAX, MUN,"
+        property_query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, CMAX, AMAX, MUN,"
                                   "MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP FROM %1 WHERE %2 = :idValue").arg(electricalPropertyTable, "ID"));
-        query.bindValue(":idValue", INT2_materialId);
-        if (not query.exec()) {
-            qDebug() << "Query execution failed:" << query.lastError().text();
+        property_query.bindValue(":idValue", INT2_materialId);
+        if (not property_query.exec()) {
+            qDebug() << "Query execution failed:" << property_query.lastError().text();
             return false;
         }
 
-        if (query.next()) {
-            materialSn = query.value("MATERIAL_SN").toString();
-            Phi_EA = query.value("PHI_EA").toDouble();
-            Phi_IP = query.value("PHI_IP").toDouble();
-            EF0 = query.value("EF0").toDouble();
-            ET = query.value("ET").toDouble();
-            NC = query.value("NC").toDouble();
-            NV = query.value("NV").toDouble();
-            NCAT = query.value("NCAT").toDouble();
-            NANI = query.value("NANI").toDouble();
-            CMAX = query.value("CMAX").toDouble();
-            AMAX = query.value("AMAX").toDouble();
-            MUN = query.value("MUN").toDouble();
-            MUP = query.value("MUP").toDouble();
-            MUC = query.value("MUC").toDouble();
-            MUA = query.value("MUA").toDouble();
-            EPP = query.value("EPP").toDouble();
-            G0 = query.value("G0").toDouble();
-            B = query.value("B").toDouble();
+        if (property_query.next()) {
+            materialSn = property_query.value("MATERIAL_SN").toString();
+            Phi_EA = property_query.value("PHI_EA").toDouble();
+            Phi_IP = property_query.value("PHI_IP").toDouble();
+            EF0 = property_query.value("EF0").toDouble();
+            ET = property_query.value("ET").toDouble();
+            NC = property_query.value("NC").toDouble();
+            NV = property_query.value("NV").toDouble();
+            NCAT = property_query.value("NCAT").toDouble();
+            NANI = property_query.value("NANI").toDouble();
+            CMAX = property_query.value("CMAX").toDouble();
+            AMAX = property_query.value("AMAX").toDouble();
+            MUN = property_query.value("MUN").toDouble();
+            MUP = property_query.value("MUP").toDouble();
+            MUC = property_query.value("MUC").toDouble();
+            MUA = property_query.value("MUA").toDouble();
+            EPP = property_query.value("EPP").toDouble();
+            G0 = property_query.value("G0").toDouble();
+            B = property_query.value("B").toDouble();
         } else {
             qDebug() << "No data found in table" << electricalPropertyTable;
             return false;
@@ -705,39 +706,39 @@ bool SqlTreeModel::readGclDb(const QString &path) {
             << ',' << G0 << ',' << B << ",,," <<  INT2_sn << ',' << INT2_sp << ',' << INT2_vsrZoneLoc
             << ",1,0.9,0.7,,,,\n";
 
-        readRefrLib(query, doc, side == 1 ? HTL_materialId : ETL_materialId);
+        readRefrLib(property_query, doc, side == 1 ? HTL_materialId : ETL_materialId);
         doc.saveAs(optPropPath);
 
-        query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, "
+        property_query.prepare(QString("SELECT MATERIAL_SN, PHI_EA, PHI_IP, EF0, ET, NC, NV, NCAT, NANI, "
                               "CMAX, AMAX, MUN, MUP, MUC, MUA, EPP, G0, B, TAUN, TAUP FROM %1 "
                               "WHERE %2 = :idValue").arg(electricalPropertyTable, "ID"));
-        query.bindValue(":idValue", side == 1 ? HTL_materialId : ETL_materialId);
-        if (not query.exec()) {
-            qDebug() << "Query execution failed:" << query.lastError().text();
+        property_query.bindValue(":idValue", side == 1 ? HTL_materialId : ETL_materialId);
+        if (not property_query.exec()) {
+            qDebug() << "Query execution failed:" << property_query.lastError().text();
             return false;
         }
 
-        if (query.next()) {
-            materialSn = query.value("MATERIAL_SN").toString();
-            Phi_EA = query.value("PHI_EA").toDouble();
-            Phi_IP = query.value("PHI_IP").toDouble();
-            EF0 = query.value("EF0").toDouble();
-            ET = query.value("ET").toDouble();
-            NC = query.value("NC").toDouble();
-            NV = query.value("NV").toDouble();
-            NCAT = query.value("NCAT").toDouble();
-            NANI = query.value("NANI").toDouble();
-            CMAX = query.value("CMAX").toDouble();
-            AMAX = query.value("AMAX").toDouble();
-            MUN = query.value("MUN").toDouble();
-            MUP = query.value("MUP").toDouble();
-            MUC = query.value("MUC").toDouble();
-            MUA = query.value("MUA").toDouble();
-            EPP = query.value("EPP").toDouble();
-            G0 = query.value("G0").toDouble();
-            B = query.value("B").toDouble();
-            TAUN = query.value("TAUN").toDouble();
-            TAUP = query.value("TAUP").toDouble();
+        if (property_query.next()) {
+            materialSn = property_query.value("MATERIAL_SN").toString();
+            Phi_EA = property_query.value("PHI_EA").toDouble();
+            Phi_IP = property_query.value("PHI_IP").toDouble();
+            EF0 = property_query.value("EF0").toDouble();
+            ET = property_query.value("ET").toDouble();
+            NC = property_query.value("NC").toDouble();
+            NV = property_query.value("NV").toDouble();
+            NCAT = property_query.value("NCAT").toDouble();
+            NANI = property_query.value("NANI").toDouble();
+            CMAX = property_query.value("CMAX").toDouble();
+            AMAX = property_query.value("AMAX").toDouble();
+            MUN = property_query.value("MUN").toDouble();
+            MUP = property_query.value("MUP").toDouble();
+            MUC = property_query.value("MUC").toDouble();
+            MUA = property_query.value("MUA").toDouble();
+            EPP = property_query.value("EPP").toDouble();
+            G0 = property_query.value("G0").toDouble();
+            B = property_query.value("B").toDouble();
+            TAUN = property_query.value("TAUN").toDouble();
+            TAUP = property_query.value("TAUP").toDouble();
         } else {
             qDebug() << "No data found in table" << electricalPropertyTable;
             return false;
@@ -761,7 +762,6 @@ bool SqlTreeModel::readGclDb(const QString &path) {
         file.close();
         m_devId.emplace_back(deviceId);
         m_devList.emplace_back(devConfPath);
-        emit devListChanged();
     }
     return true;
 }

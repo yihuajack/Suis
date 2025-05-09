@@ -34,6 +34,10 @@ ElectricalParsetPageForm {
                 Layout.preferredHeight: contentHeight
                 model: DevSysModel
 
+                ButtonGroup {
+                    id: radioGroup
+                }
+
                 delegate: Item {
                     width: devLView.width
                     height: 150
@@ -48,6 +52,14 @@ ElectricalParsetPageForm {
 
                         Row {
                             spacing: 10
+
+                            RadioButton {  // It seems that RadioDelegate is not enough for our task
+                                checked: selected
+                                ButtonGroup.group: radioGroup
+                                onClicked : {
+                                    DevSysModel.selectedIndex = index;
+                                }
+                            }
 
                             TextField {
                                 id: devPathTextField

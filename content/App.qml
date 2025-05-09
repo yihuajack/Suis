@@ -90,7 +90,7 @@ QtObject {
                 // let newWindow = windowComponent.createObject(parent)
                 wizardWindow.close();
                 root.mainWindow.show();
-                mainWindow.simStart(urlToPath(backendPath), urlToPath(DevSysModel.devList[0]));  // only allow processing the first device
+                mainWindow.simStart(urlToPath(backendPath), urlToPath(DevSysModel.devList[DevSysModel.selectedIndex]));  // only allow processing the first device
             }
         }
 

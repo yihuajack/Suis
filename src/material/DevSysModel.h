@@ -17,11 +17,13 @@ class DevSysModel : public QAbstractListModel {
     QML_ELEMENT
     Q_PROPERTY(QList<int> devId READ devId NOTIFY devIdChanged)
     Q_PROPERTY(QStringList devList READ devList NOTIFY devListChanged)
+    Q_PROPERTY(int selectedIndex READ selectedIndex WRITE setSelectedIndex NOTIFY selectedIndexChanged)
 
 public:
     enum DevSysRoles {
         NameRole = Qt::UserRole + 1,
-        DeviceRole
+        DeviceRole,
+        SelectedRole
     };
 
     explicit DevSysModel(QObject *parent = nullptr);
@@ -31,6 +33,9 @@ public:
 
     [[nodiscard]] QList<int> devId() const;
     [[nodiscard]] QStringList devList() const;
+    [[nodiscard]] int selectedIndex() const;
+
+    void setSelectedIndex(int selectedIndex);
 
     Q_INVOKABLE void addDevice();
     Q_INVOKABLE void removeDevice(const int &row);
@@ -39,6 +44,7 @@ public:
 signals:
     void devIdChanged();
     void devListChanged();
+    void selectedIndexChanged();
 
 protected:
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
@@ -48,6 +54,7 @@ private:
 
     QList<int> m_devIds;
     QStringList m_devList;
+    int m_selectedIndex = -1;
 };
 
 
