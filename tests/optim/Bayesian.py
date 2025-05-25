@@ -7,13 +7,13 @@ from skopt.utils import use_named_args
 
 # Define the search space
 search_space = [
-    Real(4e-6, 4e-5, name='dH'),
+    Real(1e-6, 1e-5, name='dH'),
     Real(2e-5, 1e-4, name='dP'),
     Real(1e-6, 1e-5, name='dE')
 ]
 
 def model(x):
-    path = r'E:\Documents\GitHub\ddmodel-octave\Input_files\spiro_fapbi3_tio2.csv'
+    path = r'E:\Documents\GitHub\ddmodel-octave\Input_files\niox_fapbi3_pcbm.csv'
     df = pd.read_csv(path)
     df.loc[1, 'thickness'] = x[0]
     df.loc[3, 'thickness'] = x[1]
@@ -26,7 +26,7 @@ def model(x):
         output = subprocess.run(command, capture_output=True, text=True, check=True)
         print("MATLAB Output:\n", output.stdout)
         df_stats = pd.read_csv(r'E:\Documents\GitHub\ddmodel-octave\stats.csv', header=None)
-        return df_stats.iloc[9, 1]
+        return df_stats.iloc[7, 1]  # 9 for eta
 
     except subprocess.CalledProcessError as e:
         print("Error occurred:", e.stderr)
