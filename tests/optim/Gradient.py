@@ -37,8 +37,13 @@ VLimit = 1.1
 x = pd.read_csv(r'E:\Documents\GitHub\ddmodel-octave\JV.csv', header=None).iloc[:, 0].to_numpy()
 x = np.flip(x[x < VLimit])
 JV_ref = pd.read_csv('../../data/optim/JV_NiOx_PVK_PCBM_1796092911782965264_BATTERY_253268_2024-05-27K1-5.csv')
-x_ref = np.flip(JV_ref[JV_ref.iloc[:, 0] < VLimit].iloc[:, 0].to_numpy())  # xp must be increasing
-y_ref = np.flip(JV_ref[JV_ref.iloc[:, 0] < VLimit].iloc[:, 1].to_numpy())
+x_ref = JV_ref[JV_ref.iloc[:, 0] < VLimit].iloc[:, 0].to_numpy()  # xp must be increasing
+y_ref = JV_ref[JV_ref.iloc[:, 0] < VLimit].iloc[:, 1].to_numpy()
+if x_ref[0] > x_ref[-1]:
+    print("Warning: x_ref is not increasing, flipping it.")
+    x_ref = np.flip(x_ref)
+    y_ref = np.flip(y_ref)
+
 y_interp = np.interp(x, x_ref, y_ref)  # interpolated reference curve
 
 
