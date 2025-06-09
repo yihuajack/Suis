@@ -11,7 +11,6 @@ def model(p, eng):
     deviceFile = r'E:\Documents\GitHub\ddmodel-octave\Input_files\niox_fapbi3_pcbm.csv'
     df = pd.read_csv(deviceFile)
 
-    # 更新参数（对数尺度）
     df.loc[3, 'taun'] = pow(10, p[0])
     df.loc[3, 'taup'] = pow(10, p[1])
     df.loc[2, 'sn'] = pow(10, p[2])
