@@ -201,6 +201,7 @@ public:
         // changing device thickness on the fly. These are not present
         // in the dependent variables as it is too costly to have them
         // continuously called.
+        refresh_device();
     }
 
     static constexpr F_T kB = 8.617330350e-5;  // Boltzmann constant [eV K^-1]
@@ -1000,17 +1001,17 @@ private:
             for (SZ_T i : std::views::iota(0U, col_size())) {
                 std::vector<F_T> x_layer;
                 if (layer_type.at(i) == "layer" or layer_type.at(i) == "active") {
-                    std::vector<F_T> parr = Utils::Math::linspace(-0.5, 1 / std::numbers::pi_v<F_T>, 0.5);
-                    std::size_t sz_parr = parr.size();
+                    const std::vector<F_T> parr = Utils::Math::linspace(-0.5, 1 / std::numbers::pi_v<F_T>, 0.5);
+                    const std::size_t sz_parr = parr.size();
                     x_layer.resize(sz_parr);
-                    F_T x_layer0 = std::erf(2 * std::numbers::pi_v<F_T> * xmesh_coeff.front() * parr.front());
+                    const F_T x_layer0 = std::erf(2 * std::numbers::pi_v<F_T> * xmesh_coeff.front() * parr.front());
                     x_layer.front() = 0;
                     for (std::size_t j : std::views::iota(1U, sz_parr)) {
-                        x_layer[i] = std::erf(2 * std::numbers::pi_v<F_T> * xmesh_coeff.at(i) * parr.at(i)) - x_layer0;
+                        x_layer.at(j) = std::erf(2 * std::numbers::pi_v<F_T> * xmesh_coeff.at(j) * parr.at(j)) - x_layer0;
                     }
-                    F_T max_x_layer = std::ranges::max(x_layer);
+                    const F_T max_x_layer = std::ranges::max(x_layer);
                     for (std::size_t j : std::views::iota(1U, sz_parr)) {
-                        x_layer[i] = dcum.at(i) + x_layer[i] / max_x_layer * d.at(i);
+                        x_layer.at(j) = dcum.at(i) + x_layer.at(j) / max_x_layer * d.at(i);
                     }
                 } else if (layer_type.at(i) == "junction" or layer_type.at(i) == "interface") {
                     x_layer = Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i));
