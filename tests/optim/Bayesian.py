@@ -11,7 +11,7 @@ search_space = [
     Real(2e-5, 1e-4, name='dP'),
     Real(1e-6, 1e-5, name='dE')
 ]
-#wd = r'E:\Documents\GitHub\ddmodel-octave'
+# wd = r'E:\Documents\GitHub\ddmodel-octave'
 wd = '~/simulation/device_module/ddmodel_octave'
 
 def model(x):
@@ -23,9 +23,11 @@ def model(x):
     df.to_csv(path, index=False)
     # Also see https://ww2.mathworks.cn/help/matlab/matlab-engine-for-python.html
     # command = ["matlab", "-batch", "run('E:/Documents/GitHub/ddmodel-octave/fast_test.m')"]
-    command = ["flatpak", "-run", "org.octave.Octave", '--no-gui', '--quiet', '--eval',
-               'cd {}'.format(wd),
-               "demo_ms_pin({}, '{}/Libraries/Index_of_Refraction_library.xlsx')".format(path, wd)]
+    command = [
+        "flatpak", "run", "org.octave.Octave",
+        # r"E:\Program Files\GNU Octave\Octave-9.2.0\mingw64\bin\octave-cli.exe",
+        '--no-gui', '--quiet', '--eval',
+        "cd('{}'), demo_ms_pin('{}', '{}/Libraries/Index_of_Refraction_library.xlsx')".format(wd, path, wd)]
 
     try:
         output = subprocess.run(command, capture_output=True, text=True, check=True)
@@ -35,14 +37,15 @@ def model(x):
 
     except subprocess.CalledProcessError as e:
         print("Error occurred:", e.stderr)
+        print(command)
         return None
 
 
 # Objective function to minimize
 @use_named_args(search_space)
 def objective_function(**params):
-    log_x = [params[key] for key in ['dH', 'dP', 'dE']]
-    y = model(log_x)  # Get outputs from the black-box model
+    x = [params[key] for key in ['dH', 'dP', 'dE']]
+    y = model(x)  # Get outputs from the black-box model
     loss = -y ** 2
     return loss
 

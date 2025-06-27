@@ -411,7 +411,7 @@ public:
     L<F_T> x_sub;
 
     SZ_T col_size() const {
-        return layer_type.size();
+        return static_cast<SZ_T>(layer_type.size());
     }
 
     /* Getters */
@@ -993,12 +993,12 @@ private:
         L<F_T> x;  // pcum().back()
         L<F_T> dcum = dcum0();
         if (xmesh_type) {  // linear
-            for (SZ_T i : std::views::iota(0U, col_size())) {
+            for (SZ_T i : std::views::iota(0, col_size())) {
                 x.append_range(Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i)));
             }
             x.emplace_back(dcum.back());
         } else {  // erf-linear
-            for (SZ_T i : std::views::iota(0U, col_size())) {
+            for (SZ_T i : std::views::iota(0, col_size())) {
                 std::vector<F_T> x_layer;
                 if (layer_type.at(i) == "layer" or layer_type.at(i) == "active") {
                     const std::vector<F_T> parr = Utils::Math::linspace(-0.5, 1 / std::numbers::pi_v<F_T>, 0.5);

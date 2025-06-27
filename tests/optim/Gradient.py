@@ -54,9 +54,8 @@ def model(p):
     df.to_csv(deviceFile, index=False)
 
     try:
-        command = ["flatpak", "-run", "org.octave.Octave", '--no-gui', '--quiet', '--eval',
-                   'cd {}'.format(wd),
-                   "demo_ms_pin({}, '{}/Libraries/Index_of_Refraction_library.xlsx')".format(deviceFile, wd)]
+        command = ["flatpak", "run", "org.octave.Octave", '--no-gui', '--quiet', '--eval',
+        "cd('{}'), demo_ms_pin('{}', '{}/Libraries/Index_of_Refraction_library.xlsx')".format(wd, deviceFile, wd)]
         output = subprocess.run(command, capture_output=True, text=True, check=True)
         print("MATLAB Output:\n", output.stdout)
         print(p)
