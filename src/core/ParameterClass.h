@@ -31,6 +31,16 @@ enum class FUN_TYPE {
     CONSTANT, SWEEP_AND_STILL, SIN, SWEEP
 };
 
+template <typename C, typename R>
+concept HasAppendRange = requires (C c, R r) {
+    { c.append_range(r) } -> std::same_as<void>;
+};
+
+template <typename C, typename R>
+concept HasAppend = requires(C c, R r) {
+    { c.append(r) } -> std::same_as<void>;
+};
+
 template<template <typename...> class L, typename F_T, typename STR_T>
 class ParameterClass {
     using SZ_T = typename L<F_T>::size_type;
@@ -533,19 +543,29 @@ public:
 
     // Thickness and point arrays
     L<F_T> dcum() const {
-        return std::partial_sum(d.begin(), d.end());
+        L<F_T> cumsum(d.size());
+        std::partial_sum(d.cbegin(), d.cend(), cumsum.begin());
+        return cumsum;
     }
 
     L<SZ_T> pcum() const {
-        return std::partial_sum(layer_points.begin(), layer_points.end());
+        L<F_T> cumsum(layer_points.size());
+        std::partial_sum(layer_points.cbegin(), layer_points.cend(), cumsum.begin());
+        return cumsum;
     }
 
     L<F_T> dcum0() const {
-        return {0, std::partial_sum(d.begin(), d.end())};
+        L<F_T> cumsum(d.size());
+        std::partial_sum(d.cbegin(), d.cend(), cumsum.begin());
+        cumsum.prepend(0);
+        return cumsum;
     }
 
     L<SZ_T> pcum0() const {
-        return {1, std::partial_sum(layer_points.begin(), layer_points.end())};
+        L<F_T> cumsum(layer_points.size());
+        std::partial_sum(layer_points.cbegin(), layer_points.cend(), cumsum.begin());
+        cumsum.prepend(1);
+        return cumsum;
     }
 
     // interface switch for zeroing field in interfaces
@@ -994,12 +1014,20 @@ private:
         L<F_T> dcum = dcum0();
         if (xmesh_type) {  // linear
             for (SZ_T i : std::views::iota(0, col_size())) {
-                x.append_range(Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i)));
+                if constexpr (HasAppendRange<L<F_T>, L<F_T>>) {
+                    x.append_range(Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i)));
+                } else if constexpr (HasAppend<L<F_T>, L<F_T>>) {
+                    x.append(Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i)));
+                } else {
+                    static_assert([] {
+                        return false;
+                    }(), "Container does not support append_range or append.");
+                }
             }
             x.emplace_back(dcum.back());
         } else {  // erf-linear
             for (SZ_T i : std::views::iota(0, col_size())) {
-                std::vector<F_T> x_layer;
+                L<F_T> x_layer;
                 if (layer_type.at(i) == "layer" or layer_type.at(i) == "active") {
                     const std::vector<F_T> parr = Utils::Math::linspace(-0.5, 1 / std::numbers::pi_v<F_T>, 0.5);
                     const std::size_t sz_parr = parr.size();
@@ -1007,16 +1035,24 @@ private:
                     const F_T x_layer0 = std::erf(2 * std::numbers::pi_v<F_T> * xmesh_coeff.front() * parr.front());
                     x_layer.front() = 0;
                     for (std::size_t j : std::views::iota(1U, sz_parr)) {
-                        x_layer.at(j) = std::erf(2 * std::numbers::pi_v<F_T> * xmesh_coeff.at(j) * parr.at(j)) - x_layer0;
+                        x_layer[j] = std::erf(2 * std::numbers::pi_v<F_T> * xmesh_coeff.at(j) * parr.at(j)) - x_layer0;
                     }
                     const F_T max_x_layer = std::ranges::max(x_layer);
                     for (std::size_t j : std::views::iota(1U, sz_parr)) {
-                        x_layer.at(j) = dcum.at(i) + x_layer.at(j) / max_x_layer * d.at(i);
+                        x_layer[j] = dcum.at(i) + x_layer.at(j) / max_x_layer * d.at(i);
                     }
                 } else if (layer_type.at(i) == "junction" or layer_type.at(i) == "interface") {
                     x_layer = Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i));
                 }
-                x.append_range(x_layer.begin(), x_layer.end() - 1);
+                if constexpr (HasAppendRange<L<F_T>, L<F_T>>) {
+                    x.append_range(x_layer.begin(), x_layer.end() - 1);
+                } else if constexpr (HasAppend<L<F_T>, L<F_T>>) {
+                    x.append(x_layer.begin(), x_layer.end() - 1);
+                } else {
+                    static_assert([] {
+                        return false;
+                    }(), "Container does not support append_range or append.");
+                }
                 x.emplace_back(dcum.back());
             }
         }

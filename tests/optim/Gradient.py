@@ -52,17 +52,21 @@ def model(p):
     df.loc[3, 'Nani'] = pow(10, p[6])
 
     df.to_csv(deviceFile, index=False)
+    command = [
+        "flatpak", "run", "org.octave.Octave",
+        # r"E:\Program Files\GNU Octave\Octave-9.2.0\mingw64\bin\octave-cli.exe",
+        '--no-gui', '--quiet', '--eval',
+        "cd('{}'), demo_ms_pin('{}', '{}/Libraries/Index_of_Refraction_library.xlsx')".format(wd, deviceFile, wd)]
 
     try:
-        command = ["flatpak", "run", "org.octave.Octave", '--no-gui', '--quiet', '--eval',
-        "cd('{}'), demo_ms_pin('{}', '{}/Libraries/Index_of_Refraction_library.xlsx')".format(wd, deviceFile, wd)]
         output = subprocess.run(command, capture_output=True, text=True, check=True)
-        print("MATLAB Output:\n", output.stdout)
+        print("GNU Octave Output:\n", output.stdout)
         print(p)
         JV_result = pd.read_csv('{}/JV.csv'.format(wd), header=None)
         return np.flip(JV_result[JV_result.iloc[:, 0] < VLimit].iloc[:, 1].to_numpy())   # 1 for RS 2 for FS
     except subprocess.CalledProcessError as e:
         print("Error occurred:", e.stderr)
+        print(command)
         return None
 
 
@@ -94,7 +98,7 @@ def main():
     y_ref = JV_ref[JV_ref.iloc[:, 0] < VLimit].iloc[:, 1].to_numpy()
 
     if x_ref[0] > x_ref[-1]:
-        print("Warning: x_ref is not increasing, flipping it.")
+        print("Info: x_ref is not increasing, flipping it.")
         x_ref = np.flip(x_ref)
         y_ref = np.flip(y_ref)
 

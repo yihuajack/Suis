@@ -6,6 +6,7 @@
 #define SUISAPP_DEVICEMODEL_H
 
 #include <QAbstractTableModel>
+#include <QtQmlIntegration/qqmlintegration.h>  // or <QtQml/qqmlregistration.h>
 
 #include "core/ParameterClass.h"
 

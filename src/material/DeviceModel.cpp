@@ -23,7 +23,7 @@ int DeviceModel::columnCount(const QModelIndex &parent) const {
     return static_cast<int>(par->col_size());
 }
 
-QVariant DeviceModel::data(const QModelIndex &index, int role) const {
+QVariant DeviceModel::data(const QModelIndex &index, const int role) const {
     if (not index.isValid() or index.row() >= ParameterClass<QList, double, QString>::size) {
         qWarning("QModelIndex of DeviceModel is invalid.");
         return {};
@@ -39,13 +39,12 @@ bool DeviceModel::setData(const QModelIndex &index, const QVariant &value, int r
     //     return false;
     // }
     if (role == Qt::DisplayRole) {
-        if (QVariant cellData = par->get<QVariant>(index.row()).toList().at(index.column()); value == cellData) {
+        if (const QVariant cellData = par->get<QVariant>(index.row()).toList().at(index.column()); value == cellData) {
             return false;
         }
         par->set(value, index.row(), index.column());
     }
     emit dataChanged(index, index, {role});
-    qInfo("setData of DeviceModel");
     return true;
 }
 

@@ -11,6 +11,7 @@
 #include <valarray>
 #include <variant>
 #include <vector>
+#include <QList>
 
 #include "Global.h"
 
@@ -33,6 +34,9 @@ namespace Utils::Math {
 
     template<typename T>
     auto linspace(T start, T stop, std::size_t num) -> std::vector<T>;
+
+    template<typename T, typename SZ_T>
+    auto linspace(T start, T stop, SZ_T num) -> QList<T>;
 
     template<typename T>
     auto linspace_va(T start, T stop, std::size_t num) -> std::valarray<T>;

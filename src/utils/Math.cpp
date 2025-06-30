@@ -5,6 +5,7 @@
 #include "Math.h"
 #include <algorithm>
 #include <ranges>
+#include <QList>
 
 /* numpy.real_if_close(a, tol=100)
  * If input is complex with all imaginary parts close to zero, return real parts.
@@ -87,7 +88,7 @@ auto Utils::Math::linspace(const T start, const T stop) -> std::array<T, N> {
     std::array<T, N> result{};
     T step = (stop - start) / static_cast<T>(N - 1);
     T current = start;
-    std::ranges::generate(result, [&current, step]() {
+    std::ranges::generate(result, [&current, step]() -> T {
         T value = current;
         current += step;
         return value;
@@ -95,14 +96,14 @@ auto Utils::Math::linspace(const T start, const T stop) -> std::array<T, N> {
     return result;
 }
 
-template auto Utils::Math::linspace(const double start, const double stop) -> std::array<double, 357>;
+template auto Utils::Math::linspace(double start, double stop) -> std::array<double, 357>;
 
 template<typename T>
 auto Utils::Math::linspace(const T start, const T stop, const std::size_t num) -> std::vector<T> {
     std::vector<T> result(num);
     T step = (stop - start) / static_cast<T>(num - 1);
     T current = start;
-    std::ranges::generate(result, [&current, &step] /* -> T */ {  // (C2760)
+    std::ranges::generate(result, [&current, &step] -> T {  // (C2760)
         T value = current;
         current += step;
         return value;
@@ -112,12 +113,27 @@ auto Utils::Math::linspace(const T start, const T stop, const std::size_t num) -
 
 template auto Utils::Math::linspace(double start, double stop, std::size_t num) -> std::vector<double>;
 
+template<typename T, typename SZ_T>
+auto Utils::Math::linspace(const T start, const T stop, const SZ_T num) -> QList<T> {
+    QList<T> result(num);
+    T step = (stop - start) / static_cast<T>(num - 1);
+    T current = start;
+    std::ranges::generate(result, [&current, &step] -> T {  // (C2760)
+        T value = current;
+        current += step;
+        return value;
+    });
+    return result;
+}
+
+template auto Utils::Math::linspace(double start, double stop, qsizetype num) -> QList<double>;
+
 template<typename T>
 auto Utils::Math::linspace_va(const T start, const T stop, const std::size_t num) -> std::valarray<T> {
     std::valarray<T> result(num);
     T step = (stop - start) / static_cast<T>(num - 1);
     T current = start;
-    std::ranges::generate(result, [&current, &step] /* -> T */ {  // (C2760)
+    std::ranges::generate(result, [&current, &step] -> T {  // (C2760)
         T value = current;
         current += step;
         return value;
