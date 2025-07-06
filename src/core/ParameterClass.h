@@ -31,16 +31,6 @@ enum class FUN_TYPE {
     CONSTANT, SWEEP_AND_STILL, SIN, SWEEP
 };
 
-template <typename C, typename R>
-concept HasAppendRange = requires (C c, R r) {
-    { c.append_range(r) } -> std::same_as<void>;
-};
-
-template <typename C, typename R>
-concept HasAppend = requires(C c, R r) {
-    { c.append(r) } -> std::same_as<void>;
-};
-
 template<template <typename...> class L, typename F_T, typename STR_T>
 class ParameterClass {
     using SZ_T = typename L<F_T>::size_type;
@@ -783,6 +773,7 @@ public:
     }
 
 private:
+    Device<L<F_T>> dev;
     /*
      * A function to IMPORT_PROPERTIES from a text file LOCATED at FILEPATH. Each of the listed properties
      * is checked to see if it is available in the .CSV file. If it is available, the existing properties
@@ -1008,68 +999,18 @@ private:
     }
 
     // Generates the spatial mesh dependent on option defined by XMESH_TYPE
-    L<F_T> meshgen_x() {
-        // Linearly spaced
-        L<F_T> x;  // pcum().back()
-        L<F_T> dcum = dcum0();
-        if (xmesh_type) {  // linear
-            for (SZ_T i : std::views::iota(0, col_size())) {
-                if constexpr (HasAppendRange<L<F_T>, L<F_T>>) {
-                    x.append_range(Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i)));
-                } else if constexpr (HasAppend<L<F_T>, L<F_T>>) {
-                    x.append(Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i)));
-                } else {
-                    static_assert([] {
-                        return false;
-                    }(), "Container does not support append_range or append.");
-                }
-            }
-            x.emplace_back(dcum.back());
-        } else {  // erf-linear
-            for (SZ_T i : std::views::iota(0, col_size())) {
-                L<F_T> x_layer;
-                if (layer_type.at(i) == "layer" or layer_type.at(i) == "active") {
-                    const std::vector<F_T> parr = Utils::Math::linspace(-0.5, 1 / std::numbers::pi_v<F_T>, 0.5);
-                    const std::size_t sz_parr = parr.size();
-                    x_layer.resize(sz_parr);
-                    const F_T x_layer0 = std::erf(2 * std::numbers::pi_v<F_T> * xmesh_coeff.front() * parr.front());
-                    x_layer.front() = 0;
-                    for (std::size_t j : std::views::iota(1U, sz_parr)) {
-                        x_layer[j] = std::erf(2 * std::numbers::pi_v<F_T> * xmesh_coeff.at(j) * parr.at(j)) - x_layer0;
-                    }
-                    const F_T max_x_layer = std::ranges::max(x_layer);
-                    for (std::size_t j : std::views::iota(1U, sz_parr)) {
-                        x_layer[j] = dcum.at(i) + x_layer.at(j) / max_x_layer * d.at(i);
-                    }
-                } else if (layer_type.at(i) == "junction" or layer_type.at(i) == "interface") {
-                    x_layer = Utils::Math::linspace(dcum.at(i), dcum.at(i + 1) - d.at(i) / layer_points.at(i), layer_points.at(i));
-                }
-                if constexpr (HasAppendRange<L<F_T>, L<F_T>>) {
-                    x.append_range(x_layer.begin(), x_layer.end() - 1);
-                } else if constexpr (HasAppend<L<F_T>, L<F_T>>) {
-                    x.append(x_layer.begin(), x_layer.end() - 1);
-                } else {
-                    static_assert([] {
-                        return false;
-                    }(), "Container does not support append_range or append.");
-                }
-                x.emplace_back(dcum.back());
-            }
-        }
-        return x;
-    }
+    L<F_T> meshgen_x();
 
     // BUILD_DEVICE calls BUILD_PROPERTY for each device property. BUILD_PROPERTY then defines the
     // properties at each point on the grid defined by MESHOPTION
     Device<L<F_T>> build_device(bool meshoption);
 
     // Rebuilds important device properties
-    void refresh_device() {
-        xx = meshgen_x();
-        x_sub = getvar_sub(xx);
-    }
+    void refresh_device();
 };
 
 #include "BuildDevice.tpp"
+#include "MeshGenX.tpp"
+#include "RefreshDevice.tpp"
 
 #endif  // SUISAPP_PARAMETERCLASS_H

@@ -13,7 +13,7 @@
 #include "Device.h"
 
 template<template <typename...> class L, typename F_T, typename STR_T>
-Device<L<F_T>> ParameterClass<L, F_T, STR_T>::build_device(const bool meshoption) {
+Device<L<F_T>> ParameterClass<L, F_T, STR_T>::build_device(const bool meshoption) {  // 1 for 'whole', 0 for 'sub'
     L<F_T> xmesh = meshoption ? xx : x_sub;
     return xmesh;
 }

@@ -2,10 +2,13 @@ target_sources(SuisApp PRIVATE
         # Do not add sources of content qml module here
         # core headers
         core/BuildDevice.tpp
+        core/BuildProperty.h
         core/Device.h
         core/DistFun.h
         core/GetVarSub.h
+        core/MeshGenX.tpp
         core/ParameterClass.h
+        core/RefreshDevice.tpp
         # material headers
         material/DbSysModel.h
         material/IniConfigParser.h
