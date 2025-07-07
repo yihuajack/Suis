@@ -405,7 +405,7 @@ void readRefrLib(QSqlQuery& query, QXlsx::Document& doc, const unsigned long lon
                 }
             }
         } else {
-            QSqlQuery relateQuery(query);
+            QSqlQuery relateQuery(std::move(query));
             relateQuery.prepare(QString("SELECT OPTICAL_ID, WAVELENGTH, N, K FROM %1 WHERE OPTICAL_ID = :idValue").arg(opticalRelateTable));
             relateQuery.bindValue(":idValue", opticalId);
             if (not relateQuery.exec()) {

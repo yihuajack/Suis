@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import time
 from scipy.optimize import minimize
 try:
     import matlab.engine
@@ -13,6 +14,7 @@ except ModuleNotFoundError:
 
 VLimit = 1.1
 deviceFile = "{}/Input_files/niox_pk35_pcbm.csv".format(wd)
+start_time = time.time()
 
 
 def model_eng(p, eng):
@@ -88,6 +90,19 @@ def objective(p, x, y_interp):
     return loss
 
 
+def callback_func(p):
+    now = time.time()
+    if callback_func.count == 0:
+        callback_func.last_time = now
+    elapsed = now - callback_func.last_time
+    callback_func.count += 1
+    total_elapsed = now - start_time
+    print(f"[callback] Iteration {callback_func.count} | Time: {elapsed:.4f}s | Total: {total_elapsed:.4f}s | Params: {p}")
+    callback_func.last_time = now
+
+callback_func.count = 0
+callback_func.last_time = None  # initialized in first call
+
 def main():
     x_all = pd.read_csv('{}/JV.csv'.format(wd), header=None).iloc[:, 0].to_numpy()
     x = np.flip(x_all[x_all < VLimit])
@@ -107,6 +122,9 @@ def main():
     initial_guess = np.array([-7.5, -7.5, 3.0, 3.0, 3.0, 3.0, 17.0])
     bounds = [(-9.0, -5.0), (-9.0, -5.0), (0.0, 6.0), (0.0, 6.0), (0.0, 6.0), (0.0, 6.0), (15.0, 19.0)]
 
+    # Because the optimizer may call objective() multiple times per single "iteration" (e.g., probing different points),
+    # this count reflects total calls, not strictly outer-loop iterations of the optimizer.
+    # global counter
     if use_matlab_engine:
         eng = matlab.engine.start_matlab()
         result = minimize(
@@ -114,7 +132,8 @@ def main():
             initial_guess,
             bounds=bounds,
             method='L-BFGS-B',
-            options={'maxiter': 20, 'disp': True, 'eps': 1e-2}
+            options={'maxiter': 20, 'disp': True, 'eps': 1e-2},
+            callback=callback_func
         )
         eng.quit()
     else:
@@ -123,7 +142,8 @@ def main():
             initial_guess,
             bounds=bounds,
             method='L-BFGS-B',
-            options={'maxiter': 20, 'disp': True, 'eps': 1e-2}
+            options={'maxiter': 20, 'disp': True, 'eps': 1e-2},
+            callback=callback_func
         )
 
     print(f"Optimal parameters: {result.x}")
@@ -132,3 +152,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    total_time = time.time() - start_time
+    print(f"[done] Optimization completed in {total_time:.4f} seconds with {callback_func.count} iterations.")
